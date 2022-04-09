@@ -1,0 +1,391 @@
+{
+    "normalizedInput": {
+        "line1": "1311 East Chambers Street",
+        "city": "Milwaukee",
+        "state": "WI",
+        "zip": "53212"
+    },
+    "kind": "civicinfo#representativeInfoResponse",
+    "divisions": {
+        "ocd-division/country:us/state:wi/county:milwaukee": {
+            "name": "Milwaukee County",
+            "officeIndices": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7
+            ]
+        }
+    },
+    "offices": [
+        {
+            "name": "Milwaukee County Executive",
+            "divisionId": "ocd-division/country:us/state:wi/county:milwaukee",
+            "levels": [
+                "administrativeArea2"
+            ],
+            "roles": [
+                "headOfGovernment"
+            ],
+            "officialIndices": [
+                0
+            ]
+        },
+        {
+            "name": "Milwaukee County Treasurer",
+            "divisionId": "ocd-division/country:us/state:wi/county:milwaukee",
+            "levels": [
+                "administrativeArea2"
+            ],
+            "roles": [
+                "governmentOfficer"
+            ],
+            "officialIndices": [
+                1
+            ]
+        },
+        {
+            "name": "Milwaukee County Sheriff",
+            "divisionId": "ocd-division/country:us/state:wi/county:milwaukee",
+            "levels": [
+                "administrativeArea2"
+            ],
+            "roles": [
+                "governmentOfficer"
+            ],
+            "officialIndices": [
+                2
+            ]
+        },
+        {
+            "name": "Milwaukee County Clerk",
+            "divisionId": "ocd-division/country:us/state:wi/county:milwaukee",
+            "levels": [
+                "administrativeArea2"
+            ],
+            "roles": [
+                "governmentOfficer"
+            ],
+            "officialIndices": [
+                3
+            ]
+        },
+        {
+            "name": "Milwaukee County Register of Deeds",
+            "divisionId": "ocd-division/country:us/state:wi/county:milwaukee",
+            "levels": [
+                "administrativeArea2"
+            ],
+            "roles": [
+                "governmentOfficer"
+            ],
+            "officialIndices": [
+                4
+            ]
+        },
+        {
+            "name": "Milwaukee County Comptroller",
+            "divisionId": "ocd-division/country:us/state:wi/county:milwaukee",
+            "levels": [
+                "administrativeArea2"
+            ],
+            "roles": [
+                "governmentOfficer"
+            ],
+            "officialIndices": [
+                5
+            ]
+        },
+        {
+            "name": "Milwaukee County Clerk of Circuit Court",
+            "divisionId": "ocd-division/country:us/state:wi/county:milwaukee",
+            "levels": [
+                "administrativeArea2"
+            ],
+            "roles": [
+                "governmentOfficer"
+            ],
+            "officialIndices": [
+                6
+            ]
+        },
+        {
+            "name": "Milwaukee County District Attorney",
+            "divisionId": "ocd-division/country:us/state:wi/county:milwaukee",
+            "levels": [
+                "administrativeArea2"
+            ],
+            "roles": [
+                "governmentOfficer"
+            ],
+            "officialIndices": [
+                7
+            ]
+        }
+    ],
+    "officials": [
+        {
+            "name": "David Crowley",
+            "address": [
+                {
+                    "line1": "901 North 9th Street",
+                    "city": "Milwaukee",
+                    "state": "WI",
+                    "zip": "53233"
+                }
+            ],
+            "party": "Democratic Party",
+            "phones": [
+                "(414) 278-4212"
+            ],
+            "urls": [
+                "https://county.milwaukee.gov/EN/County-Executive"
+            ],
+            "channels": [
+                {
+                    "type": "Facebook",
+                    "id": "MilwaukeeCountyExecChrisAbele"
+                },
+                {
+                    "type": "Twitter",
+                    "id": "ChrisAbeleMKE"
+                }
+            ],
+            "geocodingSummaries": [
+                {
+                    "queryString": "901 N. 9th Street, RM 306, Milwaukee, WI 53233",
+                    "featureId": {
+                        "cellId": "9801268167940321557",
+                        "fprint": "15932960262690670119"
+                    },
+                    "featureType": "typeCompoundSection",
+                    "positionPrecisionMeters": 0,
+                    "addressUnderstood": true
+                }
+            ]
+        },
+        {
+            "name": "David Cullen",
+            "address": [
+                {
+                    "line1": "901 North 9th Street",
+                    "city": "Milwaukee",
+                    "state": "WI",
+                    "zip": "53233"
+                }
+            ],
+            "party": "Democratic Party",
+            "phones": [
+                "(414) 278-4033"
+            ],
+            "urls": [
+                "https://county.milwaukee.gov/EN/Treasurer"
+            ],
+            "emails": [
+                "david.cullen@milwaukeecountywi.gov"
+            ],
+            "geocodingSummaries": [
+                {
+                    "queryString": "901 N. 9th Street, RM 102, Milwaukee, WI 53233",
+                    "featureId": {
+                        "cellId": "9801268167940321485",
+                        "fprint": "1654492850505789413"
+                    },
+                    "featureType": "typeCompoundSection",
+                    "positionPrecisionMeters": 0,
+                    "addressUnderstood": true
+                }
+            ]
+        },
+        {
+            "name": "Earnell R. Lucas",
+            "address": [
+                {
+                    "line1": "821 West State Street",
+                    "city": "Milwaukee",
+                    "state": "WI",
+                    "zip": "53233"
+                }
+            ],
+            "party": "Democratic Party",
+            "phones": [
+                "(414) 278-4766"
+            ],
+            "urls": [
+                "https://county.milwaukee.gov/EN/Sheriff"
+            ],
+            "emails": [
+                "mkesheriff@milwaukeecountywi.gov"
+            ],
+            "channels": [
+                {
+                    "type": "Facebook",
+                    "id": "MilwaukeeCountySheriff"
+                },
+                {
+                    "type": "Twitter",
+                    "id": "MCSOSheriff"
+                }
+            ],
+            "geocodingSummaries": [
+                {
+                    "queryString": "821 W. State St., Room 107, Milwaukee, WI 53233",
+                    "featureId": {
+                        "cellId": "9801268163159047795",
+                        "fprint": "10347974844110276898"
+                    },
+                    "featureType": "typeCompoundSection",
+                    "positionPrecisionMeters": 61.555762857379484,
+                    "addressUnderstood": true
+                }
+            ]
+        },
+        {
+            "name": "George L. Christenson",
+            "address": [
+                {
+                    "line1": "901 North 9th Street",
+                    "city": "Milwaukee",
+                    "state": "WI",
+                    "zip": "53233"
+                }
+            ],
+            "party": "Democratic Party",
+            "phones": [
+                "(414) 278-4067"
+            ],
+            "urls": [
+                "https://county.milwaukee.gov/EN/County-Clerk"
+            ],
+            "emails": [
+                "countyclerk@milwaukeecountywi.gov"
+            ],
+            "channels": [
+                {
+                    "type": "Facebook",
+                    "id": "milwaukeecountyclerk"
+                },
+                {
+                    "type": "Twitter",
+                    "id": "MkeCountyClerk"
+                }
+            ],
+            "geocodingSummaries": [
+                {
+                    "queryString": "901 N. 9th Street, RM 105, Milwaukee, WI 53233",
+                    "featureId": {
+                        "cellId": "9801268167940321557",
+                        "fprint": "8638238200251821373"
+                    },
+                    "featureType": "typeCompoundSection",
+                    "positionPrecisionMeters": 0,
+                    "addressUnderstood": true
+                }
+            ]
+        },
+        {
+            "name": "Israel Ramon",
+            "party": "Democratic Party"
+        },
+        {
+            "name": "Scott B. Manske",
+            "address": [
+                {
+                    "line1": "901 North 9th Street",
+                    "city": "Milwaukee",
+                    "state": "WI",
+                    "zip": "53233"
+                }
+            ],
+            "party": "Nonpartisan",
+            "phones": [
+                "(414) 278-3001"
+            ],
+            "urls": [
+                "https://county.milwaukee.gov/EN/Comptroller"
+            ],
+            "geocodingSummaries": [
+                {
+                    "queryString": "901 N. 9th Street, RM 301, Milwaukee, WI 53233",
+                    "featureId": {
+                        "cellId": "9801268167940321557",
+                        "fprint": "2604857980124348812"
+                    },
+                    "featureType": "typeCompoundSection",
+                    "positionPrecisionMeters": 0,
+                    "addressUnderstood": true
+                }
+            ]
+        },
+        {
+            "name": "George L. Christenson",
+            "address": [
+                {
+                    "line1": "901 North 9th Street",
+                    "city": "Milwaukee",
+                    "state": "WI",
+                    "zip": "53233"
+                }
+            ],
+            "party": "Democratic Party",
+            "phones": [
+                "(414) 278-4190"
+            ],
+            "urls": [
+                "https://county.milwaukee.gov/EN/Courts/Clerk-of-Courts"
+            ],
+            "emails": [
+                "ctimail@wicourts.gov"
+            ],
+            "geocodingSummaries": [
+                {
+                    "queryString": "901 N. 9th Street, RM 104, Milwaukee, WI 53233",
+                    "featureId": {
+                        "cellId": "9801268167929807693",
+                        "fprint": "15957523012418493430"
+                    },
+                    "featureType": "typeCompoundSection",
+                    "positionPrecisionMeters": 90.14716666156032,
+                    "addressUnderstood": true
+                }
+            ]
+        },
+        {
+            "name": "John T. Chisholm",
+            "address": [
+                {
+                    "line1": "821 West State Street",
+                    "city": "Milwaukee",
+                    "state": "WI",
+                    "zip": "53233"
+                }
+            ],
+            "party": "Democratic Party",
+            "phones": [
+                "(414) 278-4646"
+            ],
+            "urls": [
+                "https://county.milwaukee.gov/EN/District-Attorney"
+            ],
+            "emails": [
+                "milwaukee.da@da.wi.gov"
+            ],
+            "geocodingSummaries": [
+                {
+                    "queryString": "821 W. State St., Room 405, Milwaukee, WI 53233",
+                    "featureId": {
+                        "cellId": "9801268163254936483",
+                        "fprint": "1435794396843286421"
+                    },
+                    "featureType": "typeCompoundSection",
+                    "positionPrecisionMeters": 0,
+                    "addressUnderstood": true
+                }
+            ]
+        }
+    ]
+}

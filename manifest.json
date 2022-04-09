@@ -1,0 +1,17 @@
+{
+    "name": "Government Stuff Tab",
+    "description": "Know all the stuff about your government in a new tab",
+    "version": "1.0",
+    "manifest_version": 3,
+    "background": {
+        "service_worker": "background.js"
+    },
+    "permissions": [
+        "storage",
+        "scripting"
+    ],
+    "chrome_url_overrides": {
+        "newtab": "index.html"
+    },
+    "options_page": "options.html"
+}
