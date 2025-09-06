@@ -5,16 +5,217 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="icons/icon-32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="icons/icon-16.png" sizes="16x16">
+    <link rel="shortcut icon" href="icons/peoples-flag-mke.ico">
+    <link rel="stylesheet" href="styles.css">
     <script src="script.js"></script>
-    <title>Hello</title>
+    <script src="propublica-api.js"></script>
+    <script src="milwaukee-api.js"></script>
+    <title>New Tab - Milwaukee Government Representatives</title>
+    <meta name="description" content="Find your local Milwaukee County government representatives, including alderpersons and county supervisors">
 </head>
 
 <body>
-    <h2>These are your government officials</h2>
+    <div class="container">
+        <!-- Main content area for favorite sites -->
+        <main class="main-content">
+            <header class="header" role="banner">
+                <h1>New Tab - Milwaukee</h1>
+                <div class="header-controls" role="toolbar" aria-label="Application controls">
+                    <span class="version-indicator" aria-label="Application version 2.0.0">v2.0.0</span>
+                    <button id="test-btn" class="btn-icon" title="Test JavaScript functionality" aria-label="Test JavaScript functionality">🧪</button>
+                    <button id="theme-toggle" class="btn-icon" title="Toggle between light and dark themes" aria-label="Toggle theme">🌙</button>
+                    <button id="settings-btn" class="btn-icon" title="Open application settings" aria-label="Open settings">⚙️</button>
+                </div>
+            </header>
 
-    <ul id="listOfOfficials">
-    </ul>
+            <!-- Centered content wrapper -->
+            <div class="main-content-wrapper">
+                <!-- Search section moved above favorites -->
+                <section class="search-section">
+                    <div class="search-container">
+                        <form id="search-form" class="search-form" role="search">
+                            <input type="search" 
+                                   id="search-input" 
+                                   class="search-input" 
+                                   placeholder="Search the web..." 
+                                   aria-label="Search the web"
+                                   autocomplete="off">
+                            <button type="submit" class="search-button" aria-label="Search">🔍</button>
+                        </form>
+                    </div>
+                </section>
 
+                <!-- Favorite sites grid -->
+                <section class="favorites-section" aria-labelledby="favorites-heading">
+                    <h2 id="favorites-heading" class="visually-hidden">Favorite websites</h2>
+                    <div id="favorites-grid" class="favorites-grid" role="grid" aria-label="Favorite websites grid">
+                        <!-- Favorites will be dynamically populated -->
+                    </div>
+                    <a href="#" id="add-favorite" class="add-favorite-link" aria-label="Add new favorite website">+ Add site</a>
+                </section>
+            </div>
+        </main>
+
+        <!-- Show sidebar button (hidden when sidebar is visible) -->
+        <button id="show-sidebar-btn" class="show-sidebar-btn hidden" aria-label="Show representatives sidebar" title="Show representatives">→</button>
+
+        <!-- Civic information sidebar -->
+        <aside class="sidebar" id="civic-sidebar" role="complementary" aria-labelledby="sidebar-heading">
+            <div class="sidebar-header">
+                <h2 id="sidebar-heading">Milwaukee County Representatives</h2>
+                <button id="toggle-sidebar" class="btn-icon" aria-label="Hide representatives sidebar" title="Hide sidebar">←</button>
+            </div>
+
+            <!-- Address input section (shown when no data) -->
+            <div class="address-section" id="address-section" role="region" aria-labelledby="address-section-heading">
+                <h3 id="address-section-heading" class="visually-hidden">Enter your address</h3>
+                <label for="address-input">Your Milwaukee Area Address:</label>
+                <div class="address-input-group">
+                    <input type="text" 
+                           id="address-input" 
+                           placeholder="e.g., Milwaukee, WI 53202"
+                           aria-describedby="address-help"
+                           autocomplete="street-address">
+                    <button id="locate-btn" class="btn-icon" title="Use current location" aria-label="Use current location">📍</button>
+                    <button id="refresh-btn" class="btn-icon" title="Refresh representatives data" aria-label="Refresh data">🔄</button>
+                </div>
+                <div class="address-actions">
+                    <button id="update-address" class="btn-primary" aria-describedby="address-help">Update</button>
+                </div>
+                <div class="address-help" id="address-help" style="margin-top: 0.5rem;">
+                    <small style="color: var(--text-muted); font-size: 0.75rem;">
+                        Example: "200 E Wells St, Milwaukee, WI 53202"
+                    </small>
+                </div>
+            </div>
+
+            <!-- Compact address display (shown when data is loaded) -->
+            <div class="address-display hidden" id="address-display" role="status" aria-live="polite">
+                <div class="current-address">
+                    <div class="address-info">
+                        <span class="address-label">Showing representatives for</span>
+                        <span class="address-value" id="current-address-text" aria-describedby="current-address-controls"></span>
+                    </div>
+                    <div class="address-controls" id="current-address-controls">
+                        <button id="edit-address-btn" class="btn-icon btn-small" title="Change address" aria-label="Change address">✏️</button>
+                        <button id="refresh-address-btn" class="btn-icon btn-small" title="Refresh representatives data" aria-label="Refresh representatives data">🔄</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Officials section -->
+            <div class="officials-section" role="region" aria-labelledby="officials-heading">
+                <h3 id="officials-heading" class="visually-hidden">Your representatives</h3>
+                <div id="officials-list" class="officials-list" role="list" aria-live="polite" aria-busy="false">
+                    <!-- Officials will be dynamically populated -->
+                </div>
+            </div>
+
+        </aside>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title" aria-describedby="settings-description">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="settings-title">Application Settings</h3>
+                <button id="close-settings" class="btn-icon" aria-label="Close settings dialog" title="Close settings">×</button>
+            </div>
+            <div class="modal-body">
+                <p id="settings-description" class="visually-hidden">Configure application preferences and display options</p>
+                <fieldset class="setting-group">
+                    <legend class="visually-hidden">Display preferences</legend>
+                    <label>
+                        <input type="checkbox" id="show-sidebar" aria-describedby="sidebar-setting-help">
+                        Show government information sidebar
+                    </label>
+                    <div id="sidebar-setting-help" class="setting-help" style="display: none;">Toggle the visibility of the representatives sidebar</div>
+                </fieldset>
+                <fieldset class="setting-group">
+                    <legend class="visually-hidden">Location preferences</legend>
+                    <label>
+                        <input type="checkbox" id="auto-location" aria-describedby="location-setting-help">
+                        Automatically detect location
+                    </label>
+                    <div id="location-setting-help" class="setting-help" style="display: none;">Automatically use your current location to find representatives</div>
+                </fieldset>
+                <fieldset class="setting-group">
+                    <legend>Search Engine</legend>
+                    <div class="search-engine-options">
+                        <label>
+                            <input type="radio" name="search-engine" value="google" id="search-google" aria-describedby="google-search-help">
+                            Google
+                        </label>
+                        <label>
+                            <input type="radio" name="search-engine" value="bing" id="search-bing" aria-describedby="bing-search-help">
+                            Bing
+                        </label>
+                        <label>
+                            <input type="radio" name="search-engine" value="duckduckgo" id="search-duckduckgo" aria-describedby="ddg-search-help">
+                            DuckDuckGo
+                        </label>
+                        <label>
+                            <input type="radio" name="search-engine" value="startpage" id="search-startpage" aria-describedby="startpage-search-help">
+                            Startpage
+                        </label>
+                    </div>
+                    <div id="google-search-help" class="setting-help" style="display: none;">Use Google for web searches</div>
+                    <div id="bing-search-help" class="setting-help" style="display: none;">Use Microsoft Bing for web searches</div>
+                    <div id="ddg-search-help" class="setting-help" style="display: none;">Use DuckDuckGo for private web searches</div>
+                    <div id="startpage-search-help" class="setting-help" style="display: none;">Use Startpage for private web searches</div>
+                </fieldset>
+                <div class="setting-group" role="region" aria-labelledby="about-heading">
+                    <h4 id="about-heading" class="visually-hidden">About this extension</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">
+                        <strong>Milwaukee County Representatives</strong><br>
+                        This extension shows local government officials for Milwaukee County addresses using the
+                        Milwaukee County API.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Favorite Modal -->
+    <div id="favorite-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="favorite-modal-title" aria-describedby="favorite-modal-description">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="favorite-modal-title">Add Favorite Site</h3>
+                <button id="close-favorite-modal" class="btn-icon" aria-label="Close favorite site dialog" title="Close dialog">×</button>
+            </div>
+            <div class="modal-body">
+                <p id="favorite-modal-description" class="visually-hidden">Add or edit a favorite website shortcut</p>
+                <form id="favorite-form" novalidate>
+                    <div class="form-group">
+                        <label for="site-name">Site Name:</label>
+                        <input type="text" 
+                               id="site-name" 
+                               placeholder="e.g., Google"
+                               required
+                               aria-describedby="name-help"
+                               autocomplete="off">
+                        <div id="name-help" class="input-help" style="display: none;">Enter a display name for this website</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="site-url">URL:</label>
+                        <input type="url" 
+                               id="site-url" 
+                               placeholder="https://example.com"
+                               required
+                               aria-describedby="url-help"
+                               autocomplete="url">
+                        <div id="url-help" class="input-help" style="display: none;">Enter the complete web address (including https://)</div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" id="save-favorite" class="btn-primary">Save Favorite</button>
+                        <button type="button" id="cancel-favorite" class="btn-secondary">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

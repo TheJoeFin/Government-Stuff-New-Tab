@@ -5,11 +5,22 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Options</title>
+    <title>Government Stuff New Tab Options</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
-    <h1>Options</h1>
+    <h1>Settings</h1>
+    <form id="options-form">
+        <label for="api-key">Google API Key:</label>
+        <input type="text" id="api-key" name="apiKey" size="50">
+        <br>
+        <label for="propublica-api-key">ProPublica API Key:</label>
+        <input type="text" id="propublica-api-key" name="propublicaApiKey" size="50">
+        <button type="submit">Save</button>
+    </form>
+    <div id="status"></div>
+    <script src="options.js"></script>
 </body>
 
 </html>

@@ -1,17 +1,33 @@
 {
-    "name": "Government Stuff Tab",
-    "description": "Know all the stuff about your government in a new tab",
-    "version": "1.0",
     "manifest_version": 3,
-    "background": {
-        "service_worker": "background.js"
-    },
-    "permissions": [
-        "storage",
-        "scripting"
-    ],
+    "name": "Milwaukee County Government Representatives",
+    "version": "2.0.0",
+    "description": "New tab page featuring Milwaukee County local representatives, favorite websites, and web search. Find your alderperson and county supervisor with address lookup.",
     "chrome_url_overrides": {
         "newtab": "index.html"
     },
-    "options_page": "options.html"
+    "permissions": [
+        "storage"
+    ],
+    "host_permissions": [
+        "https://milwaukee-alder-apim.azure-api.net/*",
+        "https://www.googleapis.com/*",
+        "https://api.propublica.org/*",
+        "https://api.bigdatacloud.net/*",
+        "https://www.google.com/s2/favicons*",
+        "https://icons.duckduckgo.com/*",
+        "https://*.com/favicon.ico",
+        "https://*.org/favicon.ico",
+        "https://*.net/favicon.ico"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "options_page": "options.html",
+    "icons": {
+        "16": "icons/icon-16.png",
+        "32": "icons/icon-32.png",
+        "48": "icons/icon-48.png",
+        "128": "icons/icon-128.png"
+    }
 }
