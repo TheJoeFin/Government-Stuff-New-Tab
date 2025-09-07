@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "Local Milwaukee Government Representatives",
     "version": "2.0.0",
-    "description": "New tab page featuring local Milwaukee government representatives, favorite websites, and web search. Find your alderperson and county supervisor with address lookup.",
+    "description": "New tab page with Milwaukee government representatives, favorite sites, and web search. Find your alderperson easily.",
     "chrome_url_overrides": {
         "newtab": "index.html"
     },

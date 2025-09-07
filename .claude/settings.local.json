@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:lively-bay-0b9f9fa0f.2.azurestaticapps.net)",
+      "WebSearch",
+      "WebFetch(domain:developer.chrome.com)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
