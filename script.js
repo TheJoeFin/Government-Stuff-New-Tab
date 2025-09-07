@@ -91,31 +91,34 @@ class NewTabApp {
   // Search functionality
   handleSearch(query) {
     if (!query.trim()) return
-    
+
     const searchEngines = {
-      google: 'https://www.google.com/search?q=',
-      bing: 'https://www.bing.com/search?q=',
-      duckduckgo: 'https://duckduckgo.com/?q=',
-      startpage: 'https://www.startpage.com/sp/search?query='
+      google: "https://www.google.com/search?q=",
+      bing: "https://www.bing.com/search?q=",
+      duckduckgo: "https://duckduckgo.com/?q=",
+      startpage: "https://www.startpage.com/sp/search?query=",
     }
-    
-    const baseUrl = searchEngines[this.settings.searchEngine] || searchEngines.google
+
+    const baseUrl =
+      searchEngines[this.settings.searchEngine] || searchEngines.google
     const searchUrl = baseUrl + encodeURIComponent(query.trim())
-    
+
     window.location.href = searchUrl
-    
+
     // Announce to screen reader
-    this.announceToScreenReader(`Searching ${this.getSearchEngineName()} for "${query.trim()}"`)
+    this.announceToScreenReader(
+      `Searching ${this.getSearchEngineName()} for "${query.trim()}"`
+    )
   }
 
   getSearchEngineName() {
     const names = {
-      google: 'Google',
-      bing: 'Bing', 
-      duckduckgo: 'DuckDuckGo',
-      startpage: 'Startpage'
+      google: "Google",
+      bing: "Bing",
+      duckduckgo: "DuckDuckGo",
+      startpage: "Startpage",
     }
-    return names[this.settings.searchEngine] || 'Google'
+    return names[this.settings.searchEngine] || "Google"
   }
 
   // Settings and Storage Management
@@ -321,32 +324,32 @@ class NewTabApp {
       {
         id: "1",
         name: "Google",
-        url: "https://google.com"
+        url: "https://google.com",
       },
       {
         id: "2",
         name: "YouTube",
-        url: "https://youtube.com"
+        url: "https://youtube.com",
       },
       {
         id: "3",
         name: "Gmail",
-        url: "https://gmail.com"
+        url: "https://gmail.com",
       },
       {
         id: "4",
         name: "GitHub",
-        url: "https://github.com"
+        url: "https://github.com",
       },
       {
         id: "5",
         name: "Bluesky",
-        url: "https://bluesky.com"
+        url: "https://bluesky.com",
       },
       {
         id: "6",
         name: "Reddit",
-        url: "https://reddit.com"
+        url: "https://reddit.com",
       },
     ]
   }
@@ -414,14 +417,17 @@ class NewTabApp {
 
   updateSettingsUI() {
     document.getElementById("show-sidebar").checked = this.settings.showSidebar
-    document.getElementById("auto-location").checked = this.settings.autoLocation
-    
+    document.getElementById("auto-location").checked =
+      this.settings.autoLocation
+
     // Update search engine radio buttons
-    const searchEngineRadios = document.querySelectorAll('input[name="search-engine"]')
-    searchEngineRadios.forEach(radio => {
+    const searchEngineRadios = document.querySelectorAll(
+      'input[name="search-engine"]'
+    )
+    searchEngineRadios.forEach((radio) => {
       radio.checked = radio.value === this.settings.searchEngine
     })
-    
+
     // Update search placeholder
     this.updateSearchPlaceholder()
   }
@@ -431,7 +437,10 @@ class NewTabApp {
     if (searchInput) {
       const engineName = this.getSearchEngineName()
       searchInput.placeholder = `Search with ${engineName}...`
-      searchInput.setAttribute('aria-label', `Search the web using ${engineName}`)
+      searchInput.setAttribute(
+        "aria-label",
+        `Search the web using ${engineName}`
+      )
     }
   }
 
@@ -462,15 +471,15 @@ class NewTabApp {
           this.handleSearch(query)
         }
       })
-      
+
       // Focus search with Ctrl+K or Cmd+K
       document.addEventListener("keydown", (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        if ((e.ctrlKey || e.metaKey) && e.key === "k") {
           e.preventDefault()
           searchInput.focus()
         }
       })
-      
+
       console.log("Search form events bound")
     } else {
       console.error("Search form elements not found")
@@ -534,19 +543,23 @@ class NewTabApp {
     }
 
     // Search engine radio buttons
-    const searchEngineRadios = document.querySelectorAll('input[name="search-engine"]')
-    searchEngineRadios.forEach(radio => {
+    const searchEngineRadios = document.querySelectorAll(
+      'input[name="search-engine"]'
+    )
+    searchEngineRadios.forEach((radio) => {
       radio.addEventListener("change", (e) => {
         if (e.target.checked) {
           console.log("Search engine changed:", e.target.value)
           this.settings.searchEngine = e.target.value
           this.saveSettings()
-          
+
           // Update search placeholder
           this.updateSearchPlaceholder()
-          
+
           // Announce change to screen readers
-          this.announceToScreenReader(`Search engine changed to ${this.getSearchEngineName()}`)
+          this.announceToScreenReader(
+            `Search engine changed to ${this.getSearchEngineName()}`
+          )
         }
       })
     })
@@ -572,7 +585,7 @@ class NewTabApp {
         this.updateSidebarVisibility()
         this.updateSettingsUI()
         this.saveSettings()
-        
+
         // Announce to screen readers
         this.announceToScreenReader("Representatives sidebar opened")
       })
@@ -686,8 +699,8 @@ class NewTabApp {
     item.href = favorite.url
     item.target = "_blank"
     item.rel = "noopener noreferrer"
-    item.setAttribute('role', 'gridcell')
-    item.setAttribute('aria-label', `Visit ${favorite.name} website`)
+    item.setAttribute("role", "gridcell")
+    item.setAttribute("aria-label", `Visit ${favorite.name} website`)
 
     const icon = document.createElement("img")
     icon.className = "icon"
@@ -705,8 +718,8 @@ class NewTabApp {
     const editBtn = document.createElement("button")
     editBtn.className = "edit-btn"
     editBtn.textContent = "✏️"
-    editBtn.setAttribute('aria-label', `Edit ${favorite.name} favorite`)
-    editBtn.setAttribute('title', `Edit ${favorite.name}`)
+    editBtn.setAttribute("aria-label", `Edit ${favorite.name} favorite`)
+    editBtn.setAttribute("title", `Edit ${favorite.name}`)
     editBtn.onclick = (e) => {
       e.preventDefault()
       e.stopPropagation()
@@ -751,15 +764,15 @@ class NewTabApp {
     }
 
     modal.classList.remove("hidden")
-    
+
     // Set up modal keyboard trap
     this.setupModalKeyboardTrap(modal)
-    
+
     // Focus the first input
     setTimeout(() => {
       nameInput.focus()
     }, 100)
-    
+
     // Announce modal opening to screen readers
     this.announceToScreenReader(`${title.textContent} dialog opened`)
   }
@@ -767,16 +780,16 @@ class NewTabApp {
   hideFavoriteModal() {
     const modal = document.getElementById("favorite-modal")
     modal.classList.add("hidden")
-    
+
     // Remove keyboard trap
     this.removeModalKeyboardTrap(modal)
-    
+
     // Restore focus to the element that opened the modal
     if (this.lastFocusedElement) {
       this.lastFocusedElement.focus()
       this.lastFocusedElement = null
     }
-    
+
     // Announce modal closing to screen readers
     this.announceToScreenReader("Dialog closed")
   }
@@ -837,10 +850,11 @@ class NewTabApp {
     )
     this.modalFocusableElements = Array.from(focusableElements)
     this.firstFocusableElement = this.modalFocusableElements[0]
-    this.lastFocusableElement = this.modalFocusableElements[this.modalFocusableElements.length - 1]
+    this.lastFocusableElement =
+      this.modalFocusableElements[this.modalFocusableElements.length - 1]
 
     this.modalKeydownHandler = (e) => {
-      if (e.key === 'Tab') {
+      if (e.key === "Tab") {
         if (e.shiftKey) {
           // Shift + Tab
           if (document.activeElement === this.firstFocusableElement) {
@@ -854,19 +868,19 @@ class NewTabApp {
             this.firstFocusableElement.focus()
           }
         }
-      } else if (e.key === 'Escape') {
+      } else if (e.key === "Escape") {
         e.preventDefault()
         this.hideFavoriteModal()
         this.hideSettingsModal()
       }
     }
 
-    modal.addEventListener('keydown', this.modalKeydownHandler)
+    modal.addEventListener("keydown", this.modalKeydownHandler)
   }
 
   removeModalKeyboardTrap(modal) {
     if (this.modalKeydownHandler) {
-      modal.removeEventListener('keydown', this.modalKeydownHandler)
+      modal.removeEventListener("keydown", this.modalKeydownHandler)
       this.modalKeydownHandler = null
     }
     this.modalFocusableElements = null
@@ -876,18 +890,18 @@ class NewTabApp {
 
   announceToScreenReader(message) {
     // Create or update the screen reader announcement element
-    let announcer = document.getElementById('sr-announcer')
+    let announcer = document.getElementById("sr-announcer")
     if (!announcer) {
-      announcer = document.createElement('div')
-      announcer.id = 'sr-announcer'
-      announcer.setAttribute('aria-live', 'polite')
-      announcer.setAttribute('aria-atomic', 'true')
-      announcer.className = 'visually-hidden'
+      announcer = document.createElement("div")
+      announcer.id = "sr-announcer"
+      announcer.setAttribute("aria-live", "polite")
+      announcer.setAttribute("aria-atomic", "true")
+      announcer.className = "visually-hidden"
       document.body.appendChild(announcer)
     }
-    
+
     // Clear and set the message
-    announcer.textContent = ''
+    announcer.textContent = ""
     setTimeout(() => {
       announcer.textContent = message
     }, 100)
@@ -896,30 +910,30 @@ class NewTabApp {
   hideSettingsModal() {
     const modal = document.getElementById("settings-modal")
     modal.classList.add("hidden")
-    
+
     // Remove keyboard trap
     this.removeModalKeyboardTrap(modal)
-    
+
     // Restore focus
     if (this.lastFocusedElement) {
       this.lastFocusedElement.focus()
       this.lastFocusedElement = null
     }
-    
+
     this.announceToScreenReader("Settings dialog closed")
   }
 
   showSettingsModal() {
     const modal = document.getElementById("settings-modal")
-    
+
     // Store the element that opened this modal for focus restoration
     this.lastFocusedElement = document.activeElement
-    
+
     modal.classList.remove("hidden")
-    
+
     // Set up modal keyboard trap
     this.setupModalKeyboardTrap(modal)
-    
+
     // Focus the first interactive element
     setTimeout(() => {
       const firstCheckbox = modal.querySelector('input[type="checkbox"]')
@@ -927,7 +941,7 @@ class NewTabApp {
         firstCheckbox.focus()
       }
     }, 100)
-    
+
     // Announce modal opening to screen readers
     this.announceToScreenReader("Application settings dialog opened")
   }
@@ -1089,14 +1103,14 @@ class NewTabApp {
   }
 
   showLoadingState(container) {
-    container.setAttribute('aria-busy', 'true')
+    container.setAttribute("aria-busy", "true")
     container.innerHTML = `
       <div class="loading">
         <div class="loading-spinner"></div>
-        <div class="loading-text">Loading Milwaukee County representatives...</div>
+        <div class="loading-text">Loading Local representatives...</div>
       </div>
     `
-    this.announceToScreenReader("Loading Milwaukee County representatives, please wait")
+    this.announceToScreenReader("Loading Local representatives, please wait")
   }
 
   async loadMemberDetails() {
@@ -1138,13 +1152,13 @@ class NewTabApp {
   async loadMilwaukeeData(address) {
     if (!address || !this.milwaukeeApi.isAddressLikelyInMilwaukee(address)) {
       console.log(
-        "Address not likely in Milwaukee County area, skipping Milwaukee API"
+        "Address not likely in the Milwaukee area, skipping Milwaukee API"
       )
       return
     }
 
     try {
-      console.log("Loading Milwaukee County data for:", address)
+      console.log("Loading Local data for:", address)
       const milwaukeeData = await this.milwaukeeApi.getRepresentatives(address)
 
       if (milwaukeeData && milwaukeeData.isInMilwaukeeCounty) {
@@ -1232,27 +1246,58 @@ class NewTabApp {
     const container = document.getElementById("officials-list")
     container.innerHTML = ""
 
-    // Create Milwaukee County section
-    const milwaukeeSection = document.createElement("div")
-    milwaukeeSection.className = "division-group fade-in milwaukee-section"
-    milwaukeeSection.style.borderLeft = "4px solid #0077be"
-
-    const header = document.createElement("div")
-    header.className = "division-header"
-    header.textContent = "Milwaukee Area Representatives"
-    header.style.color = "#0077be"
-    milwaukeeSection.appendChild(header)
+    // Group representatives by division for hierarchical display
+    const groupedReps = {
+      "City of Milwaukee": [],
+      "Milwaukee County": [],
+      "Wisconsin State": [],
+      "U.S. Congress": [],
+    }
 
     this.milwaukeeData.representatives.forEach((rep) => {
-      const officialElement = this.createMilwaukeeOfficialElement(rep)
-      milwaukeeSection.appendChild(officialElement)
+      if (groupedReps[rep.division]) {
+        groupedReps[rep.division].push(rep)
+      }
     })
 
-    container.appendChild(milwaukeeSection)
-    container.setAttribute('aria-busy', 'false')
+    // Render each division group that has representatives
+    Object.entries(groupedReps).forEach(([division, reps]) => {
+      if (reps.length === 0) return
+
+      const divisionSection = document.createElement("div")
+      divisionSection.className = "division-group fade-in milwaukee-section"
+
+      // Different colors for different levels
+      const colors = {
+        "U.S. Congress": "#dc143c",
+        "Wisconsin State": "#228b22",
+        "Milwaukee County": "#0077be",
+        "City of Milwaukee": "#ffa500",
+      }
+      divisionSection.style.borderLeft = `4px solid ${
+        colors[division] || "#0077be"
+      }`
+
+      const header = document.createElement("div")
+      header.className = "division-header"
+      header.textContent = division
+      header.style.color = colors[division] || "#0077be"
+      divisionSection.appendChild(header)
+
+      reps.forEach((rep) => {
+        const officialElement = this.createMilwaukeeOfficialElement(rep)
+        divisionSection.appendChild(officialElement)
+      })
+
+      container.appendChild(divisionSection)
+    })
+
+    container.setAttribute("aria-busy", "false")
 
     // Announce completion to screen readers
-    this.announceToScreenReader(`Loaded ${this.milwaukeeData.representatives.length} Milwaukee County representatives`)
+    this.announceToScreenReader(
+      `Loaded ${this.milwaukeeData.representatives.length} representatives`
+    )
 
     // Hide address input and show compact display
     this.showCompactAddressDisplay()
@@ -1498,9 +1543,15 @@ class NewTabApp {
   createMilwaukeeOfficialElement(rep) {
     const element = document.createElement("div")
     element.className = "official milwaukee-official"
-    element.setAttribute('role', 'listitem')
-    element.setAttribute('aria-labelledby', `official-name-${rep.name.replace(/\s+/g, '-').toLowerCase()}`)
-    element.setAttribute('aria-describedby', `official-office-${rep.name.replace(/\s+/g, '-').toLowerCase()}`)
+    element.setAttribute("role", "listitem")
+    element.setAttribute(
+      "aria-labelledby",
+      `official-name-${rep.name.replace(/\s+/g, "-").toLowerCase()}`
+    )
+    element.setAttribute(
+      "aria-describedby",
+      `official-office-${rep.name.replace(/\s+/g, "-").toLowerCase()}`
+    )
 
     const info = document.createElement("div")
     info.className = "official-info"
@@ -1508,29 +1559,34 @@ class NewTabApp {
     const name = document.createElement("div")
     name.className = "official-name"
     name.textContent = rep.name
-    name.id = `official-name-${rep.name.replace(/\s+/g, '-').toLowerCase()}`
+    name.id = `official-name-${rep.name.replace(/\s+/g, "-").toLowerCase()}`
+
+    // Add party affiliation if available
+    if (rep.party) {
+      name.textContent += ` (${rep.party})`
+    }
+
     info.appendChild(name)
 
     const office = document.createElement("div")
     office.className = "official-office"
-    office.id = `official-office-${rep.name.replace(/\s+/g, '-').toLowerCase()}`
-
-    // Create more detailed title based on representative type
-    let detailedTitle = rep.office
-    if (rep.type === "alderperson") {
-      detailedTitle = `City of Milwaukee Alderperson - District ${rep.district}`
-      if (rep.division && rep.division !== "City of Milwaukee") {
-        detailedTitle = `${rep.division} Alderperson - District ${rep.district}`
-      }
-    } else if (rep.type === "supervisor") {
-      detailedTitle = `Milwaukee County Supervisor - District ${rep.district}`
-    }
-
-    office.textContent = detailedTitle
+    office.id = `official-office-${rep.name.replace(/\s+/g, "-").toLowerCase()}`
+    office.textContent = rep.office
     office.style.fontSize = "0.9em"
     office.style.color = "var(--text-muted)"
     office.style.fontWeight = "500"
     info.appendChild(office)
+
+    // Add population info for congressional district
+    if (rep.type === "congressional" && rep.population) {
+      const population = document.createElement("div")
+      population.className = "official-population"
+      population.textContent = `Population: ${rep.population.toLocaleString()}`
+      population.style.fontSize = "0.8em"
+      population.style.color = "var(--text-muted)"
+      population.style.marginTop = "0.2rem"
+      info.appendChild(population)
+    }
 
     element.appendChild(info)
 
@@ -1545,7 +1601,10 @@ class NewTabApp {
       websiteLink.rel = "noopener noreferrer"
       websiteLink.textContent = "Website"
       websiteLink.style.marginRight = "0.5rem"
-      websiteLink.setAttribute('aria-label', `Visit ${rep.name}'s official website`)
+      websiteLink.setAttribute(
+        "aria-label",
+        `Visit ${rep.name}'s official website`
+      )
       links.appendChild(websiteLink)
     }
 
@@ -1553,8 +1612,17 @@ class NewTabApp {
       const emailLink = document.createElement("a")
       emailLink.href = `mailto:${rep.email}`
       emailLink.textContent = "Email"
-      emailLink.setAttribute('aria-label', `Send email to ${rep.name}`)
+      emailLink.style.marginRight = "0.5rem"
+      emailLink.setAttribute("aria-label", `Send email to ${rep.name}`)
       links.appendChild(emailLink)
+    }
+
+    if (rep.phone) {
+      const phoneLink = document.createElement("a")
+      phoneLink.href = `tel:${rep.phone}`
+      phoneLink.textContent = "Phone"
+      phoneLink.setAttribute("aria-label", `Call ${rep.name} at ${rep.phone}`)
+      links.appendChild(phoneLink)
     }
 
     if (links.children.length > 0) {
@@ -1627,15 +1695,15 @@ class NewTabApp {
     const container = document.getElementById("officials-list")
     container.innerHTML = `
       <div class="empty-state">
-        <h3>Welcome to Milwaukee County Representatives</h3>
-        <p>Enter a Milwaukee County address to see your local representatives.</p>
+        <h3>Welcome to Milwaukee Area Representatives</h3>
+        <p>Enter a Milwaukee Area address to see your local representatives.</p>
         <p><strong>This extension shows:</strong></p>
         <ul style="text-align: left; margin: 1rem 0;">
           <li>City Alderperson</li>
           <li>County Supervisor</li>
           <li>Contact information and websites</li>
         </ul>
-        <p><small>Powered by Milwaukee County API</small></p>
+        <p><small>Powered by Joe's API</small></p>
       </div>
     `
   }
@@ -1645,7 +1713,7 @@ class NewTabApp {
     container.innerHTML = `
       <div class="empty-state">
         <h3>Enter an address to see your elected officials</h3>
-        <p>Enter a Milwaukee County address above to find your local representatives.</p>
+        <p>Enter a Milwaukee area address above to find your local representatives.</p>
       </div>
     `
     // Show locate button since no address is set
@@ -1659,11 +1727,11 @@ class NewTabApp {
     const container = document.getElementById("officials-list")
     container.innerHTML = `
       <div class="empty-state">
-        <h3>Address Not Found in Milwaukee County</h3>
+        <h3>Address Not Found in Milwaukee Area</h3>
         <p>No representatives found for: <strong>${address}</strong></p>
-        <p>This extension only works for Milwaukee County addresses. Please try:</p>
+        <p>This extension only works for Milwaukee area addresses. Please try:</p>
         <ul style="text-align: left; margin: 1rem 0;">
-          <li>A more specific Milwaukee County address</li>
+          <li>A more specific Milwaukee area address</li>
           <li>Including ZIP code (53xxx)</li>
           <li>City names like Milwaukee, Wauwatosa, West Allis</li>
         </ul>
@@ -1697,7 +1765,7 @@ class NewTabApp {
   }
 
   async testMilwaukeeApi() {
-    console.log("Testing Milwaukee County API...")
+    console.log("Testing Milwaukee Area API...")
     try {
       const testAddress = "Milwaukee, WI"
       console.log("Testing with address:", testAddress)
@@ -1709,7 +1777,7 @@ class NewTabApp {
       if (milwaukeeData && milwaukeeData.isInMilwaukeeCounty) {
         console.log("✅ Milwaukee API works! Data:", milwaukeeData)
         alert(
-          `🎉 Milwaukee County API Working!\n\nFound ${
+          `🎉 Milwaukee area API Working!\n\nFound ${
             milwaukeeData.representatives.length
           } representatives:\n${milwaukeeData.representatives
             .map((rep) => `• ${rep.name} (${rep.type})`)

@@ -12,8 +12,9 @@
     <script src="script.js"></script>
     <script src="propublica-api.js"></script>
     <script src="milwaukee-api.js"></script>
-    <title>New Tab - Milwaukee Government Representatives</title>
-    <meta name="description" content="Find your local Milwaukee County government representatives, including alderpersons and county supervisors">
+    <title>New Tab - Milwaukee Government</title>
+    <meta name="description"
+        content="Find your government representatives, including alderpersons and county supervisors">
 </head>
 
 <body>
@@ -24,9 +25,12 @@
                 <h1>New Tab - Milwaukee</h1>
                 <div class="header-controls" role="toolbar" aria-label="Application controls">
                     <span class="version-indicator" aria-label="Application version 2.0.0">v2.0.0</span>
-                    <button id="test-btn" class="btn-icon" title="Test JavaScript functionality" aria-label="Test JavaScript functionality">🧪</button>
-                    <button id="theme-toggle" class="btn-icon" title="Toggle between light and dark themes" aria-label="Toggle theme">🌙</button>
-                    <button id="settings-btn" class="btn-icon" title="Open application settings" aria-label="Open settings">⚙️</button>
+                    <button id="test-btn" class="btn-icon" title="Test JavaScript functionality"
+                        aria-label="Test JavaScript functionality">🧪</button>
+                    <button id="theme-toggle" class="btn-icon" title="Toggle between light and dark themes"
+                        aria-label="Toggle theme">🌙</button>
+                    <button id="settings-btn" class="btn-icon" title="Open application settings"
+                        aria-label="Open settings">⚙️</button>
                 </div>
             </header>
 
@@ -36,12 +40,8 @@
                 <section class="search-section">
                     <div class="search-container">
                         <form id="search-form" class="search-form" role="search">
-                            <input type="search" 
-                                   id="search-input" 
-                                   class="search-input" 
-                                   placeholder="Search the web..." 
-                                   aria-label="Search the web"
-                                   autocomplete="off">
+                            <input type="search" id="search-input" class="search-input" placeholder="Search the web..."
+                                aria-label="Search the web" autocomplete="off">
                             <button type="submit" class="search-button" aria-label="Search">🔍</button>
                         </form>
                     </div>
@@ -53,19 +53,22 @@
                     <div id="favorites-grid" class="favorites-grid" role="grid" aria-label="Favorite websites grid">
                         <!-- Favorites will be dynamically populated -->
                     </div>
-                    <a href="#" id="add-favorite" class="add-favorite-link" aria-label="Add new favorite website">+ Add site</a>
+                    <a href="#" id="add-favorite" class="add-favorite-link" aria-label="Add new favorite website">+ Add
+                        site</a>
                 </section>
             </div>
         </main>
 
         <!-- Show sidebar button (hidden when sidebar is visible) -->
-        <button id="show-sidebar-btn" class="show-sidebar-btn hidden" aria-label="Show representatives sidebar" title="Show representatives">→</button>
+        <button id="show-sidebar-btn" class="show-sidebar-btn hidden" aria-label="Show representatives sidebar"
+            title="Show representatives">→</button>
 
         <!-- Civic information sidebar -->
         <aside class="sidebar" id="civic-sidebar" role="complementary" aria-labelledby="sidebar-heading">
             <div class="sidebar-header">
-                <h2 id="sidebar-heading">Milwaukee County Representatives</h2>
-                <button id="toggle-sidebar" class="btn-icon" aria-label="Hide representatives sidebar" title="Hide sidebar">←</button>
+                <h2 id="sidebar-heading">Representatives</h2>
+                <button id="toggle-sidebar" class="btn-icon" aria-label="Hide representatives sidebar"
+                    title="Hide sidebar">←</button>
             </div>
 
             <!-- Address input section (shown when no data) -->
@@ -73,13 +76,12 @@
                 <h3 id="address-section-heading" class="visually-hidden">Enter your address</h3>
                 <label for="address-input">Your Milwaukee Area Address:</label>
                 <div class="address-input-group">
-                    <input type="text" 
-                           id="address-input" 
-                           placeholder="e.g., Milwaukee, WI 53202"
-                           aria-describedby="address-help"
-                           autocomplete="street-address">
-                    <button id="locate-btn" class="btn-icon" title="Use current location" aria-label="Use current location">📍</button>
-                    <button id="refresh-btn" class="btn-icon" title="Refresh representatives data" aria-label="Refresh data">🔄</button>
+                    <input type="text" id="address-input" placeholder="e.g., Milwaukee, WI 53202"
+                        aria-describedby="address-help" autocomplete="street-address">
+                    <button id="locate-btn" class="btn-icon" title="Use current location"
+                        aria-label="Use current location">📍</button>
+                    <button id="refresh-btn" class="btn-icon" title="Refresh representatives data"
+                        aria-label="Refresh data">🔄</button>
                 </div>
                 <div class="address-actions">
                     <button id="update-address" class="btn-primary" aria-describedby="address-help">Update</button>
@@ -96,11 +98,14 @@
                 <div class="current-address">
                     <div class="address-info">
                         <span class="address-label">Showing representatives for</span>
-                        <span class="address-value" id="current-address-text" aria-describedby="current-address-controls"></span>
+                        <span class="address-value" id="current-address-text"
+                            aria-describedby="current-address-controls"></span>
                     </div>
                     <div class="address-controls" id="current-address-controls">
-                        <button id="edit-address-btn" class="btn-icon btn-small" title="Change address" aria-label="Change address">✏️</button>
-                        <button id="refresh-address-btn" class="btn-icon btn-small" title="Refresh representatives data" aria-label="Refresh representatives data">🔄</button>
+                        <button id="edit-address-btn" class="btn-icon btn-small" title="Change address"
+                            aria-label="Change address">✏️</button>
+                        <button id="refresh-address-btn" class="btn-icon btn-small" title="Refresh representatives data"
+                            aria-label="Refresh representatives data">🔄</button>
                     </div>
                 </div>
             </div>
@@ -117,21 +122,25 @@
     </div>
 
     <!-- Settings Modal -->
-    <div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title" aria-describedby="settings-description">
+    <div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title"
+        aria-describedby="settings-description">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="settings-title">Application Settings</h3>
-                <button id="close-settings" class="btn-icon" aria-label="Close settings dialog" title="Close settings">×</button>
+                <button id="close-settings" class="btn-icon" aria-label="Close settings dialog"
+                    title="Close settings">×</button>
             </div>
             <div class="modal-body">
-                <p id="settings-description" class="visually-hidden">Configure application preferences and display options</p>
+                <p id="settings-description" class="visually-hidden">Configure application preferences and display
+                    options</p>
                 <fieldset class="setting-group">
                     <legend class="visually-hidden">Display preferences</legend>
                     <label>
                         <input type="checkbox" id="show-sidebar" aria-describedby="sidebar-setting-help">
                         Show government information sidebar
                     </label>
-                    <div id="sidebar-setting-help" class="setting-help" style="display: none;">Toggle the visibility of the representatives sidebar</div>
+                    <div id="sidebar-setting-help" class="setting-help" style="display: none;">Toggle the visibility of
+                        the representatives sidebar</div>
                 </fieldset>
                 <fieldset class="setting-group">
                     <legend class="visually-hidden">Location preferences</legend>
@@ -139,39 +148,47 @@
                         <input type="checkbox" id="auto-location" aria-describedby="location-setting-help">
                         Automatically detect location
                     </label>
-                    <div id="location-setting-help" class="setting-help" style="display: none;">Automatically use your current location to find representatives</div>
+                    <div id="location-setting-help" class="setting-help" style="display: none;">Automatically use your
+                        current location to find representatives</div>
                 </fieldset>
                 <fieldset class="setting-group">
                     <legend>Search Engine</legend>
                     <div class="search-engine-options">
                         <label>
-                            <input type="radio" name="search-engine" value="google" id="search-google" aria-describedby="google-search-help">
+                            <input type="radio" name="search-engine" value="google" id="search-google"
+                                aria-describedby="google-search-help">
                             Google
                         </label>
                         <label>
-                            <input type="radio" name="search-engine" value="bing" id="search-bing" aria-describedby="bing-search-help">
+                            <input type="radio" name="search-engine" value="bing" id="search-bing"
+                                aria-describedby="bing-search-help">
                             Bing
                         </label>
                         <label>
-                            <input type="radio" name="search-engine" value="duckduckgo" id="search-duckduckgo" aria-describedby="ddg-search-help">
+                            <input type="radio" name="search-engine" value="duckduckgo" id="search-duckduckgo"
+                                aria-describedby="ddg-search-help">
                             DuckDuckGo
                         </label>
                         <label>
-                            <input type="radio" name="search-engine" value="startpage" id="search-startpage" aria-describedby="startpage-search-help">
+                            <input type="radio" name="search-engine" value="startpage" id="search-startpage"
+                                aria-describedby="startpage-search-help">
                             Startpage
                         </label>
                     </div>
-                    <div id="google-search-help" class="setting-help" style="display: none;">Use Google for web searches</div>
-                    <div id="bing-search-help" class="setting-help" style="display: none;">Use Microsoft Bing for web searches</div>
-                    <div id="ddg-search-help" class="setting-help" style="display: none;">Use DuckDuckGo for private web searches</div>
-                    <div id="startpage-search-help" class="setting-help" style="display: none;">Use Startpage for private web searches</div>
+                    <div id="google-search-help" class="setting-help" style="display: none;">Use Google for web searches
+                    </div>
+                    <div id="bing-search-help" class="setting-help" style="display: none;">Use Microsoft Bing for web
+                        searches</div>
+                    <div id="ddg-search-help" class="setting-help" style="display: none;">Use DuckDuckGo for private web
+                        searches</div>
+                    <div id="startpage-search-help" class="setting-help" style="display: none;">Use Startpage for
+                        private web searches</div>
                 </fieldset>
                 <div class="setting-group" role="region" aria-labelledby="about-heading">
                     <h4 id="about-heading" class="visually-hidden">About this extension</h4>
                     <p style="color: var(--text-muted); font-size: 0.9rem;">
-                        <strong>Milwaukee County Representatives</strong><br>
-                        This extension shows local government officials for Milwaukee County addresses using the
-                        Milwaukee County API.
+                        <strong>Local Representatives</strong><br>
+                        This extension shows local government officials for Milwaukee area addresses.
                     </p>
                 </div>
             </div>
@@ -179,34 +196,30 @@
     </div>
 
     <!-- Add/Edit Favorite Modal -->
-    <div id="favorite-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="favorite-modal-title" aria-describedby="favorite-modal-description">
+    <div id="favorite-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="favorite-modal-title"
+        aria-describedby="favorite-modal-description">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="favorite-modal-title">Add Favorite Site</h3>
-                <button id="close-favorite-modal" class="btn-icon" aria-label="Close favorite site dialog" title="Close dialog">×</button>
+                <button id="close-favorite-modal" class="btn-icon" aria-label="Close favorite site dialog"
+                    title="Close dialog">×</button>
             </div>
             <div class="modal-body">
                 <p id="favorite-modal-description" class="visually-hidden">Add or edit a favorite website shortcut</p>
                 <form id="favorite-form" novalidate>
                     <div class="form-group">
                         <label for="site-name">Site Name:</label>
-                        <input type="text" 
-                               id="site-name" 
-                               placeholder="e.g., Google"
-                               required
-                               aria-describedby="name-help"
-                               autocomplete="off">
-                        <div id="name-help" class="input-help" style="display: none;">Enter a display name for this website</div>
+                        <input type="text" id="site-name" placeholder="e.g., Google" required
+                            aria-describedby="name-help" autocomplete="off">
+                        <div id="name-help" class="input-help" style="display: none;">Enter a display name for this
+                            website</div>
                     </div>
                     <div class="form-group">
                         <label for="site-url">URL:</label>
-                        <input type="url" 
-                               id="site-url" 
-                               placeholder="https://example.com"
-                               required
-                               aria-describedby="url-help"
-                               autocomplete="url">
-                        <div id="url-help" class="input-help" style="display: none;">Enter the complete web address (including https://)</div>
+                        <input type="url" id="site-url" placeholder="https://example.com" required
+                            aria-describedby="url-help" autocomplete="url">
+                        <div id="url-help" class="input-help" style="display: none;">Enter the complete web address
+                            (including https://)</div>
                     </div>
                     <div class="modal-actions">
                         <button type="submit" id="save-favorite" class="btn-primary">Save Favorite</button>

@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
-    "name": "Milwaukee County Government Representatives",
+    "name": "Local Milwaukee Government Representatives",
     "version": "2.0.0",
-    "description": "New tab page featuring Milwaukee County local representatives, favorite websites, and web search. Find your alderperson and county supervisor with address lookup.",
+    "description": "New tab page featuring local Milwaukee government representatives, favorite websites, and web search. Find your alderperson and county supervisor with address lookup.",
     "chrome_url_overrides": {
         "newtab": "index.html"
     },

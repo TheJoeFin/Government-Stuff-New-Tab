@@ -1,15 +1,24 @@
-# Milwaukee County Government Representatives - Chrome Extension
+# Milwaukee Area Government Representatives - Chrome Extension
 
-A Chrome extension that replaces the new tab page to help Milwaukee County residents stay connected with their local government representatives.
+A Chrome extension that replaces your new tab page with a beautiful, functional interface showing your complete government representation from city to federal level. Simply enter your Milwaukee area address to instantly see your Alderperson, County Supervisor, State Representatives, and Congressional Representative - complete with direct contact information.
+
+Perfect for Milwaukee area residents who want to stay engaged with local democracy and easily contact their elected officials.
 
 ## Features
 
-- **🏛️ Local Representatives**: View your City Alderperson and County Supervisor
-- **📍 Address-Based Lookup**: Enter any Milwaukee County address to find representatives
+- **🏛️ Complete Government Representation**: View all your elected officials from local to federal level
+  - City Alderperson (with email and phone contact)
+  - Milwaukee County Supervisor
+  - Wisconsin State Assembly Representative
+  - Wisconsin State Senator
+  - U.S. Congressional Representative
+- **📍 Address-Based Lookup**: Enter any Milwaukee area address to find representatives
+- **📞 Direct Contact**: Click-to-call phone numbers and email links for immediate contact
 - **🌐 Quick Access**: Direct links to representative websites and contact information
 - **🔗 Favorite Sites**: Customizable grid of your favorite websites
 - **🌙 Dark Mode**: Toggle between light and dark themes
 - **🔍 Web Search**: Built-in search with multiple engine options (Google, Bing, DuckDuckGo, Startpage)
+- **♿ Accessibility**: Full screen reader support and keyboard navigation
 
 ## Installation
 
@@ -32,16 +41,28 @@ Then follow the installation steps above.
 
 ## Usage
 
-1. **Enter Your Address**: When you open a new tab, enter a Milwaukee County address
-2. **View Representatives**: See your local alderperson and county supervisor
-3. **Contact Information**: Click website links or email addresses to contact representatives
-4. **Customize**: Add favorite websites and adjust settings as needed
+1. **Enter Your Address**: When you open a new tab, enter a Milwaukee area address
+2. **View Representatives**: See all your elected officials displayed from local to federal level:
+   - **City Level**: Alderperson with direct email and phone contact
+   - **County Level**: Supervisor with website and contact info
+   - **State Level**: Assembly Representative and State Senator
+   - **Federal Level**: U.S. Congressional Representative
+3. **Contact Officials**: Click email, phone, or website buttons to contact representatives directly
+4. **Customize Your Experience**:
+   - Add favorite websites to the main grid
+   - Toggle dark/light mode
+   - Choose your preferred search engine
+   - Collapse/expand the government information sidebar
 
 ## Data Sources
 
-- **Milwaukee County API**: Provides local representative information
+- **Milwaukee Area API**: Provides comprehensive representative information including:
+  - City Alderperson details with contact information
+  - County Supervisor information
+  - Wisconsin State Assembly and Senate representatives
+  - U.S. Congressional representative data
 - **Google Civic Information API**: Available for additional government data (requires API key)
-- **ProPublica Congress API**: Available for federal representative details (requires API key)
+- **ProPublica Congress API**: Available for enhanced federal representative details (requires API key)
 
 ## API Configuration (Optional)
 
@@ -78,7 +99,7 @@ To enable additional features:
 ├── script.js              # Main application logic
 ├── styles.css             # Styling
 ├── background.js          # Service worker
-├── milwaukee-api.js       # Milwaukee County API client
+├── milwaukee-api.js       # Milwaukee API client
 ├── propublica-api.js      # ProPublica API client
 ├── options.html           # Settings page
 ├── options.js             # Settings logic
@@ -104,11 +125,13 @@ MIT License - see LICENSE file for details
 ## Support
 
 For issues or questions:
+
 - Open an issue on GitHub
 - Check the browser console for error messages
-- Verify your address is in Milwaukee County
+- Verify your address is in Milwaukee area
 
 ## Version History
 
-- **v2.0.0**: Milwaukee County focus, modern UI, dark mode
+- **v2.0.1** (Latest): Enhanced alderperson contact details, reversed representative display order (local to federal)
+- **v2.0.0**: Milwaukee focus, modern UI, dark mode, comprehensive representative coverage
 - **v1.0.0**: Initial release with Google Civic API integration
