@@ -697,8 +697,6 @@ class NewTabApp {
     const item = document.createElement("a")
     item.className = "favorite-item fade-in"
     item.href = favorite.url
-    item.target = "_blank"
-    item.rel = "noopener noreferrer"
     item.setAttribute("role", "gridcell")
     item.setAttribute("aria-label", `Visit ${favorite.name} website`)
 
