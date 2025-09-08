@@ -679,6 +679,52 @@ class NewTabApp {
       if (e.target.classList.contains("modal")) {
         e.target.classList.add("hidden")
       }
+
+      // Hide context menu when clicking outside
+      if (
+        !e.target.closest("#context-menu") &&
+        !e.target.closest(".favorite-item")
+      ) {
+        this.hideContextMenu()
+      }
+    })
+
+    // Context menu event handlers
+    document.getElementById("context-edit").addEventListener("click", () => {
+      if (this.contextMenuFavorite) {
+        this.editFavorite(this.contextMenuFavorite)
+        this.hideContextMenu()
+      }
+    })
+
+    document.getElementById("context-delete").addEventListener("click", () => {
+      if (this.contextMenuFavorite) {
+        this.deleteFavorite(this.contextMenuFavorite.id)
+      }
+    })
+
+    // Context menu keyboard navigation
+    document.addEventListener("keydown", (e) => {
+      const contextMenu = document.getElementById("context-menu")
+      if (contextMenu.classList.contains("show")) {
+        if (e.key === "Escape") {
+          e.preventDefault()
+          this.hideContextMenu()
+        } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault()
+          const items = contextMenu.querySelectorAll(".context-menu-item")
+          const currentIndex = Array.from(items).indexOf(document.activeElement)
+          let nextIndex
+
+          if (e.key === "ArrowDown") {
+            nextIndex = (currentIndex + 1) % items.length
+          } else {
+            nextIndex = (currentIndex - 1 + items.length) % items.length
+          }
+
+          items[nextIndex].focus()
+        }
+      }
     })
   }
 
@@ -699,6 +745,7 @@ class NewTabApp {
     item.href = favorite.url
     item.setAttribute("role", "gridcell")
     item.setAttribute("aria-label", `Visit ${favorite.name} website`)
+    item.dataset.favoriteId = favorite.id
 
     const icon = document.createElement("img")
     icon.className = "icon"
@@ -713,20 +760,14 @@ class NewTabApp {
     name.className = "name"
     name.textContent = favorite.name
 
-    const editBtn = document.createElement("button")
-    editBtn.className = "edit-btn"
-    editBtn.textContent = "✏️"
-    editBtn.setAttribute("aria-label", `Edit ${favorite.name} favorite`)
-    editBtn.setAttribute("title", `Edit ${favorite.name}`)
-    editBtn.onclick = (e) => {
+    // Add context menu event listener
+    item.addEventListener("contextmenu", (e) => {
       e.preventDefault()
-      e.stopPropagation()
-      this.editFavorite(favorite)
-    }
+      this.showContextMenu(e, favorite)
+    })
 
     item.appendChild(icon)
     item.appendChild(name)
-    item.appendChild(editBtn)
 
     return item
   }
@@ -839,6 +880,62 @@ class NewTabApp {
     this.saveFavorites()
     this.renderFavorites()
     this.hideFavoriteModal()
+  }
+
+  // Context Menu Management
+  showContextMenu(event, favorite) {
+    const contextMenu = document.getElementById("context-menu")
+    const editItem = document.getElementById("context-edit")
+    const deleteItem = document.getElementById("context-delete")
+
+    // Store the current favorite for the context menu actions
+    this.contextMenuFavorite = favorite
+
+    // Position the context menu
+    contextMenu.style.left = `${event.pageX}px`
+    contextMenu.style.top = `${event.pageY}px`
+    contextMenu.classList.add("show")
+
+    // Update aria labels with specific favorite name
+    editItem.setAttribute("aria-label", `Edit ${favorite.name} favorite`)
+    deleteItem.setAttribute("aria-label", `Delete ${favorite.name} favorite`)
+
+    // Focus the first item for keyboard navigation
+    setTimeout(() => {
+      editItem.focus()
+    }, 10)
+
+    // Announce to screen reader
+    this.announceToScreenReader(`Context menu opened for ${favorite.name}`)
+  }
+
+  hideContextMenu() {
+    const contextMenu = document.getElementById("context-menu")
+    contextMenu.classList.remove("show")
+    this.contextMenuFavorite = null
+  }
+
+  deleteFavorite(favoriteId) {
+    const favorite = this.favorites.find((f) => f.id === favoriteId)
+    if (!favorite) return
+
+    // Confirm deletion
+    if (!confirm(`Delete "${favorite.name}" from favorites?`)) {
+      return
+    }
+
+    // Remove from array
+    this.favorites = this.favorites.filter((f) => f.id !== favoriteId)
+
+    // Save and re-render
+    this.saveFavorites()
+    this.renderFavorites()
+
+    // Accessibility announcement
+    this.announceToScreenReader(`${favorite.name} deleted from favorites`)
+
+    // Hide context menu
+    this.hideContextMenu()
   }
 
   // Accessibility Methods
