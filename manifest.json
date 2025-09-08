@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
-    "name": "Local Milwaukee Government Representatives",
-    "version": "2.0.0",
-    "description": "New tab page with Milwaukee government representatives, favorite sites, and web search. Find your alderperson easily.",
+    "name": "Milwaukee Government Representatives & Officials",
+    "version": "2.1.0",
+    "description": "New tab page with comprehensive Milwaukee area government representatives, local officials, and favorite sites. Find your alderperson and all government officials easily.",
     "chrome_url_overrides": {
         "newtab": "index.html"
     },

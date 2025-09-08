@@ -31,6 +31,7 @@ class NewTabApp {
 
     this.propublicaApi = new ProPublicaApi(this.settings.propublicaApiKey)
     this.milwaukeeApi = new MilwaukeeApi()
+    this.governmentOfficials = new GovernmentOfficials()
 
     this.init()
   }
@@ -1334,55 +1335,152 @@ class NewTabApp {
   }
 
   renderMilwaukeeDataOnly() {
-    if (!this.milwaukeeData || !this.milwaukeeData.representatives.length) {
-      return
-    }
-
     const container = document.getElementById("officials-list")
     container.innerHTML = ""
 
-    // Group representatives by division for hierarchical display
-    const groupedReps = {
-      "City of Milwaukee": [],
-      "Milwaukee County": [],
-      "Wisconsin State": [],
-      "U.S. Congress": [],
+    // Define the division structure with both local and comprehensive officials
+    const divisionStructure = {
+      "City of Milwaukee": {
+        color: "#ffa500",
+        localReps: [],
+        allOfficials: this.governmentOfficials.getOfficialsByLevel("city"),
+      },
+      "Milwaukee County": {
+        color: "#0077be",
+        localReps: [],
+        allOfficials: this.governmentOfficials.getOfficialsByLevel("county"),
+      },
+      "Wisconsin State": {
+        color: "#228b22",
+        localReps: [],
+        allOfficials: this.governmentOfficials.getOfficialsByLevel("state"),
+      },
+      "Federal Government": {
+        color: "#dc143c",
+        localReps: [],
+        allOfficials: this.governmentOfficials
+          .getOfficialsByLevel("federal")
+          .filter(
+            (official) =>
+              !(
+                official.title.includes("U.S. Senator") &&
+                official.responsibilities.some((resp) =>
+                  resp.includes("Wisconsin")
+                )
+              )
+          ),
+      },
     }
 
-    this.milwaukeeData.representatives.forEach((rep) => {
-      if (groupedReps[rep.division]) {
-        groupedReps[rep.division].push(rep)
+    // Add local representatives to their respective divisions if available
+    if (this.milwaukeeData && this.milwaukeeData.representatives.length) {
+      console.log(
+        "Milwaukee representatives found:",
+        this.milwaukeeData.representatives
+      )
+      this.milwaukeeData.representatives.forEach((rep) => {
+        console.log(`Processing rep: ${rep.name} in division: ${rep.division}`)
+
+        // Map old division names to new ones
+        let targetDivision = rep.division
+        if (rep.division === "U.S. Congress") {
+          targetDivision = "Federal Government"
+          console.log(`Mapping ${rep.division} to ${targetDivision}`)
+        }
+
+        if (divisionStructure[targetDivision]) {
+          divisionStructure[targetDivision].localReps.push(rep)
+          console.log(`Added ${rep.name} to ${targetDivision}`)
+        } else {
+          console.log(`Division ${targetDivision} not found in structure`)
+        }
+      })
+    } else {
+      console.log("No Milwaukee data or representatives found")
+    }
+
+    console.log("Available divisions:", Object.keys(divisionStructure))
+
+    // Always add Wisconsin senators as local representatives for Wisconsin addresses
+    const wisconsinSenators = this.governmentOfficials
+      .getOfficialsByLevel("federal")
+      .filter(
+        (official) =>
+          official.title.includes("U.S. Senator") &&
+          official.responsibilities.some((resp) => resp.includes("Wisconsin"))
+      )
+
+    wisconsinSenators.forEach((senator) => {
+      // Create a representative object similar to Milwaukee API format
+      const senatorRep = {
+        name: senator.name,
+        title: senator.title,
+        party: senator.party,
+        division: "Federal Government",
+        contact: senator.contact,
+        responsibilities: senator.responsibilities,
+      }
+      console.log(`Adding Wisconsin senator: ${senator.name}`)
+      divisionStructure["Federal Government"].localReps.push(senatorRep)
+    })
+
+    // Debug: Show what's in each division
+    Object.entries(divisionStructure).forEach(([division, data]) => {
+      console.log(
+        `${division}: ${data.localReps.length} local reps, ${data.allOfficials.length} all officials`
+      )
+      if (data.localReps.length > 0) {
+        console.log(
+          `  Local reps: ${data.localReps.map((rep) => rep.name).join(", ")}`
+        )
       }
     })
 
-    // Render each division group that has representatives
-    Object.entries(groupedReps).forEach(([division, reps]) => {
-      if (reps.length === 0) return
-
+    // Render each division with integrated local + comprehensive officials
+    Object.entries(divisionStructure).forEach(([division, data]) => {
       const divisionSection = document.createElement("div")
-      divisionSection.className = "division-group fade-in milwaukee-section"
-
-      // Different colors for different levels
-      const colors = {
-        "U.S. Congress": "#dc143c",
-        "Wisconsin State": "#228b22",
-        "Milwaukee County": "#0077be",
-        "City of Milwaukee": "#ffa500",
-      }
-      divisionSection.style.borderLeft = `4px solid ${
-        colors[division] || "#0077be"
-      }`
+      divisionSection.className = "division-group fade-in integrated-section"
+      divisionSection.style.borderLeft = `4px solid ${data.color}`
 
       const header = document.createElement("div")
       header.className = "division-header"
       header.textContent = division
-      header.style.color = colors[division] || "#0077be"
+      header.style.color = data.color
       divisionSection.appendChild(header)
 
-      reps.forEach((rep) => {
-        const officialElement = this.createMilwaukeeOfficialElement(rep)
-        divisionSection.appendChild(officialElement)
-      })
+      // Add local representatives first (if any)
+      if (data.localReps.length > 0) {
+        const localSubheader = document.createElement("div")
+        localSubheader.className = "subsection-header local-subsection"
+        localSubheader.textContent = "Your Representatives"
+        divisionSection.appendChild(localSubheader)
+
+        data.localReps.forEach((rep) => {
+          const officialElement = this.createCompactOfficialElement(
+            rep,
+            "local",
+            data.color
+          )
+          divisionSection.appendChild(officialElement)
+        })
+      }
+
+      // Add all officials for this level
+      if (data.allOfficials.length > 0) {
+        const allSubheader = document.createElement("div")
+        allSubheader.className = "subsection-header all-subsection"
+        allSubheader.textContent = `All ${division} Officials`
+        divisionSection.appendChild(allSubheader)
+
+        data.allOfficials.forEach((official) => {
+          const officialElement = this.createCompactOfficialElement(
+            official,
+            "comprehensive",
+            data.color
+          )
+          divisionSection.appendChild(officialElement)
+        })
+      }
 
       container.appendChild(divisionSection)
     })
@@ -1390,12 +1488,282 @@ class NewTabApp {
     container.setAttribute("aria-busy", "false")
 
     // Announce completion to screen readers
+    const totalLocalReps = this.milwaukeeData
+      ? this.milwaukeeData.representatives.length
+      : 0
+    const totalAllOfficials = Object.values(
+      this.governmentOfficials.getAllOfficials()
+    ).reduce((sum, officials) => sum + officials.length, 0)
+
     this.announceToScreenReader(
-      `Loaded ${this.milwaukeeData.representatives.length} representatives`
+      `Loaded ${totalLocalReps} local representatives and ${totalAllOfficials} government officials`
     )
 
     // Hide address input and show compact display
     this.showCompactAddressDisplay()
+  }
+
+  createCompactOfficialElement(official, type, themeColor) {
+    const element = document.createElement("div")
+    element.className = `official compact-official ${type}-official`
+    element.setAttribute("role", "listitem")
+
+    const uniqueId = `${official.name
+      .replace(/\s+/g, "-")
+      .toLowerCase()}-${type}`
+    element.setAttribute("aria-labelledby", `name-${uniqueId}`)
+
+    // Main container with name and menu button
+    const mainContainer = document.createElement("div")
+    mainContainer.className = "official-main"
+
+    // Name display
+    const nameContainer = document.createElement("div")
+    nameContainer.className = "official-name-container"
+
+    const name = document.createElement("span")
+    name.className = "official-name"
+    name.id = `name-${uniqueId}`
+    name.textContent = official.name || official.title
+
+    nameContainer.appendChild(name)
+
+    // Menu button
+    const menuButton = document.createElement("button")
+    menuButton.className = "official-menu-btn"
+    menuButton.innerHTML = "⋯"
+    menuButton.setAttribute(
+      "aria-label",
+      `Show details for ${official.name || official.title}`
+    )
+    menuButton.setAttribute("aria-expanded", "false")
+    menuButton.setAttribute("aria-controls", `details-${uniqueId}`)
+
+    mainContainer.appendChild(nameContainer)
+    mainContainer.appendChild(menuButton)
+
+    // Details panel (initially hidden)
+    const detailsPanel = document.createElement("div")
+    detailsPanel.className = "official-details-panel hidden"
+    detailsPanel.id = `details-${uniqueId}`
+    detailsPanel.setAttribute("aria-hidden", "true")
+
+    // Build details content based on type
+    if (type === "local") {
+      this.buildLocalOfficialDetails(detailsPanel, official, themeColor)
+    } else {
+      this.buildComprehensiveOfficialDetails(detailsPanel, official, themeColor)
+    }
+
+    // Menu button click handler
+    menuButton.addEventListener("click", () => {
+      const isExpanded = menuButton.getAttribute("aria-expanded") === "true"
+      const newState = !isExpanded
+
+      menuButton.setAttribute("aria-expanded", newState.toString())
+      detailsPanel.setAttribute("aria-hidden", (!newState).toString())
+
+      if (newState) {
+        detailsPanel.classList.remove("hidden")
+        detailsPanel.classList.add("visible")
+        menuButton.innerHTML = "⋀"
+        menuButton.style.color = themeColor
+      } else {
+        detailsPanel.classList.add("hidden")
+        detailsPanel.classList.remove("visible")
+        menuButton.innerHTML = "⋯"
+        menuButton.style.color = ""
+      }
+
+      // Announce to screen readers
+      this.announceToScreenReader(
+        newState
+          ? `Details expanded for ${official.name || official.title}`
+          : `Details collapsed`
+      )
+    })
+
+    element.appendChild(mainContainer)
+    element.appendChild(detailsPanel)
+
+    return element
+  }
+
+  buildLocalOfficialDetails(panel, rep, themeColor) {
+    panel.innerHTML = ""
+
+    // Title/Office
+    if (rep.office) {
+      const office = document.createElement("div")
+      office.className = "detail-item office"
+      office.innerHTML = `<strong>Office:</strong> ${rep.office}`
+      panel.appendChild(office)
+    }
+
+    // District info
+    if (rep.district) {
+      const district = document.createElement("div")
+      district.className = "detail-item district"
+      district.innerHTML = `<strong>District:</strong> ${rep.district}`
+      panel.appendChild(district)
+    }
+
+    // Population (for congressional)
+    if (rep.population) {
+      const population = document.createElement("div")
+      population.className = "detail-item population"
+      population.innerHTML = `<strong>Population:</strong> ${rep.population.toLocaleString()}`
+      panel.appendChild(population)
+    }
+
+    // Contact links
+    const contactContainer = document.createElement("div")
+    contactContainer.className = "contact-links"
+
+    if (rep.website) {
+      const websiteLink = document.createElement("a")
+      websiteLink.href = rep.website
+      websiteLink.target = "_blank"
+      websiteLink.rel = "noopener noreferrer"
+      websiteLink.textContent = "Website"
+      websiteLink.className = "contact-link"
+      websiteLink.style.borderColor = themeColor
+      contactContainer.appendChild(websiteLink)
+    }
+
+    if (rep.email) {
+      const emailLink = document.createElement("a")
+      emailLink.href = `mailto:${rep.email}`
+      emailLink.textContent = "Email"
+      emailLink.className = "contact-link"
+      emailLink.style.borderColor = themeColor
+      contactContainer.appendChild(emailLink)
+    }
+
+    if (rep.phone) {
+      const phoneLink = document.createElement("a")
+      phoneLink.href = `tel:${rep.phone}`
+      phoneLink.textContent = "Phone"
+      phoneLink.className = "contact-link"
+      phoneLink.style.borderColor = themeColor
+      contactContainer.appendChild(phoneLink)
+    }
+
+    if (contactContainer.children.length > 0) {
+      panel.appendChild(contactContainer)
+    }
+  }
+
+  buildComprehensiveOfficialDetails(panel, official, themeColor) {
+    panel.innerHTML = ""
+
+    // Title
+    const title = document.createElement("div")
+    title.className = "detail-item title"
+    title.innerHTML = `<strong>Title:</strong> ${official.title}`
+    panel.appendChild(title)
+
+    // Department
+    if (official.department) {
+      const dept = document.createElement("div")
+      dept.className = "detail-item department"
+      dept.innerHTML = `<strong>Department:</strong> ${official.department}`
+      panel.appendChild(dept)
+    }
+
+    // Term info
+    if (official.term_start || official.term_end) {
+      const term = document.createElement("div")
+      term.className = "detail-item term"
+      let termText = "<strong>Term:</strong> "
+      if (official.term_start && official.term_end) {
+        termText += `${official.term_start} - ${official.term_end}`
+      } else if (official.term_start) {
+        termText += `Since ${official.term_start}`
+      }
+      term.innerHTML = termText
+      panel.appendChild(term)
+    }
+
+    // Key responsibilities (collapsed by default)
+    if (official.responsibilities && official.responsibilities.length > 0) {
+      const responsibilitiesHeader = document.createElement("button")
+      responsibilitiesHeader.className = "responsibilities-header"
+      responsibilitiesHeader.textContent = "Key Responsibilities"
+      responsibilitiesHeader.setAttribute("aria-expanded", "false")
+
+      const responsibilitiesList = document.createElement("ul")
+      responsibilitiesList.className = "responsibilities-list hidden"
+
+      official.responsibilities.slice(0, 3).forEach((resp) => {
+        // Show only first 3
+        const li = document.createElement("li")
+        li.textContent = resp
+        responsibilitiesList.appendChild(li)
+      })
+
+      responsibilitiesHeader.addEventListener("click", () => {
+        const isExpanded =
+          responsibilitiesHeader.getAttribute("aria-expanded") === "true"
+        responsibilitiesHeader.setAttribute(
+          "aria-expanded",
+          (!isExpanded).toString()
+        )
+        responsibilitiesList.classList.toggle("hidden")
+        responsibilitiesHeader.textContent = isExpanded
+          ? "Key Responsibilities"
+          : "Hide Responsibilities"
+      })
+
+      panel.appendChild(responsibilitiesHeader)
+      panel.appendChild(responsibilitiesList)
+    }
+
+    // Contact links
+    if (official.contact) {
+      const contactContainer = document.createElement("div")
+      contactContainer.className = "contact-links"
+
+      if (official.contact.website) {
+        const websiteLink = document.createElement("a")
+        websiteLink.href = official.contact.website
+        websiteLink.target = "_blank"
+        websiteLink.rel = "noopener noreferrer"
+        websiteLink.textContent = "Website"
+        websiteLink.className = "contact-link"
+        websiteLink.style.borderColor = themeColor
+        contactContainer.appendChild(websiteLink)
+      }
+
+      if (official.contact.email) {
+        const emailLink = document.createElement("a")
+        emailLink.href = `mailto:${official.contact.email}`
+        emailLink.textContent = "Email"
+        emailLink.className = "contact-link"
+        emailLink.style.borderColor = themeColor
+        contactContainer.appendChild(emailLink)
+      }
+
+      if (official.contact.phone) {
+        const phoneLink = document.createElement("a")
+        phoneLink.href = `tel:${official.contact.phone}`
+        phoneLink.textContent = "Phone"
+        phoneLink.className = "contact-link"
+        phoneLink.style.borderColor = themeColor
+        contactContainer.appendChild(phoneLink)
+      }
+
+      if (official.contact.office) {
+        const office = document.createElement("div")
+        office.className = "detail-item office-address"
+        office.innerHTML = `<strong>Office:</strong> ${official.contact.office}`
+        panel.appendChild(office)
+      }
+
+      if (contactContainer.children.length > 0) {
+        panel.appendChild(contactContainer)
+      }
+    }
   }
 
   showCompactAddressDisplay() {
@@ -1804,13 +2172,13 @@ class NewTabApp {
   }
 
   renderNoAddressMessage() {
-    const container = document.getElementById("officials-list")
-    container.innerHTML = `
-      <div class="empty-state">
-        <h3>Enter an address to see your elected officials</h3>
-        <p>Enter a Milwaukee area address above to find your local representatives.</p>
-      </div>
-    `
+    // Clear Milwaukee data since we have no address
+    this.milwaukeeData = null
+    this.currentAddress = ""
+
+    // Use the integrated rendering approach with no local data
+    this.renderMilwaukeeDataOnly()
+
     // Show locate button since no address is set
     this.showLocateButton()
 
@@ -1823,16 +2191,21 @@ class NewTabApp {
     container.innerHTML = `
       <div class="empty-state">
         <h3>Address Not Found in Milwaukee Area</h3>
-        <p>No representatives found for: <strong>${address}</strong></p>
-        <p>This extension only works for Milwaukee area addresses. Please try:</p>
+        <p>No local representatives found for: <strong>${address}</strong></p>
+        <p>This extension works best for Milwaukee area addresses. Please try:</p>
         <ul style="text-align: left; margin: 1rem 0;">
           <li>A more specific Milwaukee area address</li>
           <li>Including ZIP code (53xxx)</li>
           <li>City names like Milwaukee, Wauwatosa, West Allis</li>
         </ul>
+        <p><strong>Showing general government officials below:</strong></p>
       </div>
     `
-    // Clear current address since it didn't work
+
+    // Still show comprehensive government officials data even if no local data
+    this.renderAllGovernmentOfficials(container)
+
+    // Clear current address since it didn't work for local data
     this.currentAddress = ""
 
     // Show address input again for retry
@@ -1860,10 +2233,26 @@ class NewTabApp {
   }
 
   async testMilwaukeeApi() {
-    console.log("Testing Milwaukee Area API...")
+    console.log("Testing Milwaukee Area API and Government Officials...")
     try {
+      // Test Government Officials data first
+      const allOfficials = this.governmentOfficials.getAllOfficials()
+      const totalOfficials = Object.values(allOfficials).reduce(
+        (sum, officials) => sum + officials.length,
+        0
+      )
+
+      console.log("✅ Government Officials loaded!", {
+        city: allOfficials.city.length,
+        county: allOfficials.county.length,
+        state: allOfficials.state.length,
+        federal: allOfficials.federal.length,
+        total: totalOfficials,
+      })
+
+      // Test Milwaukee API
       const testAddress = "Milwaukee, WI"
-      console.log("Testing with address:", testAddress)
+      console.log("Testing Milwaukee API with address:", testAddress)
 
       const milwaukeeData = await this.milwaukeeApi.getRepresentatives(
         testAddress
@@ -1872,22 +2261,26 @@ class NewTabApp {
       if (milwaukeeData && milwaukeeData.isInMilwaukeeCounty) {
         console.log("✅ Milwaukee API works! Data:", milwaukeeData)
         alert(
-          `🎉 Milwaukee area API Working!\n\nFound ${
+          `🎉 Extension v2.1.0 Working!\n\n✅ Government Officials: ${totalOfficials} total\n• Federal: ${
+            allOfficials.federal.length
+          }\n• State: ${allOfficials.state.length}\n• County: ${
+            allOfficials.county.length
+          }\n• City: ${allOfficials.city.length}\n\n✅ Milwaukee API: ${
             milwaukeeData.representatives.length
-          } representatives:\n${milwaukeeData.representatives
+          } local reps\n${milwaukeeData.representatives
             .map((rep) => `• ${rep.name} (${rep.type})`)
-            .join("\n")}\n\nExtension v2.0.0 ready!`
+            .join(
+              "\n"
+            )}\n\nExtension v2.1.0 ready with comprehensive government officials!`
         )
       } else {
         alert(
-          "❌ Milwaukee API Test Failed\nNo representatives found for test address.\nCheck console for details."
+          `✅ Government Officials Working!\n\nLoaded ${totalOfficials} comprehensive government officials:\n• Federal: ${allOfficials.federal.length}\n• State: ${allOfficials.state.length}\n• County: ${allOfficials.county.length}\n• City: ${allOfficials.city.length}\n\n❌ Milwaukee API: No local data\n\nExtension v2.1.0 ready!`
         )
       }
     } catch (error) {
-      console.error("Milwaukee API test failed:", error)
-      alert(
-        `❌ Milwaukee API Test Failed\n${error.message}\n\nExtension v2.0.0`
-      )
+      console.error("Test failed:", error)
+      alert(`❌ Test Failed\n${error.message}\n\nExtension v2.1.0`)
     }
   }
 

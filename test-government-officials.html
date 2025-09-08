@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Government Officials Extension</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .test-pass {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+
+        .test-fail {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+
+        .official-count {
+            font-weight: bold;
+            color: #0077be;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Government Officials Extension Test</h1>
+
+    <div id="test-results"></div>
+
+    <script src="government-officials.js"></script>
+    <script>
+        // Test the Government Officials functionality
+        function runTests() {
+            const testResults = document.getElementById('test-results');
+
+            try {
+                // Test 1: Initialize GovernmentOfficials class
+                const govOfficials = new GovernmentOfficials();
+
+                const testSection1 = document.createElement('div');
+                testSection1.className = 'test-section test-pass';
+                testSection1.innerHTML = '<h3>✅ Test 1 PASSED: GovernmentOfficials class initialized successfully</h3>';
+                testResults.appendChild(testSection1);
+
+                // Test 2: Check all levels have data
+                const allOfficials = govOfficials.getAllOfficials();
+                const levels = ['city', 'county', 'state', 'federal'];
+                let allLevelsPass = true;
+
+                levels.forEach(level => {
+                    const officials = allOfficials[level];
+                    if (!officials || officials.length === 0) {
+                        allLevelsPass = false;
+                    }
+                });
+
+                const testSection2 = document.createElement('div');
+                testSection2.className = `test-section ${allLevelsPass ? 'test-pass' : 'test-fail'}`;
+                testSection2.innerHTML = `<h3>${allLevelsPass ? '✅ Test 2 PASSED' : '❌ Test 2 FAILED'}: All government levels have data</h3>`;
+                testResults.appendChild(testSection2);
+
+                // Test 3: Display data counts
+                const testSection3 = document.createElement('div');
+                testSection3.className = 'test-section test-pass';
+                testSection3.innerHTML = `
+                    <h3>📊 Data Summary</h3>
+                    <p><span class="official-count">${allOfficials.federal.length}</span> Federal Officials</p>
+                    <p><span class="official-count">${allOfficials.state.length}</span> State Officials</p>
+                    <p><span class="official-count">${allOfficials.county.length}</span> County Officials</p>
+                    <p><span class="official-count">${allOfficials.city.length}</span> City Officials</p>
+                    <p><strong>Total: <span class="official-count">${Object.values(allOfficials).reduce((sum, officials) => sum + officials.length, 0)}</span> Officials</strong></p>
+                `;
+                testResults.appendChild(testSection3);
+
+                // Test 4: Test search functionality
+                const searchResults = govOfficials.searchOfficials('mayor');
+                const testSection4 = document.createElement('div');
+                testSection4.className = `test-section ${searchResults.length > 0 ? 'test-pass' : 'test-fail'}`;
+                testSection4.innerHTML = `<h3>${searchResults.length > 0 ? '✅ Test 4 PASSED' : '❌ Test 4 FAILED'}: Search functionality works</h3><p>Found ${searchResults.length} results for "mayor"</p>`;
+                testResults.appendChild(testSection4);
+
+                // Test 5: Sample official data structure
+                const sampleOfficial = allOfficials.federal[0];
+                const hasRequiredFields = sampleOfficial.name && sampleOfficial.title && sampleOfficial.contact;
+                const testSection5 = document.createElement('div');
+                testSection5.className = `test-section ${hasRequiredFields ? 'test-pass' : 'test-fail'}`;
+                testSection5.innerHTML = `
+                    <h3>${hasRequiredFields ? '✅ Test 5 PASSED' : '❌ Test 5 FAILED'}: Official data structure is valid</h3>
+                    <p><strong>Sample:</strong> ${sampleOfficial.name} - ${sampleOfficial.title}</p>
+                `;
+                testResults.appendChild(testSection5);
+
+                console.log('✅ All tests completed successfully!');
+                console.log('Government Officials data:', allOfficials);
+
+            } catch (error) {
+                const errorSection = document.createElement('div');
+                errorSection.className = 'test-section test-fail';
+                errorSection.innerHTML = `<h3>❌ CRITICAL ERROR: ${error.message}</h3><pre>${error.stack}</pre>`;
+                testResults.appendChild(errorSection);
+                console.error('Test failed:', error);
+            }
+        }
+
+        // Run tests when page loads
+        window.addEventListener('load', runTests);
+    </script>
+</body>
+
+</html>

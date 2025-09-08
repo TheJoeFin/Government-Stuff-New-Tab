@@ -126,16 +126,28 @@ class MilwaukeeApi {
 
     // Add Congressional Representative (LAST - federal level)
     if (data.congressionalRepresentative && data.congressionalDistrict) {
+      console.log(
+        "Found congressional representative:",
+        data.congressionalRepresentative,
+        "District:",
+        data.congressionalDistrict
+      )
       representatives.push({
         name: data.congressionalRepresentative,
         office: `U.S. Representative - District ${data.congressionalDistrict}`,
-        division: "U.S. Congress",
+        division: "Federal Government",
         email: data.congressionalEmail || null,
         website: data.congressionalWebsite || null,
         district: data.congressionalDistrict,
         type: "congressional",
         party: data.congressionalParty || null,
         population: data.congressionalPopulation || null,
+      })
+    } else {
+      console.log("No congressional representative found in data:", {
+        hasRep: !!data.congressionalRepresentative,
+        hasDistrict: !!data.congressionalDistrict,
+        rawData: data,
       })
     }
 
