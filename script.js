@@ -13,7 +13,6 @@ class NewTabApp {
       showSidebar: true,
       autoLocation: false,
       theme: "light", // Default theme
-      searchEngine: "google", // Default search engine
       apiKey: "",
       propublicaApiKey: "",
     }
@@ -75,7 +74,6 @@ class NewTabApp {
       console.log("UI initialized")
       this.bindEvents()
       console.log("Events bound")
-      console.log("Search engine initialized:", this.settings.searchEngine)
 
       if (this.settings.autoLocation) {
         this.getUserLocation()
@@ -89,37 +87,31 @@ class NewTabApp {
     }
   }
 
-  // Search functionality
+  // Search functionality using Chrome Search API
   handleSearch(query) {
     if (!query.trim()) return
 
-    const searchEngines = {
-      google: "https://www.google.com/search?q=",
-      bing: "https://www.bing.com/search?q=",
-      duckduckgo: "https://duckduckgo.com/?q=",
-      startpage: "https://www.startpage.com/sp/search?query=",
+    // Use Chrome Search API to respect user's default search provider
+    if (typeof chrome !== "undefined" && chrome.search) {
+      chrome.search.query({
+        text: query.trim(),
+        disposition: "CURRENT_TAB"
+      }, () => {
+        // Announce to screen reader
+        this.announceToScreenReader(
+          `Searching for "${query.trim()}" using your default search provider`
+        )
+      })
+    } else {
+      // Fallback for testing environment - use Google
+      const searchUrl = "https://www.google.com/search?q=" + encodeURIComponent(query.trim())
+      window.location.href = searchUrl
+      
+      // Announce to screen reader
+      this.announceToScreenReader(
+        `Searching for "${query.trim()}"`
+      )
     }
-
-    const baseUrl =
-      searchEngines[this.settings.searchEngine] || searchEngines.google
-    const searchUrl = baseUrl + encodeURIComponent(query.trim())
-
-    window.location.href = searchUrl
-
-    // Announce to screen reader
-    this.announceToScreenReader(
-      `Searching ${this.getSearchEngineName()} for "${query.trim()}"`
-    )
-  }
-
-  getSearchEngineName() {
-    const names = {
-      google: "Google",
-      bing: "Bing",
-      duckduckgo: "DuckDuckGo",
-      startpage: "Startpage",
-    }
-    return names[this.settings.searchEngine] || "Google"
   }
 
   // Settings and Storage Management
@@ -421,14 +413,6 @@ class NewTabApp {
     document.getElementById("auto-location").checked =
       this.settings.autoLocation
 
-    // Update search engine radio buttons
-    const searchEngineRadios = document.querySelectorAll(
-      'input[name="search-engine"]'
-    )
-    searchEngineRadios.forEach((radio) => {
-      radio.checked = radio.value === this.settings.searchEngine
-    })
-
     // Update search placeholder
     this.updateSearchPlaceholder()
   }
@@ -436,11 +420,10 @@ class NewTabApp {
   updateSearchPlaceholder() {
     const searchInput = document.getElementById("search-input")
     if (searchInput) {
-      const engineName = this.getSearchEngineName()
-      searchInput.placeholder = `Search with ${engineName}...`
+      searchInput.placeholder = "Search the web..."
       searchInput.setAttribute(
         "aria-label",
-        `Search the web using ${engineName}`
+        "Search the web using your default search provider"
       )
     }
   }
@@ -542,28 +525,6 @@ class NewTabApp {
         this.saveSettings()
       })
     }
-
-    // Search engine radio buttons
-    const searchEngineRadios = document.querySelectorAll(
-      'input[name="search-engine"]'
-    )
-    searchEngineRadios.forEach((radio) => {
-      radio.addEventListener("change", (e) => {
-        if (e.target.checked) {
-          console.log("Search engine changed:", e.target.value)
-          this.settings.searchEngine = e.target.value
-          this.saveSettings()
-
-          // Update search placeholder
-          this.updateSearchPlaceholder()
-
-          // Announce change to screen readers
-          this.announceToScreenReader(
-            `Search engine changed to ${this.getSearchEngineName()}`
-          )
-        }
-      })
-    })
 
     // Sidebar toggle
     const toggleSidebar = document.getElementById("toggle-sidebar")

@@ -42,7 +42,7 @@
                     <div class="search-container">
                         <form id="search-form" class="search-form" role="search">
                             <input type="search" id="search-input" class="search-input" placeholder="Search the web..."
-                                aria-label="Search the web" autocomplete="off">
+                                aria-label="Search the web using your default search provider" autocomplete="off">
                             <button type="submit" class="search-button" aria-label="Search">🔍</button>
                         </form>
                     </div>
@@ -151,39 +151,6 @@
                     </label>
                     <div id="location-setting-help" class="setting-help" style="display: none;">Automatically use your
                         current location to find representatives</div>
-                </fieldset>
-                <fieldset class="setting-group">
-                    <legend>Search Engine</legend>
-                    <div class="search-engine-options">
-                        <label>
-                            <input type="radio" name="search-engine" value="google" id="search-google"
-                                aria-describedby="google-search-help">
-                            Google
-                        </label>
-                        <label>
-                            <input type="radio" name="search-engine" value="bing" id="search-bing"
-                                aria-describedby="bing-search-help">
-                            Bing
-                        </label>
-                        <label>
-                            <input type="radio" name="search-engine" value="duckduckgo" id="search-duckduckgo"
-                                aria-describedby="ddg-search-help">
-                            DuckDuckGo
-                        </label>
-                        <label>
-                            <input type="radio" name="search-engine" value="startpage" id="search-startpage"
-                                aria-describedby="startpage-search-help">
-                            Startpage
-                        </label>
-                    </div>
-                    <div id="google-search-help" class="setting-help" style="display: none;">Use Google for web searches
-                    </div>
-                    <div id="bing-search-help" class="setting-help" style="display: none;">Use Microsoft Bing for web
-                        searches</div>
-                    <div id="ddg-search-help" class="setting-help" style="display: none;">Use DuckDuckGo for private web
-                        searches</div>
-                    <div id="startpage-search-help" class="setting-help" style="display: none;">Use Startpage for
-                        private web searches</div>
                 </fieldset>
                 <div class="setting-group" role="region" aria-labelledby="about-heading">
                     <h4 id="about-heading" class="visually-hidden">About this extension</h4>
