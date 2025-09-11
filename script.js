@@ -93,24 +93,26 @@ class NewTabApp {
 
     // Use Chrome Search API to respect user's default search provider
     if (typeof chrome !== "undefined" && chrome.search) {
-      chrome.search.query({
-        text: query.trim(),
-        disposition: "CURRENT_TAB"
-      }, () => {
-        // Announce to screen reader
-        this.announceToScreenReader(
-          `Searching for "${query.trim()}" using your default search provider`
-        )
-      })
+      chrome.search.query(
+        {
+          text: query.trim(),
+          disposition: "CURRENT_TAB",
+        },
+        () => {
+          // Announce to screen reader
+          this.announceToScreenReader(
+            `Searching for "${query.trim()}" using your default search provider`
+          )
+        }
+      )
     } else {
       // Fallback for testing environment - use Google
-      const searchUrl = "https://www.google.com/search?q=" + encodeURIComponent(query.trim())
+      const searchUrl =
+        "https://www.google.com/search?q=" + encodeURIComponent(query.trim())
       window.location.href = searchUrl
-      
+
       // Announce to screen reader
-      this.announceToScreenReader(
-        `Searching for "${query.trim()}"`
-      )
+      this.announceToScreenReader(`Searching for "${query.trim()}"`)
     }
   }
 
@@ -1408,6 +1410,8 @@ class NewTabApp {
       header.textContent = division
       header.style.color = data.color
       divisionSection.appendChild(header)
+      // Make headers collapsible
+      this.addCollapsibleBehavior(header)
 
       // Add local representatives first (if any)
       if (data.localReps.length > 0) {
@@ -1548,6 +1552,35 @@ class NewTabApp {
     element.appendChild(detailsPanel)
 
     return element
+  }
+
+  // Add collapsible behavior to division headers
+  addCollapsibleBehavior(header) {
+    if (!header) return
+    header.setAttribute("role", "button")
+    header.setAttribute("tabindex", "0")
+    header.setAttribute("aria-expanded", "true")
+
+    const parent = header.parentElement
+    const toggle = () => {
+      const expanded = header.getAttribute("aria-expanded") === "true"
+      const newState = !expanded
+      header.setAttribute("aria-expanded", newState.toString())
+      if (parent) {
+        parent.classList.toggle("collapsed", !newState ? true : false)
+      }
+      this.announceToScreenReader(
+        `${header.textContent} section ${newState ? "expanded" : "collapsed"}`
+      )
+    }
+
+    header.addEventListener("click", toggle)
+    header.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault()
+        toggle()
+      }
+    })
   }
 
   buildLocalOfficialDetails(panel, rep, themeColor) {
@@ -1830,6 +1863,8 @@ class NewTabApp {
       header.className = "division-header"
       header.textContent = group.name
       divisionElement.appendChild(header)
+      // Make headers collapsible
+      this.addCollapsibleBehavior(header)
 
       group.offices.forEach((office) => {
         const officeElement = document.createElement("div")
@@ -1949,6 +1984,8 @@ class NewTabApp {
     header.textContent = "Milwaukee County Local Officials"
     header.style.color = "#0077be"
     milwaukeeSection.appendChild(header)
+    // Make headers collapsible
+    this.addCollapsibleBehavior(header)
 
     this.milwaukeeData.representatives.forEach((rep) => {
       const officialElement = this.createMilwaukeeOfficialElement(rep)
