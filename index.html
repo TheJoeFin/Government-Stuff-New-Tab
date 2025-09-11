@@ -62,14 +62,25 @@
 
         <!-- Show sidebar button (hidden when sidebar is visible) -->
         <button id="show-sidebar-btn" class="show-sidebar-btn hidden" aria-label="Show representatives sidebar"
-            title="Show representatives">→</button>
+            title="Show representatives">❮</button>
 
         <!-- Civic information sidebar -->
         <aside class="sidebar" id="civic-sidebar" role="complementary" aria-labelledby="sidebar-heading">
-            <div class="sidebar-header">
-                <h2 id="sidebar-heading">Representatives</h2>
+            <div class="sidebar-header unified-reps-bar">
+                <div class="reps-title-group">
+                    <h2 id="sidebar-heading">Representatives</h2>
+                    <div class="current-address inline" id="address-display" role="status" aria-live="polite">
+                        <span class="address-label">For:</span>
+                        <span class="address-value" id="current-address-text"
+                            aria-describedby="current-address-controls"></span>
+                        <div class="address-controls inline" id="current-address-controls">
+                            <button id="edit-address-btn" class="btn-icon btn-small" title="Change address"
+                                aria-label="Change address" aria-pressed="false">✏️</button>
+                        </div>
+                    </div>
+                </div>
                 <button id="toggle-sidebar" class="btn-icon" aria-label="Hide representatives sidebar"
-                    title="Hide sidebar">←</button>
+                    title="Hide sidebar">❯</button>
             </div>
 
             <!-- Address input section (shown when no data) -->
@@ -94,22 +105,7 @@
                 </div>
             </div>
 
-            <!-- Compact address display (shown when data is loaded) -->
-            <div class="address-display hidden" id="address-display" role="status" aria-live="polite">
-                <div class="current-address">
-                    <div class="address-info">
-                        <span class="address-label">Showing representatives for</span>
-                        <span class="address-value" id="current-address-text"
-                            aria-describedby="current-address-controls"></span>
-                    </div>
-                    <div class="address-controls" id="current-address-controls">
-                        <button id="edit-address-btn" class="btn-icon btn-small" title="Change address"
-                            aria-label="Change address">✏️</button>
-                        <button id="refresh-address-btn" class="btn-icon btn-small" title="Refresh representatives data"
-                            aria-label="Refresh representatives data">🔄</button>
-                    </div>
-                </div>
-            </div>
+            <!-- (Removed separate compact address display; merged into sidebar-header) -->
 
             <!-- Officials section -->
             <div class="officials-section" role="region" aria-labelledby="officials-heading">

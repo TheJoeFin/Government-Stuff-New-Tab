@@ -32,6 +32,9 @@ class NewTabApp {
     this.milwaukeeApi = new MilwaukeeApi()
     this.governmentOfficials = new GovernmentOfficials()
 
+    // Track whether user is currently editing the address
+    this.editingAddress = false
+
     this.init()
   }
 
@@ -398,15 +401,18 @@ class NewTabApp {
     const container = document.querySelector(".container")
     const sidebar = document.getElementById("civic-sidebar")
     const showSidebarBtn = document.getElementById("show-sidebar-btn")
+    const toggleSidebarBtn = document.getElementById("toggle-sidebar")
 
     if (this.settings.showSidebar) {
       container.classList.remove("sidebar-collapsed")
       sidebar.classList.remove("collapsed")
       showSidebarBtn.classList.add("hidden")
+      if (toggleSidebarBtn) toggleSidebarBtn.classList.remove("rotated")
     } else {
       container.classList.add("sidebar-collapsed")
       sidebar.classList.add("collapsed")
       showSidebarBtn.classList.remove("hidden")
+      if (toggleSidebarBtn) toggleSidebarBtn.classList.add("rotated")
     }
   }
 
@@ -603,20 +609,18 @@ class NewTabApp {
     document
       .getElementById("edit-address-btn")
       .addEventListener("click", () => {
-        this.showAddressInput()
+        // Toggle purely on internal state for reliability
+        if (this.editingAddress) {
+          // Leaving edit mode
+          this.showCompactAddressDisplay()
+        } else {
+          // Entering edit mode
+          this.showAddressInput()
+        }
+        this.updateEditButtonState(this.editingAddress)
       })
 
-    document
-      .getElementById("refresh-address-btn")
-      .addEventListener("click", () => {
-        if (this.currentAddress) {
-          console.log(
-            "Manual refresh from compact view for:",
-            this.currentAddress
-          )
-          this.loadCivicData(this.currentAddress, true) // Force refresh
-        }
-      })
+    // Removed separate refresh control from unified bar
 
     document
       .getElementById("address-input")
@@ -1781,16 +1785,20 @@ class NewTabApp {
       locateBtn.style.display = "none"
     }
 
-    // Hide the full address input section
+    // Hide the full address input section (still exists below unified bar)
     if (addressSection) {
       addressSection.classList.add("hidden")
     }
 
-    // Show the compact address display
+    // Address display now always present in unified header; ensure no hidden classes linger
     if (addressDisplay) {
       addressDisplay.classList.remove("hidden")
-      addressDisplay.classList.add("visible")
+      addressDisplay.classList.add("inline")
     }
+
+    // No longer editing
+    this.editingAddress = false
+    this.updateEditButtonState(false)
   }
 
   showAddressInput() {
@@ -1804,11 +1812,14 @@ class NewTabApp {
       addressSection.classList.remove("hidden")
     }
 
-    // Hide the compact address display
+    // Keep unified bar visible; do not hide addressDisplay
     if (addressDisplay) {
-      addressDisplay.classList.add("hidden")
-      addressDisplay.classList.remove("visible")
+      addressDisplay.classList.add("inline")
     }
+
+    // Entering edit mode
+    this.editingAddress = true
+    this.updateEditButtonState(true)
 
     // Show location pin button when no address is set or when editing
     if (locateBtn) {
@@ -1826,6 +1837,22 @@ class NewTabApp {
         addressInput.select()
       }, 300) // Wait for animation to complete
     }
+  }
+
+  updateEditButtonState(isEditing) {
+    const btn = document.getElementById("edit-address-btn")
+    if (!btn) return
+    btn.setAttribute("aria-pressed", isEditing.toString())
+    // Swap icon: pencil when inactive, X when editing
+    btn.textContent = isEditing ? "✖" : "✏️"
+    btn.setAttribute(
+      "title",
+      isEditing ? "Hide address input" : "Change address"
+    )
+    btn.setAttribute(
+      "aria-label",
+      isEditing ? "Hide address input" : "Change address"
+    )
   }
 
   // Method to show locate button when no address is set
