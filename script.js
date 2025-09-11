@@ -642,6 +642,10 @@ class NewTabApp {
       console.log("Test button event bound")
     }
 
+    // Officials local search (sidebar)
+    this.setupOfficialsSearch()
+    this.setupOfficialsSearchToggle()
+
     // Close modals on outside click
     document.addEventListener("click", (e) => {
       if (e.target.classList.contains("modal")) {
@@ -694,6 +698,170 @@ class NewTabApp {
         }
       }
     })
+  }
+
+  // --- Officials Search Feature ---
+  setupOfficialsSearch() {
+    const input = document.getElementById("official-search-input")
+    const clearBtn = document.getElementById("official-search-clear")
+    const listContainer = document.getElementById("officials-list")
+    if (!input || !listContainer) return
+
+    // Debounce handler
+    let debounceTimer = null
+    const handleSearch = () => {
+      const query = input.value.trim()
+      if (query.length < 2) {
+        this.clearOfficialsSearchResults()
+        clearBtn.hidden = true
+        return
+      }
+      clearBtn.hidden = false
+      const results = this.governmentOfficials.searchOfficials(query)
+      this.renderOfficialsSearchResults(results, query)
+    }
+
+    input.addEventListener("input", () => {
+      clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(handleSearch, 200)
+    })
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && input.value) {
+        input.value = ""
+        this.clearOfficialsSearchResults()
+        clearBtn.hidden = true
+        input.blur()
+      }
+    })
+
+    clearBtn?.addEventListener("click", () => {
+      input.value = ""
+      this.clearOfficialsSearchResults()
+      clearBtn.hidden = true
+      input.focus()
+    })
+  }
+
+  setupOfficialsSearchToggle() {
+    const toggleBtn = document.getElementById("toggle-official-search")
+    const searchBlock = document.querySelector(".official-search")
+    if (!toggleBtn || !searchBlock) return
+
+    // Persist preference in settings (default visible)
+    if (this.settings.hideOfficialsSearch) {
+      searchBlock.classList.add("hidden")
+      toggleBtn.setAttribute("aria-pressed", "false")
+      toggleBtn.title = "Show officials search"
+      toggleBtn.setAttribute("aria-label", "Show officials search")
+    } else {
+      toggleBtn.setAttribute("aria-pressed", "true")
+      toggleBtn.title = "Hide officials search"
+      toggleBtn.setAttribute("aria-label", "Hide officials search")
+    }
+
+    toggleBtn.addEventListener("click", () => {
+      const willHide =
+        !toggleBtn.classList.toggle("active") &&
+        !searchBlock.classList.contains("hidden")
+      // Instead of relying on toggle return, explicitly invert current pressed state
+      const currentlyPressed = toggleBtn.getAttribute("aria-pressed") === "true"
+      const newState = !currentlyPressed
+      toggleBtn.setAttribute("aria-pressed", newState.toString())
+      searchBlock.classList.toggle("hidden", !newState)
+      if (newState) {
+        toggleBtn.title = "Hide officials search"
+        toggleBtn.setAttribute("aria-label", "Hide officials search")
+      } else {
+        toggleBtn.title = "Show officials search"
+        toggleBtn.setAttribute("aria-label", "Show officials search")
+      }
+      this.settings.hideOfficialsSearch = !newState
+      this.saveSettings()
+      this.announceToScreenReader(
+        newState ? "Officials search shown" : "Officials search hidden"
+      )
+      if (newState) {
+        // Focus input when showing
+        const input = document.getElementById("official-search-input")
+        if (input) setTimeout(() => input.focus(), 50)
+      }
+    })
+  }
+
+  clearOfficialsSearchResults() {
+    const listContainer = document.getElementById("officials-list")
+    if (!listContainer) return
+    listContainer.classList.remove("search-active")
+    const existing = listContainer.querySelector(".search-results-group")
+    if (existing) existing.remove()
+  }
+
+  renderOfficialsSearchResults(results, query) {
+    const listContainer = document.getElementById("officials-list")
+    if (!listContainer) return
+
+    // Activate search mode
+    listContainer.classList.add("search-active")
+
+    // Remove previous results
+    const prev = listContainer.querySelector(".search-results-group")
+    if (prev) prev.remove()
+
+    const group = document.createElement("div")
+    group.className = "search-results-group"
+    group.setAttribute("role", "region")
+    group.setAttribute(
+      "aria-label",
+      `Search results for "${query}" (${results.length})`
+    )
+
+    // Header / count
+    const count = document.createElement("div")
+    count.className = "result-count"
+    count.textContent = `${results.length} result${
+      results.length === 1 ? "" : "s"
+    }`
+    group.appendChild(count)
+
+    if (results.length === 0) {
+      const empty = document.createElement("div")
+      empty.className = "search-results-empty"
+      empty.textContent = "No officials match your search."
+      group.appendChild(empty)
+    } else {
+      // Render each result using existing compact creation
+      results.forEach((official) => {
+        const colorMap = {
+          city: "#ffa500",
+          county: "#0077be",
+          state: "#228b22",
+          federal: "#dc143c",
+        }
+        const element = this.createCompactOfficialElement(
+          official,
+          "comprehensive",
+          colorMap[official.level] || "var(--accent-color)"
+        )
+        // Add a small level badge
+        const nameEl = element.querySelector(".official-name")
+        if (nameEl) {
+          const badge = document.createElement("span")
+          badge.textContent = ` (${official.level})`
+          badge.style.fontSize = "0.7rem"
+          badge.style.color = "var(--text-muted)"
+          nameEl.appendChild(badge)
+        }
+        group.appendChild(element)
+      })
+    }
+
+    listContainer.prepend(group)
+    this.announceToScreenReader(
+      `${results.length} official${
+        results.length === 1 ? "" : "s"
+      } found for ${query}`
+    )
   }
 
   // Favorites Management

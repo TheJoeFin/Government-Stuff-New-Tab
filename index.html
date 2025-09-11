@@ -76,6 +76,8 @@
                         <div class="address-controls inline" id="current-address-controls">
                             <button id="edit-address-btn" class="btn-icon btn-small" title="Change address"
                                 aria-label="Change address" aria-pressed="false">✏️</button>
+                            <button id="toggle-official-search" class="btn-icon btn-small" title="Show officials search"
+                                aria-label="Show officials search" aria-pressed="false">🔍</button>
                         </div>
                     </div>
                 </div>
@@ -103,6 +105,19 @@
                         Example: "200 E Wells St, Milwaukee, WI 53202"
                     </small>
                 </div>
+            </div>
+
+            <!-- Officials search (local dataset) -->
+            <div class="official-search" role="search" aria-label="Search government officials">
+                <label for="official-search-input" class="visually-hidden">Search officials</label>
+                <div class="official-search-group">
+                    <input type="search" id="official-search-input" placeholder="Search officials (e.g., sheriff)"
+                        aria-label="Search officials by name, title, department or responsibility" autocomplete="off">
+                    <button id="official-search-clear" class="btn-icon" aria-label="Clear officials search"
+                        title="Clear search" hidden>✖</button>
+                </div>
+                <small class="official-search-hint" id="official-search-hint">Type at least 2 characters to search local
+                    dataset</small>
             </div>
 
             <!-- (Removed separate compact address display; merged into sidebar-header) -->

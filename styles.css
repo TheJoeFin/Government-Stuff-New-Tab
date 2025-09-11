@@ -1914,3 +1914,75 @@
     padding: var(--space-2);
   }
 }
+
+/* Officials search (appended) */
+.official-search {
+  padding: 0.75rem 1rem 0.5rem;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+}
+.official-search.hidden {
+  display: none;
+}
+#toggle-official-search[aria-pressed="true"] {
+  color: var(--accent-color);
+}
+.dark-theme .official-search {
+  background: var(--bg-surface-alt, rgba(255, 255, 255, 0.02));
+}
+.official-search-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+#official-search-input {
+  flex: 1;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+[data-theme="dark"] #official-search-input {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+#official-search-input:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+}
+#official-search-clear {
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0.35rem 0.45rem;
+}
+.official-search-hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.6rem;
+  color: var(--text-muted);
+}
+.officials-list.search-active .division-group {
+  display: none;
+}
+.officials-list.search-active .search-results-group {
+  display: block;
+}
+.search-results-group {
+  display: none;
+  padding-top: 0.5rem;
+}
+.search-results-group .result-count {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin: 0 0 0.25rem 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.search-results-empty {
+  padding: 0.75rem 0.5rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}

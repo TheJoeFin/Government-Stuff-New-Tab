@@ -52,14 +52,37 @@ class MilwaukeeApi {
     if (!data) return null
 
     const representatives = []
+    // Determine success more flexibly: some deployments might omit or rename success flag
+    const hasAnyRepField = [
+      "alderperson",
+      "alderman",
+      "supervisor",
+      "assemblyRepresentative",
+      "senator",
+      "congressionalRepresentative",
+    ].some((k) => data[k])
 
-    // Check if data has success flag
-    if (!data.success) {
+    const isSuccess =
+      data.success !== undefined ? !!data.success : hasAnyRepField
+
+    if (!isSuccess) {
+      console.warn(
+        "Milwaukee API response indicates no success or representatives present.",
+        data
+      )
       return {
         representatives: [],
         coordinates: null,
         isInMilwaukeeCounty: false,
       }
+    }
+
+    // Normalize alternate field names
+    if (!data.alderperson && data.alderman) {
+      data.alderperson = data.alderman
+      data.alderpersonTitle = data.aldermanTitle || data.alderpersonTitle
+      data.alderpersonEmail = data.aldermanEmail || data.alderpersonEmail
+      data.alderpersonPhone = data.aldermanPhone || data.alderpersonPhone
     }
 
     // Add Alderperson based on actual API response structure (FIRST - most local)

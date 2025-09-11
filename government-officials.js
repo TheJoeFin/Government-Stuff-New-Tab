@@ -79,6 +79,22 @@ class GovernmentOfficials {
         },
       },
       {
+        name: "Alex Brower",
+        title: "Comptroller",
+        term_start: "2024-04-16",
+        responsibilities: [
+          "Leads independent financial oversight for the City",
+          "Audits city departments and programs",
+          "Issues fiscal reports and analyses",
+          "Manages city debt issuance and fiscal strategy",
+        ],
+        contact: {
+          email: "comptroller@milwaukee.gov",
+          phone: "414-286-3321",
+          office: "City Hall, 200 E Wells St, Room 404, Milwaukee, WI 53202",
+        },
+      },
+      {
         name: "José G. Pérez",
         title: "Common Council President",
         district: 12,
