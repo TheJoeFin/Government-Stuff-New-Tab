@@ -321,8 +321,8 @@ class NewTabApp {
     return [
       {
         id: "1",
-        name: "Google",
-        url: "https://google.com",
+        name: "Milwaukee.Gov",
+        url: "https://www.milwaukee.gov/",
       },
       {
         id: "2",
@@ -342,7 +342,7 @@ class NewTabApp {
       {
         id: "5",
         name: "Bluesky",
-        url: "https://bluesky.com",
+        url: "https://bsky.app",
       },
       {
         id: "6",
