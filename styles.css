@@ -479,7 +479,8 @@
 
   .favorites-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    /* Use fixed-width tracks so the group can truly center */
+    grid-template-columns: repeat(auto-fit, 100px);
     gap: var(--space-4);
     width: 100%;
     max-width: 800px;
@@ -508,6 +509,18 @@
     border-color: var(--accent-color);
     transform: translateY(-2px);
     box-shadow: var(--shadow-lg);
+  }
+
+  /* Drag & Drop states */
+  .favorite-item.dragging {
+    opacity: 0.5;
+    border-color: var(--accent-color);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .favorite-item.drag-over {
+    outline: 2px dashed var(--accent-color);
+    outline-offset: 2px;
   }
 
   .favorite-item .icon {
@@ -1254,8 +1267,9 @@
     }
 
     .favorites-grid {
-      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      grid-template-columns: repeat(auto-fit, 110px);
       gap: var(--space-4);
+      justify-content: center;
     }
   }
 
@@ -1291,8 +1305,9 @@
     }
 
     .favorites-grid {
-      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      grid-template-columns: repeat(auto-fit, 90px);
       gap: var(--space-3);
+      justify-content: center;
     }
 
     .favorite-item {
@@ -1356,8 +1371,9 @@
     }
 
     .favorites-grid {
-      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      grid-template-columns: repeat(auto-fit, 80px);
       gap: var(--space-2);
+      justify-content: center;
     }
 
     .favorite-item {

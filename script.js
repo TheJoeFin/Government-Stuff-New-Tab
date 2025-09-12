@@ -873,6 +873,9 @@ class NewTabApp {
       const item = this.createFavoriteElement(favorite)
       grid.appendChild(item)
     })
+
+    // Ensure drag & drop listeners are attached (one-time)
+    this.initializeFavoritesDragAndDrop()
   }
 
   createFavoriteElement(favorite) {
@@ -882,6 +885,25 @@ class NewTabApp {
     item.setAttribute("role", "gridcell")
     item.setAttribute("aria-label", `Visit ${favorite.name} website`)
     item.dataset.favoriteId = favorite.id
+    // Enable drag and drop ordering
+    item.setAttribute("draggable", "true")
+    item.setAttribute("aria-grabbed", "false")
+
+    item.addEventListener("dragstart", (e) => {
+      e.dataTransfer.effectAllowed = "move"
+      e.dataTransfer.setData("text/plain", favorite.id)
+      item.classList.add("dragging")
+      item.setAttribute("aria-grabbed", "true")
+    })
+
+    item.addEventListener("dragend", () => {
+      item.classList.remove("dragging")
+      item.setAttribute("aria-grabbed", "false")
+      // Clean residual highlights
+      document
+        .querySelectorAll(".favorite-item.drag-over")
+        .forEach((el) => el.classList.remove("drag-over"))
+    })
 
     const icon = document.createElement("img")
     icon.className = "icon"
@@ -906,6 +928,79 @@ class NewTabApp {
     item.appendChild(name)
 
     return item
+  }
+
+  // Initialize drag & drop reordering (event delegation on grid)
+  initializeFavoritesDragAndDrop() {
+    if (this.favoritesDnDInitialized) return
+    const grid = document.getElementById("favorites-grid")
+    if (!grid) return
+
+    grid.addEventListener("dragover", (e) => {
+      e.preventDefault()
+      const targetItem = e.target.closest(".favorite-item")
+      const dragging = grid.querySelector(".favorite-item.dragging")
+      if (!dragging) return
+      document
+        .querySelectorAll(".favorite-item.drag-over")
+        .forEach((el) => el.classList.remove("drag-over"))
+      if (targetItem && targetItem !== dragging) {
+        targetItem.classList.add("drag-over")
+      }
+      e.dataTransfer.dropEffect = "move"
+    })
+
+    grid.addEventListener("dragleave", (e) => {
+      const related = e.relatedTarget
+      if (!grid.contains(related)) {
+        document
+          .querySelectorAll(".favorite-item.drag-over")
+          .forEach((el) => el.classList.remove("drag-over"))
+      }
+    })
+
+    grid.addEventListener("drop", (e) => {
+      e.preventDefault()
+      const sourceId = e.dataTransfer.getData("text/plain")
+      const sourceIndex = this.favorites.findIndex((f) => f.id === sourceId)
+      if (sourceIndex === -1) return
+
+      const targetItem = e.target.closest(".favorite-item")
+      let targetIndex = -1
+      if (targetItem) {
+        targetIndex = this.favorites.findIndex(
+          (f) => f.id === targetItem.dataset.favoriteId
+        )
+      } else {
+        // Dropped in empty area => move to end
+        targetIndex = this.favorites.length - 1
+      }
+
+      if (targetIndex === -1 || targetIndex === sourceIndex) {
+        // Nothing to do
+        document
+          .querySelectorAll(".favorite-item.drag-over")
+          .forEach((el) => el.classList.remove("drag-over"))
+        return
+      }
+
+      const [moved] = this.favorites.splice(sourceIndex, 1)
+      // Adjust target index if item removed before it
+      const insertionIndex =
+        sourceIndex < targetIndex ? targetIndex : targetIndex
+      this.favorites.splice(insertionIndex, 0, moved)
+
+      // Persist & re-render
+      this.saveFavorites()
+      this.renderFavorites()
+
+      // Screen reader announcement
+      this.announceToScreenReader(
+        `${moved.name} moved to position ${insertionIndex + 1}`
+      )
+    })
+
+    this.favoritesDnDInitialized = true
   }
 
   getFaviconUrl(url) {
