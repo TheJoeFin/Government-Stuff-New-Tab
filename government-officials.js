@@ -79,9 +79,22 @@ class GovernmentOfficials {
         },
       },
       {
-        name: "Alex Brower",
+        name: "Evan Goyke",
+        title: "City Attorney",
+        department: "Office of the City Attorney",
+        responsibilities: [
+          "Serves as chief legal counsel to the City",
+          "Represents the City in legal matters",
+          "Prepares and reviews legislation and contracts",
+        ],
+        contact: {
+          website: "https://city.milwaukee.gov/CityAttorney",
+          office: "City Hall, 200 E Wells St, Milwaukee, WI 53202",
+        },
+      },
+      {
+        name: "Bill Christianson",
         title: "Comptroller",
-        term_start: "2024-04-16",
         responsibilities: [
           "Leads independent financial oversight for the City",
           "Audits city departments and programs",
@@ -92,6 +105,20 @@ class GovernmentOfficials {
           email: "comptroller@milwaukee.gov",
           phone: "414-286-3321",
           office: "City Hall, 200 E Wells St, Room 404, Milwaukee, WI 53202",
+        },
+      },
+      {
+        name: "Spencer Coggs",
+        title: "City Treasurer",
+        responsibilities: [
+          "Manages property tax billing and collection",
+          "Oversees City cash management",
+          "Provides taxpayer services and payment options",
+        ],
+        contact: {
+          email: "ctreas@milwaukee.gov",
+          phone: "414-286-2240",
+          office: "City Hall, 200 E Wells St, Room 103, Milwaukee, WI 53202",
         },
       },
       {
@@ -120,13 +147,13 @@ class GovernmentOfficials {
           "Implements public works projects",
         ],
         contact: {
-          email: "dpw@milwaukee.gov",
+          email: "dpwmilw@milwaukee.gov",
           phone: "414-286-2489",
-          office: "841 N Broadway, Milwaukee, WI 53202",
+          office: "841 N Broadway, Room 501, Milwaukee, WI 53202",
         },
       },
       {
-        name: "Jeffrey Norman",
+        name: "Jeffrey B. Norman",
         title: "Chief of Police",
         department: "Milwaukee Police Department",
         responsibilities: [
@@ -135,13 +162,14 @@ class GovernmentOfficials {
           "Manages police personnel and operations",
         ],
         contact: {
-          email: "mpd@milwaukee.gov",
           phone: "414-933-4444",
           office: "749 W State St, Milwaukee, WI 53233",
+          website:
+            "https://city.milwaukee.gov/police/About-MPD/Command-Staff-Bios/Jeffrey-Norman",
         },
       },
       {
-        name: "Aaron Lipski",
+        name: "Aaron D. Lipski",
         title: "Fire Chief",
         department: "Milwaukee Fire Department",
         responsibilities: [
@@ -150,9 +178,10 @@ class GovernmentOfficials {
           "Manages department staffing and operations",
         ],
         contact: {
-          email: "fire@milwaukee.gov",
           phone: "414-286-8948",
           office: "711 W Wells St, Milwaukee, WI 53233",
+          website:
+            "https://city.milwaukee.gov/MFD/Aboutmfd/FireChiefAaronDLipski",
         },
       },
       {
@@ -165,8 +194,8 @@ class GovernmentOfficials {
           "Oversees licensing and public notices",
         ],
         contact: {
-          email: "cityclerk@milwaukee.gov",
-          phone: "414-286-2221",
+          email: "jowcza@milwaukee.gov",
+          phone: "414-286-2998",
           office: "City Hall, Room 205, Milwaukee, WI 53202",
         },
       },
@@ -194,6 +223,21 @@ class GovernmentOfficials {
         },
       },
       {
+        name: "Marcelia Nicholson",
+        title: "Chairwoman, Board of Supervisors",
+        department: "Milwaukee County Board of Supervisors",
+        responsibilities: [
+          "Presides over County Board meetings",
+          "Assigns standing and special committees",
+          "Oversees legislative agenda and proceedings",
+        ],
+        contact: {
+          website: "https://county.milwaukee.gov/EN/Board-of-Supervisors",
+          office:
+            "Milwaukee County Courthouse, Room 201, 901 N 9th St, Milwaukee, WI 53233",
+        },
+      },
+      {
         name: "Denita R. Ball",
         title: "Sheriff",
         term_start: "2022-10-24",
@@ -202,31 +246,40 @@ class GovernmentOfficials {
           "Provides law enforcement for county highways, parks, and institutions",
           "Manages Milwaukee County Jail and Detention Services",
           "Ensures security at the courthouse and airport",
-          "Engages in community policing and public safety initiatives",
         ],
         contact: {
           email: "sheriff@milwaukeecountywi.gov",
           phone: "414-278-4766",
-          office: "821 W State St, Milwaukee, WI 53233",
+          office: "821 W State St, Room 107, Milwaukee, WI 53233",
         },
       },
       {
-        name: "Steve Fuentes",
-        title: "President and CEO",
-        department: "Milwaukee County Transit System (MCTS)",
-        term_start: "2025-07-15",
+        name: "Liz Sumner",
+        title: "Comptroller",
         responsibilities: [
-          "Oversees all MCTS operations and strategic planning",
-          "Guides modernization efforts including Bus Rapid Transit and WisGo fare system",
-          "Collaborates with county and regional leaders on transit policy",
-          "Manages budget and service delivery across 18 municipalities",
-          "Leads workforce of operators, supervisors, and support staff",
+          "Provides independent financial oversight",
+          "Prepares comprehensive annual financial reports",
+          "Monitors budget performance and fiscal policy",
         ],
         contact: {
-          email: "mcts@milwaukeecountywi.gov",
-          phone: "414-937-3218",
+          email: "comptroller@milwaukeecountywi.gov",
+          phone: "414-278-3001",
           office:
-            "MCTS Administration Building, 1942 N 17th St, Milwaukee, WI 53205",
+            "Milwaukee County Courthouse, Room 301, 901 N 9th St, Milwaukee, WI 53233",
+        },
+      },
+      {
+        name: "David Cullen",
+        title: "County Treasurer",
+        responsibilities: [
+          "Acts as the County's banker and cash manager",
+          "Invests public funds and manages liquidity",
+          "Collects delinquent property taxes in suburban municipalities",
+        ],
+        contact: {
+          phone: "414-278-4033",
+          office:
+            "Milwaukee County Courthouse, Room 102, 901 N 9th St, Milwaukee, WI 53233",
         },
       },
       {
@@ -241,22 +294,8 @@ class GovernmentOfficials {
         contact: {
           email: "county.clerk@milwaukeecountywi.gov",
           phone: "414-278-4067",
-          office: "Milwaukee County Courthouse, Room 105",
-        },
-      },
-      {
-        name: "Scott Manske",
-        title: "Comptroller",
-        responsibilities: [
-          "Maintains county accounting records",
-          "Prepares annual financial reports",
-          "Monitors budget performance",
-          "Analyzes fiscal proposals",
-        ],
-        contact: {
-          email: "comptroller@milwaukeecountywi.gov",
-          phone: "414-278-4207",
-          office: "Milwaukee County Courthouse, Room 301",
+          office:
+            "Milwaukee County Courthouse, Room 105, 901 N 9th St, Milwaukee, WI 53233",
         },
       },
       {
@@ -271,11 +310,12 @@ class GovernmentOfficials {
         contact: {
           email: "clerk.courts@wicourts.gov",
           phone: "414-278-5362",
-          office: "Milwaukee County Courthouse, Room 104",
+          office:
+            "Milwaukee County Courthouse, Room 104, 901 N 9th St, Milwaukee, WI 53233",
         },
       },
       {
-        name: "Sara F. Geenen",
+        name: "Israel Ramón",
         title: "Register of Deeds",
         responsibilities: [
           "Records real estate documents",
@@ -283,13 +323,14 @@ class GovernmentOfficials {
           "Maintains property ownership records",
         ],
         contact: {
-          email: "register.deeds@milwaukeecountywi.gov",
+          email: "ROD@milwaukeecountywi.gov",
           phone: "414-278-4021",
-          office: "Milwaukee County Courthouse, Room 103",
+          office:
+            "Milwaukee County Courthouse, Room 103, 901 N 9th St, Milwaukee, WI 53233",
         },
       },
       {
-        name: "John Chisholm",
+        name: "Kent Lovern",
         title: "District Attorney",
         responsibilities: [
           "Prosecutes criminal cases",
@@ -297,23 +338,9 @@ class GovernmentOfficials {
           "Oversees victim advocacy and diversion programs",
         ],
         contact: {
-          email: "da@milwaukeecountywi.gov",
+          email: "milwaukee.da@da.wi.gov",
           phone: "414-278-4646",
-          office: "Safety Building, 821 W State St, Milwaukee, WI 53233",
-        },
-      },
-      {
-        name: "Ismael Ozanne",
-        title: "Corporation Counsel",
-        responsibilities: [
-          "Provides legal counsel to county departments",
-          "Represents county in civil litigation",
-          "Reviews contracts and ordinances",
-        ],
-        contact: {
-          email: "corp.counsel@milwaukeecountywi.gov",
-          phone: "414-278-4300",
-          office: "Milwaukee County Courthouse, Room 303",
+          office: "821 W State St, Room 405, Milwaukee, WI 53233",
         },
       },
     ]
