@@ -31,6 +31,8 @@ class NewTabApp {
     this.propublicaApi = new ProPublicaApi(this.settings.propublicaApiKey)
     this.milwaukeeApi = new MilwaukeeApi()
     this.governmentOfficials = new GovernmentOfficials()
+    this.milwaukeeCouncil = new MilwaukeeCouncil()
+    this.milwaukeeCountyBoard = new MilwaukeeCountyBoard()
 
     // Track whether user is currently editing the address
     this.editingAddress = false
@@ -717,8 +719,12 @@ class NewTabApp {
         return
       }
       clearBtn.hidden = false
+      // Merge comprehensive officials with Milwaukee Council and County Board members
       const results = this.governmentOfficials.searchOfficials(query)
-      this.renderOfficialsSearchResults(results, query)
+      const councilHits = this.milwaukeeCouncil.searchMembers(query)
+      const countyHits = this.milwaukeeCountyBoard.searchMembers(query)
+      const merged = [...councilHits, ...countyHits, ...results]
+      this.renderOfficialsSearchResults(merged, query)
     }
 
     input.addEventListener("input", () => {
@@ -1930,6 +1936,14 @@ class NewTabApp {
       dept.className = "detail-item department"
       dept.innerHTML = `<strong>Department:</strong> ${official.department}`
       panel.appendChild(dept)
+    }
+
+    // District (for council members)
+    if (official.district) {
+      const dist = document.createElement("div")
+      dist.className = "detail-item district"
+      dist.innerHTML = `<strong>District:</strong> ${official.district}`
+      panel.appendChild(dist)
     }
 
     // Term info
