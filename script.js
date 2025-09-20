@@ -17,6 +17,16 @@ class NewTabApp {
       propublicaApiKey: "",
     }
 
+    this.sidebarDetailView = {
+      listSection: null,
+      detailSection: null,
+      detailContent: null,
+      detailSubtitle: null,
+      backButton: null,
+    }
+
+    this.activeOfficialDetail = null
+
     // Initialize theme early
     this.initializeTheme()
 
@@ -357,6 +367,7 @@ class NewTabApp {
   // UI Initialization
   initializeUI() {
     this.applyTheme()
+    this.setupSidebarDetailView()
     this.renderFavorites()
     this.updateSidebarVisibility()
     this.updateSettingsUI()
@@ -397,6 +408,47 @@ class NewTabApp {
     document.body.style.display = "none"
     document.body.offsetHeight // Trigger reflow
     document.body.style.display = ""
+  }
+
+  setupSidebarDetailView() {
+    const listSection = document.querySelector(
+      ".sidebar .officials-section"
+    )
+    const detailSection = document.getElementById("official-detail-section")
+    const detailContent = document.getElementById("official-detail-content")
+    const detailSubtitle = document.getElementById("official-detail-subtitle")
+    const backButton = document.getElementById("official-detail-back")
+
+    this.sidebarDetailView = {
+      listSection,
+      detailSection,
+      detailContent,
+      detailSubtitle,
+      backButton,
+      activeTrigger: null,
+      activeButton: null,
+    }
+
+    if (detailSection && !detailSection.hasAttribute("tabindex")) {
+      detailSection.setAttribute("tabindex", "-1")
+    }
+
+    if (backButton) {
+      backButton.addEventListener("click", () => {
+        this.closeOfficialDetail()
+      })
+    }
+
+    if (detailSection) {
+      detailSection.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          this.closeOfficialDetail()
+        }
+      })
+    }
+
+    // Ensure the list is visible by default
+    this.closeOfficialDetail({ silent: true })
   }
 
   updateSidebarVisibility() {
@@ -801,11 +853,14 @@ class NewTabApp {
     listContainer.classList.remove("search-active")
     const existing = listContainer.querySelector(".search-results-group")
     if (existing) existing.remove()
+    this.closeOfficialDetail({ silent: true })
   }
 
   renderOfficialsSearchResults(results, query) {
     const listContainer = document.getElementById("officials-list")
     if (!listContainer) return
+
+    this.closeOfficialDetail({ silent: true })
 
     // Activate search mode
     listContainer.classList.add("search-active")
@@ -1574,6 +1629,8 @@ class NewTabApp {
     const container = document.getElementById("officials-list")
     container.innerHTML = ""
 
+    this.closeOfficialDetail({ silent: true })
+
     // Define the division structure with both local and comprehensive officials
     const divisionStructure = {
       "City of Milwaukee": {
@@ -1741,90 +1798,510 @@ class NewTabApp {
     this.showCompactAddressDisplay()
   }
 
+  getOfficialSummary(official) {
+    if (!official) return ""
+
+    const parts = []
+    const lowerParts = new Set()
+
+    const addPart = (value) => {
+      if (value === undefined || value === null) return
+      const text = value.toString().trim()
+      if (!text) return
+      const lower = text.toLowerCase()
+      if (lowerParts.has(lower)) return
+      parts.push(text)
+      lowerParts.add(lower)
+    }
+
+    const name = (official.name || "").trim()
+    const office = (official.title || official.office || "").trim()
+    const department = (official.department || "").trim()
+
+    const isLocalRepresentative =
+      official.type === "alderperson" || official.type === "supervisor"
+
+    if (isLocalRepresentative) {
+      if (office && office.toLowerCase() !== name.toLowerCase()) {
+        addPart(office)
+      } else if (department) {
+        addPart(department)
+      }
+
+      const districtValue = official.district
+      if (districtValue) {
+        const districtLabel = /\d+/.test(String(districtValue))
+          ? `District ${districtValue}`
+          : districtValue
+        const alreadyIncludesDistrict = parts.some((part) =>
+          part.toLowerCase().includes(String(districtValue).toLowerCase())
+        )
+        if (!alreadyIncludesDistrict) {
+          addPart(districtLabel)
+        }
+      }
+
+      if (parts.length === 0 && department) {
+        addPart(department)
+      }
+
+      return parts.join(" • ")
+    }
+
+    if (office && office.toLowerCase() !== name.toLowerCase()) {
+      addPart(office)
+    }
+
+    const districtValue = official.district
+    if (districtValue) {
+      const districtLabel = /\d+/.test(String(districtValue))
+        ? `District ${districtValue}`
+        : districtValue
+      const alreadyIncludesDistrict = parts.some((part) =>
+        part.toLowerCase().includes(String(districtValue).toLowerCase())
+      )
+      if (!alreadyIncludesDistrict) {
+        addPart(districtLabel)
+      }
+    }
+
+    if (department && !lowerParts.has(department.toLowerCase())) {
+      addPart(department)
+    }
+
+    if (official.party) {
+      addPart(official.party)
+    }
+
+    return parts.join(" • ")
+  }
+
+  enrichLocalRepresentative(rep) {
+    if (!rep) return rep
+
+    const enriched = { ...rep }
+
+    const parseDistrictNumber = (value) => {
+      if (value === undefined || value === null) return NaN
+      const numeric = parseInt(String(value).replace(/[^0-9]/g, ""), 10)
+      return Number.isNaN(numeric) ? NaN : numeric
+    }
+
+    const normalizeName = (value) =>
+      (value || "")
+        .toString()
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase()
+
+    const districtNumber = parseDistrictNumber(enriched.district)
+    const normalizedName = normalizeName(enriched.name)
+
+    const matchFromCollection = (collection) => {
+      if (!collection || collection.length === 0) return null
+      if (!Number.isNaN(districtNumber)) {
+        const byDistrict = collection.find((member) => {
+          const candidateDistrict = parseDistrictNumber(member.district)
+          return !Number.isNaN(candidateDistrict) && candidateDistrict === districtNumber
+        })
+        if (byDistrict) return byDistrict
+      }
+      if (normalizedName) {
+        return collection.find(
+          (member) => normalizeName(member.name) === normalizedName
+        )
+      }
+      return null
+    }
+
+    let matched = null
+    if (enriched.type === "alderperson") {
+      matched = matchFromCollection(this.milwaukeeCouncil.getMembers())
+    } else if (enriched.type === "supervisor") {
+      matched = matchFromCollection(this.milwaukeeCountyBoard.getMembers())
+    }
+
+    if (matched) {
+      if (matched.title && !enriched.office) {
+        enriched.office = matched.title
+      }
+
+      if (matched.title && !enriched.title) {
+        enriched.title = matched.title
+      }
+
+      if (matched.department && !enriched.department) {
+        enriched.department = matched.department
+      }
+
+      if (matched.responsibilities && matched.responsibilities.length > 0) {
+        enriched.responsibilities = matched.responsibilities
+      }
+
+      const contact = matched.contact || {}
+      if (contact.website && !enriched.website) {
+        enriched.website = contact.website
+      }
+      if (contact.email && !enriched.email) {
+        enriched.email = contact.email
+      }
+      if (contact.phone && !enriched.phone) {
+        enriched.phone = contact.phone
+      }
+      if (contact.office) {
+        enriched.officeLocation = contact.office
+      }
+    }
+
+    return enriched
+  }
+
+  appendDetailItem(container, label, value, className = "") {
+    if (
+      value === undefined ||
+      value === null ||
+      (typeof value === "string" && value.trim() === "")
+    ) {
+      return
+    }
+
+    const detail = document.createElement("div")
+    detail.className = ["detail-item", className].filter(Boolean).join(" ")
+
+    const labelEl = document.createElement("strong")
+    labelEl.textContent = `${label}:`
+    detail.appendChild(labelEl)
+
+    const textValue =
+      typeof value === "number" ? value.toLocaleString() : value.toString()
+    detail.appendChild(document.createTextNode(` ${textValue}`))
+
+    container.appendChild(detail)
+  }
+
+  appendResponsibilitiesSection(
+    container,
+    responsibilities,
+    themeColor,
+    options = {}
+  ) {
+    if (!Array.isArray(responsibilities) || responsibilities.length === 0) return
+
+    const {
+      label = "Key Responsibilities",
+      limit,
+      collapsed = true,
+      expandedLabel,
+    } = options
+
+    const items =
+      typeof limit === "number" && limit > 0
+        ? responsibilities.slice(0, limit)
+        : responsibilities.slice()
+
+    if (items.length === 0) return
+
+    const header = document.createElement("button")
+    header.className = "responsibilities-header"
+    const collapsedLabel = label
+    const expandedText = expandedLabel || label
+    header.textContent = collapsed ? collapsedLabel : expandedText
+    header.setAttribute("aria-expanded", collapsed ? "false" : "true")
+
+    if (themeColor) {
+      header.style.borderColor = themeColor
+      header.style.color = themeColor
+    }
+
+    const list = document.createElement("ul")
+    list.className = "responsibilities-list"
+    if (collapsed) list.classList.add("hidden")
+
+    items.forEach((resp) => {
+      if (!resp) return
+      const item = document.createElement("li")
+      item.textContent = resp
+      list.appendChild(item)
+    })
+
+    header.addEventListener("click", () => {
+      const isExpanded = header.getAttribute("aria-expanded") === "true"
+      header.setAttribute("aria-expanded", (!isExpanded).toString())
+      list.classList.toggle("hidden")
+      header.textContent = !isExpanded ? expandedText : collapsedLabel
+    })
+
+    container.appendChild(header)
+    container.appendChild(list)
+  }
+
   createCompactOfficialElement(official, type, themeColor) {
     const element = document.createElement("div")
     element.className = `official compact-official ${type}-official`
     element.setAttribute("role", "listitem")
 
-    const uniqueId = `${official.name
+    const baseIdentifier = (official.name || official.title || "official")
+      .toString()
       .replace(/\s+/g, "-")
-      .toLowerCase()}-${type}`
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "-")
+
+    const uniqueId = `${baseIdentifier}-${type}`
     element.setAttribute("aria-labelledby", `name-${uniqueId}`)
+    element.dataset.detailTheme = themeColor || ""
 
-    // Main container with name and menu button
-    const mainContainer = document.createElement("div")
-    mainContainer.className = "official-main"
+    const detailModel =
+      type === "local"
+        ? this.enrichLocalRepresentative(official)
+        : { ...official }
 
-    // Name display
+    const mainButton = document.createElement("button")
+    mainButton.type = "button"
+    mainButton.className = "official-main"
+    mainButton.setAttribute(
+      "aria-label",
+      `View details for ${detailModel.name || detailModel.title || "representative"}`
+    )
+
     const nameContainer = document.createElement("div")
     nameContainer.className = "official-name-container"
 
     const name = document.createElement("span")
     name.className = "official-name"
     name.id = `name-${uniqueId}`
-    name.textContent = official.name || official.title
-
+    name.textContent = detailModel.name || detailModel.title || "Representative"
     nameContainer.appendChild(name)
 
-    // Menu button
-    const menuButton = document.createElement("button")
-    menuButton.className = "official-menu-btn"
-    menuButton.innerHTML = "⋯"
-    menuButton.setAttribute(
-      "aria-label",
-      `Show details for ${official.name || official.title}`
-    )
-    menuButton.setAttribute("aria-expanded", "false")
-    menuButton.setAttribute("aria-controls", `details-${uniqueId}`)
-
-    mainContainer.appendChild(nameContainer)
-    mainContainer.appendChild(menuButton)
-
-    // Details panel (initially hidden)
-    const detailsPanel = document.createElement("div")
-    detailsPanel.className = "official-details-panel hidden"
-    detailsPanel.id = `details-${uniqueId}`
-    detailsPanel.setAttribute("aria-hidden", "true")
-
-    // Build details content based on type
-    if (type === "local") {
-      this.buildLocalOfficialDetails(detailsPanel, official, themeColor)
-    } else {
-      this.buildComprehensiveOfficialDetails(detailsPanel, official, themeColor)
+    const summaryText = this.getOfficialSummary(detailModel)
+    if (summaryText) {
+      const summary = document.createElement("span")
+      summary.className = "official-summary"
+      summary.id = `summary-${uniqueId}`
+      summary.textContent = summaryText
+      nameContainer.appendChild(summary)
+      mainButton.setAttribute("aria-describedby", summary.id)
     }
 
-    // Menu button click handler
-    menuButton.addEventListener("click", () => {
-      const isExpanded = menuButton.getAttribute("aria-expanded") === "true"
-      const newState = !isExpanded
+    const indicator = document.createElement("span")
+    indicator.className = "official-detail-indicator"
+    indicator.setAttribute("aria-hidden", "true")
+    indicator.textContent = "❯"
 
-      menuButton.setAttribute("aria-expanded", newState.toString())
-      detailsPanel.setAttribute("aria-hidden", (!newState).toString())
+    mainButton.appendChild(nameContainer)
+    mainButton.appendChild(indicator)
 
-      if (newState) {
-        detailsPanel.classList.remove("hidden")
-        detailsPanel.classList.add("visible")
-        menuButton.innerHTML = "⋀"
-        menuButton.style.color = themeColor
-      } else {
-        detailsPanel.classList.add("hidden")
-        detailsPanel.classList.remove("visible")
-        menuButton.innerHTML = "⋯"
-        menuButton.style.color = ""
-      }
-
-      // Announce to screen readers
-      this.announceToScreenReader(
-        newState
-          ? `Details expanded for ${official.name || official.title}`
-          : `Details collapsed`
-      )
+    mainButton.addEventListener("click", () => {
+      this.showOfficialDetail(detailModel, type, themeColor, element)
     })
 
-    element.appendChild(mainContainer)
-    element.appendChild(detailsPanel)
+    element.appendChild(mainButton)
 
     return element
+  }
+
+  showOfficialDetail(detailModel, type, themeColor, sourceElement) {
+    const detailView = this.sidebarDetailView || {}
+    const {
+      listSection,
+      detailSection,
+      detailContent,
+      detailSubtitle,
+      backButton,
+    } = detailView
+
+    if (!detailSection || !detailContent || !listSection) {
+      return
+    }
+
+    if (detailView.activeTrigger && detailView.activeTrigger !== sourceElement) {
+      detailView.activeTrigger.classList.remove("active")
+      detailView.activeTrigger.style.removeProperty("--detail-accent")
+      detailView.activeTrigger.style.removeProperty("borderColor")
+    }
+
+    if (sourceElement) {
+      sourceElement.classList.add("active")
+      if (themeColor) {
+        sourceElement.style.setProperty("--detail-accent", themeColor)
+        sourceElement.style.borderColor = themeColor
+      } else {
+        sourceElement.style.removeProperty("--detail-accent")
+        sourceElement.style.removeProperty("borderColor")
+      }
+      detailView.activeTrigger = sourceElement
+      detailView.activeButton = sourceElement.querySelector(".official-main")
+    } else {
+      detailView.activeTrigger = null
+      detailView.activeButton = null
+    }
+
+    listSection.classList.add("hidden")
+    detailSection.classList.remove("hidden")
+
+    if (themeColor) {
+      detailSection.style.setProperty("--detail-accent", themeColor)
+    } else {
+      detailSection.style.removeProperty("--detail-accent")
+    }
+
+    detailSection.scrollTop = 0
+
+    if (detailSubtitle) {
+      let descriptor = "Government official"
+      if (type === "local") {
+        descriptor =
+          detailModel.department || detailModel.office || "Your representative"
+      } else if (detailModel.level) {
+        const levelLabel = `${detailModel.level
+          .charAt(0)
+          .toUpperCase()}${detailModel.level.slice(1).toLowerCase()}`
+        descriptor = `${levelLabel} official`
+      }
+      detailSubtitle.textContent = descriptor
+    }
+
+    detailContent.innerHTML = ""
+
+    const identity = document.createElement("div")
+    identity.className = "official-detail-identity"
+    if (themeColor) {
+      identity.style.borderColor = themeColor
+    }
+
+    const nameHeading = document.createElement("h4")
+    nameHeading.textContent =
+      detailModel.name || detailModel.title || "Representative"
+    identity.appendChild(nameHeading)
+
+    const roleText =
+      detailModel.office || detailModel.title || detailModel.role
+    if (roleText) {
+      const role = document.createElement("div")
+      role.className = "official-detail-role"
+      role.textContent = roleText
+      identity.appendChild(role)
+    }
+
+    const tagGroup = document.createElement("div")
+    tagGroup.className = "official-detail-tags"
+
+    const createTag = (label) => {
+      const tag = document.createElement("span")
+      tag.className = "official-detail-tag"
+      tag.textContent = label
+      if (themeColor) {
+        tag.style.borderColor = themeColor
+        tag.style.color = themeColor
+      }
+      return tag
+    }
+
+    if (detailModel.party) {
+      tagGroup.appendChild(createTag(detailModel.party))
+    }
+
+    if (detailModel.level && type !== "local") {
+      const levelLabel = `${detailModel.level
+        .charAt(0)
+        .toUpperCase()}${detailModel.level.slice(1).toLowerCase()}`
+      tagGroup.appendChild(createTag(levelLabel))
+    }
+
+    if (detailModel.district && !roleText?.includes(detailModel.district)) {
+      tagGroup.appendChild(createTag(detailModel.district))
+    }
+
+    if (tagGroup.childElementCount > 0) {
+      identity.appendChild(tagGroup)
+    }
+
+    detailContent.appendChild(identity)
+
+    const metadata = document.createElement("div")
+    metadata.className = "official-detail-metadata"
+
+    if (type === "local") {
+      this.buildLocalOfficialDetails(metadata, detailModel, themeColor)
+    } else {
+      this.buildComprehensiveOfficialDetails(
+        metadata,
+        detailModel,
+        themeColor
+      )
+    }
+
+    if (metadata.childElementCount > 0) {
+      detailContent.appendChild(metadata)
+    }
+
+    this.activeOfficialDetail = { official: detailModel, type, themeColor }
+
+    if (backButton) {
+      backButton.focus({ preventScroll: true })
+    }
+
+    this.announceToScreenReader(
+      `Showing details for ${detailModel.name || detailModel.title}`
+    )
+  }
+
+  closeOfficialDetail(options = {}) {
+    const detailView = this.sidebarDetailView || {}
+    const {
+      listSection,
+      detailSection,
+      detailContent,
+      detailSubtitle,
+      activeTrigger,
+      activeButton,
+    } = detailView
+
+    const wasVisible = detailSection
+      ? !detailSection.classList.contains("hidden")
+      : false
+
+    if (activeTrigger) {
+      activeTrigger.classList.remove("active")
+      activeTrigger.style.removeProperty("--detail-accent")
+      activeTrigger.style.removeProperty("borderColor")
+      detailView.activeTrigger = null
+    }
+
+    detailView.activeButton = null
+
+    if (detailSection) {
+      detailSection.classList.add("hidden")
+      detailSection.style.removeProperty("--detail-accent")
+    }
+
+    if (listSection) {
+      listSection.classList.remove("hidden")
+    }
+
+    if (detailContent) {
+      detailContent.innerHTML = ""
+    }
+
+    if (detailSubtitle) {
+      detailSubtitle.textContent = ""
+    }
+
+    const returnFocus =
+      activeButton && activeButton.isConnected ? activeButton : null
+
+    this.activeOfficialDetail = null
+
+    if (returnFocus) {
+      setTimeout(() => {
+        if (returnFocus.isConnected) {
+          returnFocus.focus({ preventScroll: true })
+        }
+      }, 0)
+    }
+
+    if (!options.silent && wasVisible) {
+      this.announceToScreenReader("Back to officials list")
+    }
   }
 
   // Add collapsible behavior to division headers
@@ -1859,184 +2336,186 @@ class NewTabApp {
   buildLocalOfficialDetails(panel, rep, themeColor) {
     panel.innerHTML = ""
 
-    // Title/Office
-    if (rep.office) {
-      const office = document.createElement("div")
-      office.className = "detail-item office"
-      office.innerHTML = `<strong>Office:</strong> ${rep.office}`
-      panel.appendChild(office)
-    }
+    this.appendDetailItem(panel, "Department", rep.department, "department")
+    this.appendDetailItem(panel, "District", rep.district, "district")
+    this.appendDetailItem(
+      panel,
+      "Office Location",
+      rep.officeLocation,
+      "office-location"
+    )
 
-    // District info
-    if (rep.district) {
-      const district = document.createElement("div")
-      district.className = "detail-item district"
-      district.innerHTML = `<strong>District:</strong> ${rep.district}`
-      panel.appendChild(district)
-    }
-
-    // Population (for congressional)
     if (rep.population) {
-      const population = document.createElement("div")
-      population.className = "detail-item population"
-      population.innerHTML = `<strong>Population:</strong> ${rep.population.toLocaleString()}`
-      panel.appendChild(population)
+      this.appendDetailItem(panel, "Population", rep.population, "population")
     }
 
-    // Contact links
     const contactContainer = document.createElement("div")
     contactContainer.className = "contact-links"
 
-    if (rep.website) {
-      const websiteLink = document.createElement("a")
-      websiteLink.href = rep.website
-      websiteLink.target = "_blank"
-      websiteLink.rel = "noopener noreferrer"
-      websiteLink.textContent = "Website"
-      websiteLink.className = "contact-link"
-      websiteLink.style.borderColor = themeColor
+    const createContactLink = (href, label) => {
+      if (!href) return null
+      const link = document.createElement("a")
+      link.href = href
+      link.textContent = label
+      link.className = "contact-link"
+      if (href.startsWith("http")) {
+        link.target = "_blank"
+        link.rel = "noopener noreferrer"
+      }
+      if (themeColor) {
+        link.style.borderColor = themeColor
+        link.style.color = themeColor
+      }
+      return link
+    }
+
+    const websiteLabel =
+      rep.type === "alderperson"
+        ? "District Website"
+        : rep.type === "supervisor"
+        ? "County Website"
+        : "Website"
+
+    const websiteLink = createContactLink(rep.website, websiteLabel)
+    if (websiteLink) {
       contactContainer.appendChild(websiteLink)
     }
 
-    if (rep.email) {
-      const emailLink = document.createElement("a")
-      emailLink.href = `mailto:${rep.email}`
-      emailLink.textContent = "Email"
-      emailLink.className = "contact-link"
-      emailLink.style.borderColor = themeColor
+    const emailLink = createContactLink(
+      rep.email ? `mailto:${rep.email}` : null,
+      "Email"
+    )
+    if (emailLink) {
       contactContainer.appendChild(emailLink)
     }
 
-    if (rep.phone) {
-      const phoneLink = document.createElement("a")
-      phoneLink.href = `tel:${rep.phone}`
-      phoneLink.textContent = "Phone"
-      phoneLink.className = "contact-link"
-      phoneLink.style.borderColor = themeColor
+    const phoneLink = createContactLink(
+      rep.phone ? `tel:${rep.phone}` : null,
+      "Phone"
+    )
+    if (phoneLink) {
       contactContainer.appendChild(phoneLink)
     }
 
     if (contactContainer.children.length > 0) {
       panel.appendChild(contactContainer)
     }
+
+    const responsibilitiesLabel =
+      rep.type === "alderperson"
+        ? "Common Council Committees"
+        : rep.type === "supervisor"
+        ? "County Committee Service"
+        : "Key Responsibilities"
+
+    const expandedLabel =
+      rep.type === "alderperson"
+        ? "Hide Committees"
+        : rep.type === "supervisor"
+        ? "Hide Committee Service"
+        : "Hide Responsibilities"
+
+    this.appendResponsibilitiesSection(
+      panel,
+      rep.responsibilities || [],
+      themeColor,
+      {
+        label: responsibilitiesLabel,
+        collapsed: false,
+        expandedLabel,
+      }
+    )
   }
 
   buildComprehensiveOfficialDetails(panel, official, themeColor) {
     panel.innerHTML = ""
 
-    // Title
-    const title = document.createElement("div")
-    title.className = "detail-item title"
-    title.innerHTML = `<strong>Title:</strong> ${official.title}`
-    panel.appendChild(title)
+    this.appendDetailItem(panel, "Title", official.title, "title")
+    this.appendDetailItem(
+      panel,
+      "Department",
+      official.department,
+      "department"
+    )
+    this.appendDetailItem(panel, "District", official.district, "district")
 
-    // Department
-    if (official.department) {
-      const dept = document.createElement("div")
-      dept.className = "detail-item department"
-      dept.innerHTML = `<strong>Department:</strong> ${official.department}`
-      panel.appendChild(dept)
-    }
-
-    // District (for council members)
-    if (official.district) {
-      const dist = document.createElement("div")
-      dist.className = "detail-item district"
-      dist.innerHTML = `<strong>District:</strong> ${official.district}`
-      panel.appendChild(dist)
-    }
-
-    // Term info
     if (official.term_start || official.term_end) {
-      const term = document.createElement("div")
-      term.className = "detail-item term"
-      let termText = "<strong>Term:</strong> "
-      if (official.term_start && official.term_end) {
-        termText += `${official.term_start} - ${official.term_end}`
-      } else if (official.term_start) {
-        termText += `Since ${official.term_start}`
+      const termLabel =
+        official.term_start && official.term_end
+          ? `${official.term_start} - ${official.term_end}`
+          : official.term_start
+          ? `Since ${official.term_start}`
+          : official.term_end
+      this.appendDetailItem(panel, "Term", termLabel, "term")
+    }
+
+    this.appendResponsibilitiesSection(
+      panel,
+      official.responsibilities || [],
+      themeColor,
+      {
+        limit: 3,
+        expandedLabel: "Hide Responsibilities",
       }
-      term.innerHTML = termText
-      panel.appendChild(term)
-    }
-
-    // Key responsibilities (collapsed by default)
-    if (official.responsibilities && official.responsibilities.length > 0) {
-      const responsibilitiesHeader = document.createElement("button")
-      responsibilitiesHeader.className = "responsibilities-header"
-      responsibilitiesHeader.textContent = "Key Responsibilities"
-      responsibilitiesHeader.setAttribute("aria-expanded", "false")
-
-      const responsibilitiesList = document.createElement("ul")
-      responsibilitiesList.className = "responsibilities-list hidden"
-
-      official.responsibilities.slice(0, 3).forEach((resp) => {
-        // Show only first 3
-        const li = document.createElement("li")
-        li.textContent = resp
-        responsibilitiesList.appendChild(li)
-      })
-
-      responsibilitiesHeader.addEventListener("click", () => {
-        const isExpanded =
-          responsibilitiesHeader.getAttribute("aria-expanded") === "true"
-        responsibilitiesHeader.setAttribute(
-          "aria-expanded",
-          (!isExpanded).toString()
-        )
-        responsibilitiesList.classList.toggle("hidden")
-        responsibilitiesHeader.textContent = isExpanded
-          ? "Key Responsibilities"
-          : "Hide Responsibilities"
-      })
-
-      panel.appendChild(responsibilitiesHeader)
-      panel.appendChild(responsibilitiesList)
-    }
+    )
 
     // Contact links
     if (official.contact) {
       const contactContainer = document.createElement("div")
       contactContainer.className = "contact-links"
 
-      if (official.contact.website) {
-        const websiteLink = document.createElement("a")
-        websiteLink.href = official.contact.website
-        websiteLink.target = "_blank"
-        websiteLink.rel = "noopener noreferrer"
-        websiteLink.textContent = "Website"
-        websiteLink.className = "contact-link"
-        websiteLink.style.borderColor = themeColor
+      const createContactLink = (href, label) => {
+        if (!href) return null
+        const link = document.createElement("a")
+        link.href = href
+        link.textContent = label
+        link.className = "contact-link"
+        if (href.startsWith("http")) {
+          link.target = "_blank"
+          link.rel = "noopener noreferrer"
+        }
+        if (themeColor) {
+          link.style.borderColor = themeColor
+          link.style.color = themeColor
+        }
+        return link
+      }
+
+      const websiteLink = createContactLink(
+        official.contact.website,
+        "Website"
+      )
+      if (websiteLink) {
         contactContainer.appendChild(websiteLink)
       }
 
-      if (official.contact.email) {
-        const emailLink = document.createElement("a")
-        emailLink.href = `mailto:${official.contact.email}`
-        emailLink.textContent = "Email"
-        emailLink.className = "contact-link"
-        emailLink.style.borderColor = themeColor
+      const emailLink = createContactLink(
+        official.contact.email ? `mailto:${official.contact.email}` : null,
+        "Email"
+      )
+      if (emailLink) {
         contactContainer.appendChild(emailLink)
       }
 
-      if (official.contact.phone) {
-        const phoneLink = document.createElement("a")
-        phoneLink.href = `tel:${official.contact.phone}`
-        phoneLink.textContent = "Phone"
-        phoneLink.className = "contact-link"
-        phoneLink.style.borderColor = themeColor
+      const phoneLink = createContactLink(
+        official.contact.phone ? `tel:${official.contact.phone}` : null,
+        "Phone"
+      )
+      if (phoneLink) {
         contactContainer.appendChild(phoneLink)
-      }
-
-      if (official.contact.office) {
-        const office = document.createElement("div")
-        office.className = "detail-item office-address"
-        office.innerHTML = `<strong>Office:</strong> ${official.contact.office}`
-        panel.appendChild(office)
       }
 
       if (contactContainer.children.length > 0) {
         panel.appendChild(contactContainer)
+      }
+
+      if (official.contact.office) {
+        this.appendDetailItem(
+          panel,
+          "Office",
+          official.contact.office,
+          "office-address"
+        )
       }
     }
   }
