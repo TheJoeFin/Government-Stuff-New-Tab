@@ -1,6 +1,19 @@
 // Government Stuff New Tab Extension
 // Main application logic
 
+const CALENDAR_SOURCE_LABELS = {
+  milwaukee: "City of Milwaukee",
+  milwaukeecounty: "Milwaukee County",
+}
+
+const CALENDAR_SOURCE_COLORS = {
+  milwaukee: "#0077be",
+  milwaukeecounty: "#ffa500",
+}
+
+const CALENDAR_STORAGE_KEY = "govtab_calendar_events_v2"
+const CALENDAR_STORAGE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
+
 class NewTabApp {
   constructor() {
     this.favorites = []
@@ -26,6 +39,29 @@ class NewTabApp {
     }
 
     this.activeOfficialDetail = null
+    this.calendarViewDate = new Date()
+    this.calendarViewDate.setDate(1)
+    this.calendarContainer = null
+    this.officialsToggleControls = null
+    this.officialsListExpandedBySearch = false
+    this.calendarEvents = []
+    this.calendarEventIndex = new Map()
+    this.selectedCalendarDate = null
+    this.calendarEventsMeta = {
+      fetchedAt: null,
+      stale: false,
+    }
+
+    this.calendarDetailView = {
+      listContainer: null,
+      detailSection: null,
+      detailContent: null,
+      detailSubtitle: null,
+      backButton: null,
+      activeTrigger: null,
+      activeButton: null,
+    }
+    this.activeCalendarEvent = null
 
     // Initialize theme early
     this.initializeTheme()
@@ -92,8 +128,8 @@ class NewTabApp {
 
       if (this.settings.autoLocation) {
         this.getUserLocation()
-      } else {
-        // Show welcome message by default
+      } else if (!this.lastAddress) {
+        // Show welcome message only when no saved address exists
         this.renderNoAddressMessage()
       }
       console.log("Government Tab App ready!")
@@ -368,6 +404,9 @@ class NewTabApp {
   initializeUI() {
     this.applyTheme()
     this.setupSidebarDetailView()
+    this.setupCalendar()
+    this.setupOfficialsToggle()
+    this.loadCalendarEvents()
     this.renderFavorites()
     this.updateSidebarVisibility()
     this.updateSettingsUI()
@@ -487,6 +526,1222 @@ class NewTabApp {
         "aria-label",
         "Search the web using your default search provider"
       )
+    }
+  }
+
+  setupCalendar() {
+    const grid = document.getElementById("calendar-grid")
+    const label = document.getElementById("calendar-month-label")
+    const prevBtn = document.getElementById("calendar-prev")
+    const nextBtn = document.getElementById("calendar-next")
+    const eventsContainer = document.getElementById("calendar-events")
+    const header = document.querySelector(".calendar-header")
+    const detailSection = document.getElementById("calendar-detail")
+    const detailContent = document.getElementById("calendar-detail-content")
+    const detailSubtitle = document.getElementById("calendar-detail-subtitle")
+    const detailBackButton = document.getElementById("calendar-detail-back")
+    const legend = document.getElementById("calendar-legend")
+
+    if (!grid || !label || !prevBtn || !nextBtn) {
+      console.warn("Calendar elements not found; skipping calendar setup")
+      return
+    }
+
+    this.calendarContainer = document.querySelector(".officials-calendar")
+    this.calendarGridElement = grid
+    this.calendarLabelElement = label
+    this.calendarEventsContainer = eventsContainer
+    this.calendarLegendElement = legend
+    this.calendarHeaderElement = header
+    this.calendarDetailView = {
+      listContainer: eventsContainer,
+      detailSection,
+      detailContent,
+      detailSubtitle,
+      backButton: detailBackButton,
+      activeTrigger: null,
+      activeButton: null,
+    }
+
+    if (detailBackButton) {
+      detailBackButton.addEventListener("click", () =>
+        this.closeCalendarEventDetail()
+      )
+    }
+
+    if (eventsContainer && !eventsContainer.innerHTML.trim()) {
+      eventsContainer.innerHTML = this.buildCalendarPlaceholder()
+      eventsContainer.setAttribute("aria-busy", "true")
+    }
+
+    const handlePrev = () => this.changeCalendarMonth(-1)
+    const handleNext = () => this.changeCalendarMonth(1)
+
+    prevBtn.addEventListener("click", handlePrev)
+    nextBtn.addEventListener("click", handleNext)
+
+    prevBtn.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft") {
+        event.preventDefault()
+        handlePrev()
+      }
+    })
+
+    nextBtn.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowRight") {
+        event.preventDefault()
+        handleNext()
+      }
+    })
+
+    this.renderCalendar()
+    this.setCalendarVisibility(true)
+  }
+
+  renderCalendar() {
+    const grid = this.calendarGridElement || document.getElementById("calendar-grid")
+    const label = this.calendarLabelElement || document.getElementById("calendar-month-label")
+    if (!grid || !label) return
+
+    // Ensure view date is anchored to first of month
+    if (!this.calendarViewDate) {
+      this.calendarViewDate = new Date()
+      this.calendarViewDate.setDate(1)
+    }
+
+    const viewDate = new Date(this.calendarViewDate.getTime())
+    viewDate.setDate(1)
+
+    const monthFormatter = new Intl.DateTimeFormat(undefined, {
+      month: "long",
+      year: "numeric",
+    })
+    label.textContent = monthFormatter.format(viewDate)
+
+    grid.innerHTML = ""
+
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    dayNames.forEach((day) => {
+      const cell = document.createElement("div")
+      cell.className = "calendar-cell is-label"
+      cell.setAttribute("role", "columnheader")
+      cell.textContent = day
+      grid.appendChild(cell)
+    })
+
+    const firstDayOfWeek = viewDate.getDay()
+    const daysInMonth = new Date(
+      viewDate.getFullYear(),
+      viewDate.getMonth() + 1,
+      0
+    ).getDate()
+
+    for (let pad = 0; pad < firstDayOfWeek; pad += 1) {
+      const filler = document.createElement("div")
+      filler.className = "calendar-cell is-empty"
+      filler.setAttribute("aria-hidden", "true")
+      filler.setAttribute("role", "presentation")
+      grid.appendChild(filler)
+    }
+
+    const today = new Date()
+    const isCurrentMonth =
+      today.getFullYear() === viewDate.getFullYear() &&
+      today.getMonth() === viewDate.getMonth()
+
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const cell = document.createElement("div")
+      cell.className = "calendar-cell"
+      cell.setAttribute("role", "gridcell")
+      cell.textContent = day.toString()
+
+      if (isCurrentMonth && today.getDate() === day) {
+        cell.classList.add("is-today")
+        cell.setAttribute("aria-current", "date")
+      }
+
+      const eventDateKey = this.buildDateKey(
+        viewDate.getFullYear(),
+        viewDate.getMonth(),
+        day
+      )
+
+      if (this.calendarEventIndex.has(eventDateKey)) {
+        const eventSources = this.getEventSourcesForDate(eventDateKey)
+        cell.classList.add("has-events")
+        cell.dataset.date = eventDateKey
+        if (eventSources.length) {
+          cell.dataset.source = eventSources.join(" ")
+        }
+        cell.tabIndex = 0
+        const describe = this.describeEventCount(eventDateKey)
+        cell.setAttribute("aria-label", `${monthFormatter.format(viewDate)} ${day}. ${describe}`)
+
+        const activate = () => {
+          if (this.selectedCalendarDate === eventDateKey) {
+            this.clearCalendarSelection()
+            return
+          }
+          this.selectCalendarDate(eventDateKey)
+        }
+
+        cell.addEventListener("click", activate)
+        cell.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault()
+            activate()
+          }
+        })
+
+        if (this.selectedCalendarDate === eventDateKey) {
+          cell.classList.add("selected")
+        }
+      }
+
+      grid.appendChild(cell)
+    }
+
+    const filledSlots = firstDayOfWeek + daysInMonth
+    const remainder = filledSlots % 7
+    if (remainder !== 0) {
+      const trailing = 7 - remainder
+      for (let pad = 0; pad < trailing; pad += 1) {
+        const filler = document.createElement("div")
+        filler.className = "calendar-cell is-empty"
+        filler.setAttribute("aria-hidden", "true")
+        filler.setAttribute("role", "presentation")
+        grid.appendChild(filler)
+      }
+    }
+  }
+
+  buildDateKey(year, monthIndex, day) {
+    const pad = (value) => value.toString().padStart(2, "0")
+    return `${year}-${pad(monthIndex + 1)}-${pad(day)}`
+  }
+
+  buildCalendarPlaceholder() {
+    return `
+      <div class="calendar-placeholder">
+        <div class="spinner" aria-hidden="true"></div>
+        <p>Loading upcoming meetings…</p>
+      </div>
+    `
+  }
+
+  setCalendarVisibility(visible) {
+    if (!this.calendarContainer) {
+      this.calendarContainer = document.querySelector(".officials-calendar")
+    }
+
+    if (!this.calendarContainer) return
+
+    this.calendarContainer.classList.toggle("hidden", !visible)
+    if (visible) {
+      this.calendarContainer.removeAttribute("aria-hidden")
+    } else {
+      this.calendarContainer.setAttribute("aria-hidden", "true")
+    }
+  }
+
+  setCalendarStructureHidden(hidden) {
+    const nodes = [
+      this.calendarHeaderElement || document.querySelector(".calendar-header"),
+      this.calendarGridElement || document.getElementById("calendar-grid"),
+      this.calendarLegendElement || document.getElementById("calendar-legend"),
+    ]
+
+    nodes.forEach((node) => {
+      if (!node) return
+      node.classList.toggle("hidden", hidden)
+    })
+  }
+
+  setCalendarBusyState(isBusy) {
+    if (!this.calendarEventsContainer) return
+    this.calendarEventsContainer.setAttribute("aria-busy", isBusy ? "true" : "false")
+  }
+
+  getCachedCalendarEvents() {
+    try {
+      const raw = localStorage.getItem(CALENDAR_STORAGE_KEY)
+      if (!raw) return null
+
+      const parsed = JSON.parse(raw)
+      if (!parsed || !Array.isArray(parsed.events)) return null
+
+      const storedFetchedAt = parsed.fetchedAt
+      const fetchedAt =
+        typeof storedFetchedAt === "number"
+          ? storedFetchedAt
+          : Date.parse(storedFetchedAt)
+
+      if (!Number.isFinite(fetchedAt)) {
+        return null
+      }
+
+      const age = Date.now() - fetchedAt
+      if (age > CALENDAR_STORAGE_TTL_MS) {
+        console.log(
+          `[Calendar] Cached events expired (age ${(age / (60 * 60 * 1000)).toFixed(
+            1
+          )}h)`
+        )
+        return null
+      }
+
+      return {
+        ...parsed,
+        fetchedAt,
+      }
+    } catch (error) {
+      console.warn("[Calendar] Failed to read cached events", error)
+      return null
+    }
+  }
+
+  saveCalendarEventsToCache(payload) {
+    if (!payload || !Array.isArray(payload.events)) return
+
+    const record = {
+      events: payload.events,
+      fetchedAt: payload.fetchedAt || Date.now(),
+      stale: Boolean(payload.stale),
+    }
+
+    if (payload.expiresAt) {
+      record.expiresAt = payload.expiresAt
+    }
+
+    try {
+      localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(record))
+      console.log(
+        `[Calendar] Cached ${record.events.length} events in local storage`
+      )
+    } catch (error) {
+      console.warn("[Calendar] Failed to cache calendar events", error)
+    }
+  }
+
+  clearCachedCalendarEvents() {
+    try {
+      localStorage.removeItem(CALENDAR_STORAGE_KEY)
+    } catch (error) {
+      console.warn("[Calendar] Failed to clear calendar cache", error)
+    }
+  }
+
+  applyCalendarPayload(payload, options = {}) {
+    if (!payload || !Array.isArray(payload.events)) {
+      throw new Error("Calendar payload missing events")
+    }
+
+    const fetchedAtRaw = payload.fetchedAt ?? Date.now()
+    const fetchedAt =
+      typeof fetchedAtRaw === "number" ? fetchedAtRaw : Date.parse(fetchedAtRaw)
+
+    const normalizedFetchedAt = Number.isNaN(fetchedAt)
+      ? Date.now()
+      : fetchedAt
+
+    this.calendarEvents = payload.events
+    this.calendarEventsMeta = {
+      fetchedAt: normalizedFetchedAt,
+      fromCache: Boolean(
+        options.fromCache !== undefined ? options.fromCache : payload.fromCache
+      ),
+      stale: Boolean(payload.stale),
+    }
+
+    this.calendarEventIndex = this.groupEventsByDate(payload.events)
+    console.log(
+      `[Calendar] Grouped events into ${this.calendarEventIndex.size} date buckets`
+    )
+
+    if (this.calendarLegendElement) {
+      this.calendarLegendElement.classList.toggle(
+        "hidden",
+        payload.events.length === 0
+      )
+    }
+
+    this.renderCalendar()
+    this.renderCalendarEventsList()
+  }
+
+  async loadCalendarEvents({ forceRefresh = false } = {}) {
+    if (!this.calendarEventsContainer) {
+      this.calendarEventsContainer = document.getElementById("calendar-events")
+    }
+
+    if (forceRefresh) {
+      this.clearCachedCalendarEvents()
+    } else {
+      const cached = this.getCachedCalendarEvents()
+      if (cached) {
+        const fetchedLabel = new Date(cached.fetchedAt).toLocaleString()
+        console.log(
+          `[Calendar] Using cached events from local storage (fetched ${fetchedLabel})`
+        )
+        try {
+          this.applyCalendarPayload(cached, { fromCache: true })
+          this.setCalendarBusyState(false)
+          return
+        } catch (error) {
+          console.warn(
+            "[Calendar] Cached calendar data invalid, proceeding to refetch",
+            error
+          )
+          this.clearCachedCalendarEvents()
+        }
+      }
+    }
+
+    if (this.calendarEventsContainer) {
+      console.log(
+        `[Calendar] Loading calendar events (forceRefresh=${forceRefresh})`
+      )
+      this.calendarEventsContainer.innerHTML = this.buildCalendarPlaceholder()
+      this.setCalendarBusyState(true)
+    }
+
+    try {
+      const payload = await this.requestLegistarEvents(forceRefresh)
+      console.log(
+        `[Calendar] Received calendar payload:`,
+        payload ? {
+          events: Array.isArray(payload.events)
+            ? payload.events.length
+            : "missing",
+          fromCache: payload?.fromCache,
+          stale: payload?.stale,
+          fetchedAt: payload?.fetchedAt,
+        } : "null response"
+      )
+      if (!payload || !Array.isArray(payload.events)) {
+        throw new Error("Calendar payload missing events")
+      }
+
+      this.applyCalendarPayload(payload, {
+        fromCache: Boolean(payload.fromCache),
+      })
+      this.saveCalendarEventsToCache(payload)
+    } catch (error) {
+      console.error("Failed to load calendar events", error)
+      if (this.calendarEvents.length) {
+        this.calendarEventsMeta.stale = true
+        this.renderCalendarEventsList()
+      } else {
+        this.renderCalendarError(error)
+      }
+    } finally {
+      console.log("[Calendar] Calendar load complete")
+      this.setCalendarBusyState(false)
+    }
+  }
+
+  async requestLegistarEvents(forceRefresh) {
+    if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
+      console.warn("[Calendar] chrome.runtime missing; using mock calendar events")
+      return { events: this.buildMockCalendarEvents(), fetchedAt: Date.now() }
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        console.log("[Calendar] Requesting Legistar events from background worker")
+        const timeoutId = setTimeout(() => {
+          console.error(
+            "[Calendar] Timed out waiting for background response (10s)"
+          )
+          reject(new Error("Calendar service not responding"))
+        }, 10000)
+        chrome.runtime.sendMessage(
+          { type: "legistar:getEvents", forceRefresh },
+          (response) => {
+            clearTimeout(timeoutId)
+            if (chrome.runtime.lastError) {
+              console.error(
+                "[Calendar] chrome.runtime.lastError while loading events",
+                chrome.runtime.lastError
+              )
+              reject(new Error(chrome.runtime.lastError.message))
+              return
+            }
+            if (!response) {
+              console.error("[Calendar] Empty response from background worker")
+              reject(new Error("Empty calendar response"))
+              return
+            }
+            if (response.status === "ok") {
+              console.log(
+                `[Calendar] Background worker returned ${
+                  response.data?.events?.length ?? "no"
+                } events`
+              )
+              resolve(response.data)
+            } else {
+              console.error(
+                `[Calendar] Background worker reported error: ${response.error}`
+              )
+              reject(new Error(response.error || "Unknown Legistar error"))
+            }
+          }
+        )
+      } catch (error) {
+        console.error("[Calendar] Unexpected error requesting events", error)
+        reject(error)
+      }
+    })
+  }
+
+  buildMockCalendarEvents() {
+    const now = new Date()
+    const sample = []
+    for (let i = 0; i < 4; i += 1) {
+      const date = new Date(now.getTime())
+      date.setDate(date.getDate() + i * 3 + 1)
+      sample.push({
+        id: `mock-${i}`,
+        source: i % 2 === 0 ? "milwaukee" : "milwaukeecounty",
+        sourceLabel:
+          i % 2 === 0
+            ? CALENDAR_SOURCE_LABELS.milwaukee
+            : CALENDAR_SOURCE_LABELS.milwaukeecounty,
+        sourceColor:
+          i % 2 === 0
+            ? CALENDAR_SOURCE_COLORS.milwaukee
+            : CALENDAR_SOURCE_COLORS.milwaukeecounty,
+        bodyName: i % 2 === 0 ? "Common Council" : "County Board",
+        title: `Sample meeting ${i + 1}`,
+        location: "City Hall",
+        startDateTime: date.toISOString(),
+        agendaUrl: "#",
+      })
+    }
+    return sample
+  }
+
+  groupEventsByDate(events) {
+    const map = new Map()
+    events.forEach((event) => {
+      if (!event.startDateTime) return
+      const date = new Date(event.startDateTime)
+      if (Number.isNaN(date.getTime())) return
+      const key = this.buildDateKey(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+      )
+      if (!map.has(key)) {
+        map.set(key, [])
+      }
+      map.get(key).push(event)
+    })
+
+    map.forEach((value, key) => {
+      value.sort(
+        (a, b) => new Date(a.startDateTime) - new Date(b.startDateTime)
+      )
+      map.set(key, value)
+    })
+
+    return map
+  }
+
+  renderCalendarEventsList() {
+    if (!this.calendarEventsContainer) return
+
+    const events = this.getEventsForCurrentView()
+    const container = this.calendarEventsContainer
+    container.innerHTML = ""
+
+    const header = document.createElement("div")
+    header.className = "calendar-events-header"
+    const heading = document.createElement("h4")
+    heading.textContent = this.buildCalendarHeading(events.length)
+    heading.style.margin = "0"
+    heading.style.fontSize = "0.95rem"
+    heading.style.color = "var(--text-primary)"
+    header.appendChild(heading)
+
+    if (this.selectedCalendarDate) {
+      const clearBtn = document.createElement("button")
+      clearBtn.className = "btn-small"
+      clearBtn.type = "button"
+      clearBtn.textContent = "Show all"
+      clearBtn.setAttribute("aria-label", "Show all meetings this month")
+      clearBtn.addEventListener("click", () => this.clearCalendarSelection())
+      header.appendChild(clearBtn)
+    }
+
+    container.appendChild(header)
+
+    const statusElement = this.buildCalendarStatusElement()
+    if (statusElement) {
+      container.appendChild(statusElement)
+    }
+
+    if (
+      this.activeCalendarEvent &&
+      !events.some((event) => event.id === this.activeCalendarEvent.id)
+    ) {
+      this.closeCalendarEventDetail({ silent: true })
+    }
+
+    if (!events.length) {
+      const empty = document.createElement("div")
+      empty.className = "calendar-empty"
+      empty.textContent = "No meetings found for this month."
+      empty.style.fontSize = "0.85rem"
+      empty.style.color = "var(--text-muted)"
+      empty.style.padding = "0.5rem 0"
+      container.appendChild(empty)
+      return
+    }
+
+    events.forEach((event) => {
+      const item = document.createElement("div")
+      item.className = "calendar-event-item"
+      item.dataset.eventId = event.id
+      item.setAttribute("role", "listitem")
+
+      if (event.sourceColor) {
+        item.style.setProperty("--detail-accent", event.sourceColor)
+      } else {
+        item.style.removeProperty("--detail-accent")
+      }
+
+      const mainButton = document.createElement("button")
+      mainButton.type = "button"
+      mainButton.className = "calendar-event-main"
+      mainButton.setAttribute(
+        "aria-label",
+        `View details for ${event.title || "meeting"}`
+      )
+
+      const title = document.createElement("span")
+      title.className = "calendar-event-title"
+      title.textContent = event.title || "Government meeting"
+
+      const meta = document.createElement("div")
+      meta.className = "calendar-event-meta"
+
+      const sourceDot = document.createElement("span")
+      sourceDot.className = "calendar-event-source-dot"
+      sourceDot.style.backgroundColor =
+        event.sourceColor || CALENDAR_SOURCE_COLORS[event.source] ||
+        "var(--accent-color)"
+      sourceDot.setAttribute("aria-hidden", "true")
+
+      const dateLabel = this.formatCalendarDate(event.startDateTime)
+      const timeLabel = this.formatEventTime(event.startDateTime)
+
+      const timeEl = document.createElement("span")
+      timeEl.className = "calendar-event-time"
+      timeEl.textContent = timeLabel
+
+      const dateEl = document.createElement("span")
+      dateEl.className = "calendar-event-date"
+      dateEl.textContent = dateLabel
+
+      const bodyEl = document.createElement("span")
+      bodyEl.textContent = event.bodyName || event.sourceLabel || "Local meeting"
+
+      meta.appendChild(sourceDot)
+      meta.appendChild(timeEl)
+      meta.appendChild(document.createTextNode("•"))
+      meta.appendChild(dateEl)
+      meta.appendChild(document.createTextNode("•"))
+      meta.appendChild(bodyEl)
+
+      const location = document.createElement("span")
+      location.className = "calendar-event-location"
+      location.textContent = event.location || "Location TBD"
+
+      mainButton.appendChild(title)
+      mainButton.appendChild(meta)
+      mainButton.appendChild(location)
+
+      mainButton.addEventListener("click", () =>
+        this.showCalendarEventDetail(event, item)
+      )
+
+      item.appendChild(mainButton)
+
+      container.appendChild(item)
+    })
+  }
+
+  appendCalendarLink(wrapper, href, label, options = {}) {
+    if (!href) return
+    const link = document.createElement("a")
+    link.href = href
+    link.target = "_blank"
+    link.rel = "noopener noreferrer"
+    link.textContent = label
+    if (options.title) {
+      link.title = options.title
+    }
+    if (options.className) {
+      const classes = Array.isArray(options.className)
+        ? options.className
+        : [options.className]
+      classes.filter(Boolean).forEach((className) => {
+        link.classList.add(className)
+      })
+    }
+    wrapper.appendChild(link)
+  }
+
+  showCalendarEventDetail(event, sourceElement) {
+    const detailView = this.calendarDetailView || {}
+    const {
+      listContainer,
+      detailSection,
+      detailContent,
+      detailSubtitle,
+    } = detailView
+
+    if (!detailSection || !detailContent) {
+      return
+    }
+
+    if (detailView.activeTrigger && detailView.activeTrigger !== sourceElement) {
+      if (detailView.activeTrigger.isConnected) {
+        detailView.activeTrigger.classList.remove("active")
+        detailView.activeTrigger.style.removeProperty("--detail-accent")
+      }
+    }
+
+    if (sourceElement) {
+      sourceElement.classList.add("active")
+      if (event.sourceColor) {
+        sourceElement.style.setProperty("--detail-accent", event.sourceColor)
+      } else {
+        sourceElement.style.removeProperty("--detail-accent")
+      }
+      detailView.activeTrigger = sourceElement
+      detailView.activeButton = sourceElement.querySelector(
+        ".calendar-event-main"
+      )
+    } else {
+      detailView.activeTrigger = null
+      detailView.activeButton = null
+    }
+
+    if (listContainer) {
+      listContainer.classList.add("hidden")
+    }
+
+    detailSection.classList.remove("hidden")
+    detailSection.scrollTop = 0
+    if (event.sourceColor) {
+      detailSection.style.setProperty("--detail-accent", event.sourceColor)
+    } else {
+      detailSection.style.removeProperty("--detail-accent")
+    }
+
+    this.setCalendarStructureHidden(true)
+
+    if (detailSubtitle) {
+      detailSubtitle.textContent = this.buildCalendarDetailSubtitle(event)
+    }
+
+    this.buildCalendarDetailContent(event)
+    this.activeCalendarEvent = event
+
+    if (detailView.backButton) {
+      detailView.backButton.focus({ preventScroll: true })
+    }
+
+    this.announceToScreenReader(
+      `Showing details for ${event.title || "meeting"}`
+    )
+  }
+
+  closeCalendarEventDetail(options = {}) {
+    const detailView = this.calendarDetailView || {}
+    const {
+      listContainer,
+      detailSection,
+      detailContent,
+      detailSubtitle,
+      activeTrigger,
+      activeButton,
+    } = detailView
+
+    const wasVisible = detailSection
+      ? !detailSection.classList.contains("hidden")
+      : false
+
+    if (activeTrigger && activeTrigger.isConnected) {
+      activeTrigger.classList.remove("active")
+      activeTrigger.style.removeProperty("--detail-accent")
+    }
+    detailView.activeTrigger = null
+
+    if (detailSection) {
+      detailSection.classList.add("hidden")
+      detailSection.style.removeProperty("--detail-accent")
+    }
+
+    if (listContainer) {
+      listContainer.classList.remove("hidden")
+    }
+
+    if (detailContent) {
+      detailContent.innerHTML = ""
+    }
+
+    if (detailSubtitle) {
+      detailSubtitle.textContent = ""
+    }
+
+    this.setCalendarStructureHidden(false)
+
+    this.activeCalendarEvent = null
+    detailView.activeButton = null
+
+    const returnFocus =
+      activeButton && activeButton.isConnected ? activeButton : null
+
+    if (!options.silent && returnFocus) {
+      setTimeout(() => {
+        if (returnFocus.isConnected) {
+          returnFocus.focus({ preventScroll: true })
+        }
+      }, 0)
+    }
+
+    if (!options.silent && wasVisible) {
+      this.announceToScreenReader("Back to calendar events")
+    }
+  }
+
+  buildCalendarDetailContent(event) {
+    const detailView = this.calendarDetailView || {}
+    const content = detailView.detailContent
+    if (!content) return
+
+    content.innerHTML = ""
+
+    const summary = document.createElement("div")
+    summary.className = "calendar-detail-summary"
+
+    const title = document.createElement("h5")
+    title.textContent = event.title || "Government meeting"
+    summary.appendChild(title)
+
+    const tags = document.createElement("div")
+    tags.className = "calendar-detail-tags"
+    const sourceTag = document.createElement("span")
+    sourceTag.className = "calendar-detail-tag"
+    sourceTag.textContent = event.sourceLabel || "Legistar"
+    tags.appendChild(sourceTag)
+
+    if (event.bodyName && event.bodyName !== event.sourceLabel) {
+      const bodyTag = document.createElement("span")
+      bodyTag.className = "calendar-detail-tag"
+      bodyTag.textContent = event.bodyName
+      tags.appendChild(bodyTag)
+    }
+
+    if (event.category) {
+      const categoryTag = document.createElement("span")
+      categoryTag.className = "calendar-detail-tag"
+      categoryTag.textContent = event.category
+      tags.appendChild(categoryTag)
+    }
+
+    if (tags.childElementCount > 0) {
+      summary.appendChild(tags)
+    }
+
+    const meta = document.createElement("div")
+    meta.className = "calendar-detail-meta"
+
+    const addMeta = (label, value) => {
+      if (!value) return
+      const row = document.createElement("span")
+      const labelEl = document.createElement("span")
+      labelEl.className = "calendar-detail-meta-label"
+      labelEl.textContent = label
+      const valueEl = document.createElement("span")
+      valueEl.textContent = value
+      row.appendChild(labelEl)
+      row.appendChild(valueEl)
+      meta.appendChild(row)
+    }
+
+    addMeta("When", this.formatCalendarDetailDateTime(event))
+    addMeta("Where", event.location || "Location TBD")
+    addMeta("Body", event.bodyName || event.sourceLabel)
+    addMeta("Type", event.category)
+    addMeta("Updated", this.formatCalendarLastModified(event.lastModified))
+
+    if (meta.childElementCount > 0) {
+      summary.appendChild(meta)
+    }
+
+    content.appendChild(summary)
+
+    const links = this.buildCalendarDetailLinks(event)
+    if (links) {
+      content.appendChild(links)
+    }
+
+    if (event.richText) {
+      const notes = document.createElement("div")
+      notes.className = "detail-item"
+      const heading = document.createElement("strong")
+      heading.textContent = "Notes"
+      heading.style.display = "block"
+      heading.style.marginBottom = "0.5rem"
+      const noteText = document.createElement("p")
+      noteText.textContent = event.richText
+      noteText.style.margin = "0"
+      notes.appendChild(heading)
+      notes.appendChild(noteText)
+      content.appendChild(notes)
+    }
+  }
+
+  buildCalendarDetailLinks(event) {
+    const links = document.createElement("div")
+    links.className = "calendar-detail-links"
+
+    const linkItems = [
+      {
+        href:
+          event.meetingUrl && event.meetingUrl !== event.agendaUrl
+            ? event.meetingUrl
+            : null,
+        label: "Meeting details",
+      },
+      { href: event.agendaUrl, label: "Agenda" },
+      { href: event.minutesUrl, label: "Minutes" },
+      { href: event.videoUrl, label: "Video" },
+    ]
+
+    linkItems.forEach(({ href, label }) => {
+      this.appendCalendarLink(links, href, label, {
+        className: "calendar-detail-link",
+        title: label,
+      })
+    })
+
+    return links.childElementCount ? links : null
+  }
+
+  buildCalendarDetailSubtitle(event) {
+    const when = this.formatCalendarDetailDateTime(event)
+    const source = event.sourceLabel || "Local meeting"
+    return `${source} • ${when}`
+  }
+
+  formatCalendarDetailDateTime(event) {
+    if (!event?.startDateTime) return "TBD"
+    const start = new Date(event.startDateTime)
+    if (Number.isNaN(start.getTime())) return "TBD"
+
+    const datePart = start.toLocaleDateString(undefined, {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    })
+
+    const timePart = start.toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    })
+
+    let result = `${datePart} · ${timePart}`
+
+    if (event.endDateTime) {
+      const end = new Date(event.endDateTime)
+      if (!Number.isNaN(end.getTime())) {
+        const sameDay = start.toDateString() === end.toDateString()
+        const endTime = end.toLocaleTimeString(undefined, {
+          hour: "numeric",
+          minute: "2-digit",
+        })
+        if (sameDay) {
+          result = `${datePart} · ${timePart} – ${endTime}`
+        } else {
+          const endDateLabel = end.toLocaleDateString(undefined, {
+            month: "short",
+            day: "numeric",
+          })
+          result = `${datePart} · ${timePart} – ${endDateLabel} ${endTime}`
+        }
+      }
+    }
+
+    return result
+  }
+
+  formatCalendarLastModified(value) {
+    if (!value) return null
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return null
+    return date.toLocaleString(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    })
+  }
+
+  buildCalendarHeading(count) {
+    if (this.selectedCalendarDate) {
+      const label = this.formatSelectedDate(this.selectedCalendarDate)
+      return `${count} meeting${count === 1 ? "" : "s"} on ${label}`
+    }
+
+    const monthLabel = this.calendarLabelElement
+      ? this.calendarLabelElement.textContent
+      : "this month"
+    return `${count} meeting${count === 1 ? "" : "s"} in ${monthLabel}`
+  }
+
+  formatSelectedDate(dateKey) {
+    const date = new Date(`${dateKey}T00:00:00`)
+    if (Number.isNaN(date.getTime())) return dateKey
+    return date.toLocaleDateString(undefined, {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    })
+  }
+
+  formatCalendarDate(value) {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return "TBD"
+    return date.toLocaleDateString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    })
+  }
+
+  formatEventTime(value) {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return "All day"
+    return date.toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    })
+  }
+
+  selectCalendarDate(dateKey) {
+    this.selectedCalendarDate = dateKey
+    this.renderCalendar()
+    this.closeCalendarEventDetail({ silent: true })
+    this.renderCalendarEventsList()
+    this.announceToScreenReader(`Showing meetings for ${this.formatSelectedDate(dateKey)}`)
+  }
+
+  clearCalendarSelection() {
+    this.selectedCalendarDate = null
+    this.renderCalendar()
+    this.closeCalendarEventDetail({ silent: true })
+    this.renderCalendarEventsList()
+    this.announceToScreenReader("Showing all meetings for this month")
+  }
+
+  getEventsForCurrentView() {
+    if (!Array.isArray(this.calendarEvents)) return []
+
+    const start = new Date(this.calendarViewDate)
+    const currentMonth = start.getMonth()
+    const currentYear = start.getFullYear()
+
+    return this.calendarEvents.filter((event) => {
+      if (!event.startDateTime) return false
+      const eventDate = new Date(event.startDateTime)
+      if (Number.isNaN(eventDate.getTime())) return false
+
+      const sameMonth =
+        eventDate.getMonth() === currentMonth &&
+        eventDate.getFullYear() === currentYear
+      if (!sameMonth) return false
+
+      if (this.selectedCalendarDate) {
+        const key = this.buildDateKey(
+          eventDate.getFullYear(),
+          eventDate.getMonth(),
+          eventDate.getDate()
+        )
+        return key === this.selectedCalendarDate
+      }
+
+      return true
+    })
+  }
+
+  getEventSourcesForDate(dateKey) {
+    const events = this.calendarEventIndex.get(dateKey) || []
+    const uniqueSources = new Set(events.map((event) => event.source).filter(Boolean))
+    return Array.from(uniqueSources)
+  }
+
+  describeEventCount(dateKey) {
+    const events = this.calendarEventIndex.get(dateKey) || []
+    if (!events.length) return "No meetings"
+    const sources = this.getEventSourcesForDate(dateKey)
+    const sourceLabel =
+      sources.length === 1
+        ? CALENDAR_SOURCE_LABELS[sources[0]] || "local government"
+        : "local governments"
+    return `${events.length} meeting${events.length === 1 ? "" : "s"} from ${sourceLabel}`
+  }
+
+  renderCalendarError(error) {
+    if (!this.calendarEventsContainer) return
+    this.calendarEventsContainer.innerHTML = ""
+    const errorBlock = document.createElement("div")
+    errorBlock.className = "calendar-error"
+    errorBlock.style.color = "var(--danger-color)"
+    errorBlock.style.fontSize = "0.85rem"
+    errorBlock.style.padding = "0.5rem 0"
+    errorBlock.textContent =
+      "Unable to load government meetings right now. Showing cached data when available."
+    this.calendarEventsContainer.appendChild(errorBlock)
+  }
+
+  buildCalendarStatusElement() {
+    if (!this.calendarEventsMeta || !this.calendarEventsMeta.fetchedAt) {
+      return null
+    }
+
+    const status = document.createElement("div")
+    status.className = "calendar-status"
+
+    if (this.calendarEventsMeta.stale) {
+      status.classList.add("warning")
+      status.textContent =
+        "Showing cached meetings while we reconnect to city servers."
+    } else if (this.calendarEventsMeta.fromCache) {
+      status.classList.add("muted")
+      const fetched = new Date(this.calendarEventsMeta.fetchedAt)
+      const label = Number.isNaN(fetched.getTime())
+        ? "recently"
+        : fetched.toLocaleTimeString(undefined, {
+            hour: "numeric",
+            minute: "2-digit",
+          })
+      status.textContent = `Last updated ${label}.`
+    } else {
+      return null
+    }
+
+    return status
+  }
+
+  changeCalendarMonth(offset) {
+    if (!Number.isInteger(offset)) return
+
+    if (!this.calendarViewDate) {
+      this.calendarViewDate = new Date()
+      this.calendarViewDate.setDate(1)
+    }
+
+    const nextDate = new Date(this.calendarViewDate.getTime())
+    nextDate.setMonth(this.calendarViewDate.getMonth() + offset)
+    nextDate.setDate(1)
+    this.calendarViewDate = nextDate
+    this.selectedCalendarDate = null
+    this.renderCalendar()
+    this.closeCalendarEventDetail({ silent: true })
+    this.renderCalendarEventsList()
+
+    const label = this.calendarLabelElement || document.getElementById("calendar-month-label")
+    if (label && label.textContent) {
+      this.announceToScreenReader(`Showing ${label.textContent} calendar`)
+    }
+  }
+
+  setupOfficialsToggle() {
+    const toggle = document.getElementById("officials-toggle")
+    const wrapper = document.getElementById("officials-list-wrapper")
+    if (!toggle || !wrapper) return
+
+    const collapsedLabel = "Show elected officials"
+    const expandedLabel = "Hide elected officials"
+
+    this.officialsToggleControls = {
+      toggle,
+      wrapper,
+      collapsedLabel,
+      expandedLabel,
+      expanded: false,
+    }
+
+    // Ensure default collapsed state without toggling animation
+    this.setOfficialsListExpanded(false, { silent: true, skipFocus: true })
+
+    toggle.addEventListener("click", () => {
+      const controls = this.officialsToggleControls
+      if (!controls) return
+      const nextState = !controls.expanded
+      this.setOfficialsListExpanded(nextState, {
+        focusFirst: nextState,
+      })
+      // Manual toggles should clear any auto-expand flag
+      this.officialsListExpandedBySearch = false
+    })
+  }
+
+  setOfficialsListExpanded(expanded, options = {}) {
+    const controls = this.officialsToggleControls
+    if (!controls) return
+
+    const {
+      toggle,
+      wrapper,
+      collapsedLabel,
+      expandedLabel,
+      expanded: currentState,
+    } = controls
+
+    if (currentState === expanded && !options.force) return
+
+    controls.expanded = expanded
+
+    const label = expanded ? expandedLabel : collapsedLabel
+    toggle.setAttribute("aria-expanded", expanded.toString())
+    toggle.textContent = label
+    toggle.setAttribute("aria-label", label)
+    toggle.setAttribute("title", label)
+    wrapper.classList.toggle("collapsed", !expanded)
+
+    if (expanded && options.focusFirst && !options.skipFocus) {
+      setTimeout(() => {
+        const firstInteractive = wrapper.querySelector(
+          ".official button, .official a, .official [tabindex]"
+        )
+        if (firstInteractive && typeof firstInteractive.focus === "function") {
+          firstInteractive.focus({ preventScroll: true })
+        }
+      }, 0)
+    }
+
+    if (!options.silent) {
+      const message =
+        options.announceMessage ||
+        (expanded ? "Officials list expanded" : "Officials list collapsed")
+      this.announceToScreenReader(message)
+    }
+  }
+
+  ensureOfficialsListForSearch() {
+    const controls = this.officialsToggleControls
+    if (!controls) return
+
+    if (!controls.expanded) {
+      this.setOfficialsListExpanded(true, { silent: true })
+      this.officialsListExpandedBySearch = true
+    } else {
+      this.officialsListExpandedBySearch = false
     }
   }
 
@@ -651,6 +1906,9 @@ class NewTabApp {
 
     // Refresh button
     document.getElementById("refresh-btn").addEventListener("click", () => {
+      console.log("Manual refresh triggered")
+      this.loadCalendarEvents({ forceRefresh: true })
+
       if (this.currentAddress) {
         console.log("Manual refresh triggered for:", this.currentAddress)
         this.loadCivicData(this.currentAddress, true) // Force refresh
@@ -794,10 +2052,18 @@ class NewTabApp {
     })
 
     clearBtn?.addEventListener("click", () => {
+      const hadValue = Boolean(input.value.trim())
       input.value = ""
       this.clearOfficialsSearchResults()
       clearBtn.hidden = true
-      input.focus()
+
+      if (hadValue) {
+        input.focus()
+      } else {
+        this.setOfficialsSearchVisible(false, {
+          focusToggle: true,
+        })
+      }
     })
   }
 
@@ -806,45 +2072,75 @@ class NewTabApp {
     const searchBlock = document.querySelector(".official-search")
     if (!toggleBtn || !searchBlock) return
 
-    // Persist preference in settings (default visible)
-    if (this.settings.hideOfficialsSearch) {
-      searchBlock.classList.add("hidden")
-      toggleBtn.setAttribute("aria-pressed", "false")
-      toggleBtn.title = "Show officials search"
-      toggleBtn.setAttribute("aria-label", "Show officials search")
-    } else {
-      toggleBtn.setAttribute("aria-pressed", "true")
-      toggleBtn.title = "Hide officials search"
-      toggleBtn.setAttribute("aria-label", "Hide officials search")
-    }
+    this.setOfficialsSearchVisible(!this.settings.hideOfficialsSearch, {
+      silent: true,
+      skipSave: true,
+    })
 
     toggleBtn.addEventListener("click", () => {
-      const willHide =
-        !toggleBtn.classList.toggle("active") &&
-        !searchBlock.classList.contains("hidden")
-      // Instead of relying on toggle return, explicitly invert current pressed state
-      const currentlyPressed = toggleBtn.getAttribute("aria-pressed") === "true"
-      const newState = !currentlyPressed
-      toggleBtn.setAttribute("aria-pressed", newState.toString())
-      searchBlock.classList.toggle("hidden", !newState)
-      if (newState) {
-        toggleBtn.title = "Hide officials search"
-        toggleBtn.setAttribute("aria-label", "Hide officials search")
-      } else {
-        toggleBtn.title = "Show officials search"
-        toggleBtn.setAttribute("aria-label", "Show officials search")
-      }
-      this.settings.hideOfficialsSearch = !newState
-      this.saveSettings()
-      this.announceToScreenReader(
-        newState ? "Officials search shown" : "Officials search hidden"
-      )
-      if (newState) {
-        // Focus input when showing
-        const input = document.getElementById("official-search-input")
-        if (input) setTimeout(() => input.focus(), 50)
-      }
+      const currentlyVisible =
+        toggleBtn.getAttribute("aria-pressed") === "true"
+      const nextVisible = !currentlyVisible
+      this.setOfficialsSearchVisible(nextVisible, {
+        focusInput: nextVisible,
+      })
     })
+  }
+
+  setOfficialsSearchVisible(
+    isVisible,
+    { focusInput = false, focusToggle = false, silent = false, skipSave = false } = {}
+  ) {
+    const toggleBtn = document.getElementById("toggle-official-search")
+    const searchBlock = document.querySelector(".official-search")
+    const input = document.getElementById("official-search-input")
+    const clearBtn = document.getElementById("official-search-clear")
+
+    if (!toggleBtn || !searchBlock) return
+
+    const showLabel = "Show officials search"
+    const hideLabel = "Hide officials search"
+
+    toggleBtn.classList.toggle("active", isVisible)
+    toggleBtn.setAttribute("aria-pressed", isVisible.toString())
+    toggleBtn.title = isVisible ? hideLabel : showLabel
+    toggleBtn.setAttribute("aria-label", isVisible ? hideLabel : showLabel)
+
+    searchBlock.classList.toggle("hidden", !isVisible)
+
+    if (clearBtn) {
+      clearBtn.hidden = true
+    }
+
+    if (input) {
+      if (isVisible) {
+        if (focusInput) {
+          setTimeout(() => input.focus(), 50)
+        }
+      } else {
+        input.value = ""
+        input.blur()
+      }
+    }
+
+    if (!skipSave) {
+      this.settings.hideOfficialsSearch = !isVisible
+      this.saveSettings()
+    }
+
+    if (!silent) {
+      this.announceToScreenReader(
+        isVisible ? "Officials search shown" : "Officials search hidden"
+      )
+    }
+
+    if (!isVisible && focusToggle && toggleBtn) {
+      setTimeout(() => {
+        if (toggleBtn.isConnected) {
+          toggleBtn.focus({ preventScroll: true })
+        }
+      }, 0)
+    }
   }
 
   clearOfficialsSearchResults() {
@@ -853,6 +2149,11 @@ class NewTabApp {
     listContainer.classList.remove("search-active")
     const existing = listContainer.querySelector(".search-results-group")
     if (existing) existing.remove()
+    this.setCalendarVisibility(true)
+    if (this.officialsListExpandedBySearch) {
+      this.setOfficialsListExpanded(false, { silent: true })
+      this.officialsListExpandedBySearch = false
+    }
     this.closeOfficialDetail({ silent: true })
   }
 
@@ -861,6 +2162,8 @@ class NewTabApp {
     if (!listContainer) return
 
     this.closeOfficialDetail({ silent: true })
+    this.ensureOfficialsListForSearch()
+    this.setCalendarVisibility(false)
 
     // Activate search mode
     listContainer.classList.add("search-active")
@@ -2527,17 +3830,24 @@ class NewTabApp {
     const locateBtn = document.getElementById("locate-btn")
 
     // Update the compact display with current address
-    if (currentAddressText && this.currentAddress) {
-      currentAddressText.textContent = this.currentAddress
+    const addressValue =
+      typeof this.currentAddress === "string" && this.currentAddress.trim()
+        ? this.currentAddress
+        : typeof this.lastAddress === "string"
+        ? this.lastAddress
+        : ""
+
+    if (currentAddressText && addressValue) {
+      currentAddressText.textContent = addressValue
     } else {
-      console.error("Could not set address text:", {
+      console.warn("Could not set address text:", {
         currentAddressText: !!currentAddressText,
         currentAddress: this.currentAddress,
       })
     }
 
     // Hide the location pin button when address is already set
-    if (locateBtn && this.currentAddress) {
+    if (locateBtn && addressValue) {
       locateBtn.style.display = "none"
     }
 

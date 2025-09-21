@@ -71,6 +71,7 @@
             <div class="sidebar-header unified-reps-bar">
                 <div class="reps-title-group">
                     <h2 id="sidebar-heading">Representatives</h2>
+                    <span class="reps-context">local gov.</span>
                     <div class="current-address inline" id="address-display" role="status" aria-live="polite">
                         <span class="address-label">For:</span>
                         <span class="address-value" id="current-address-text"
@@ -124,11 +125,51 @@
 
             <!-- (Removed separate compact address display; merged into sidebar-header) -->
 
-            <!-- Officials section -->
+            <!-- Monthly calendar and officials section -->
+            <div class="officials-calendar" role="region" aria-label="Monthly calendar">
+                <div class="calendar-header">
+                    <button id="calendar-prev" class="calendar-nav" type="button" aria-label="Show previous month">❮</button>
+                    <div id="calendar-month-label" class="calendar-month-label" aria-live="polite"></div>
+                    <button id="calendar-next" class="calendar-nav" type="button" aria-label="Show next month">❯</button>
+                </div>
+                <div id="calendar-grid" class="calendar-grid" role="grid" aria-readonly="true">
+                    <!-- Calendar days will be injected -->
+                </div>
+                <div id="calendar-legend" class="calendar-legend" aria-hidden="true">
+                    <span class="legend-dot city"></span>
+                    <span class="legend-label">City of Milwaukee</span>
+                    <span class="legend-dot county"></span>
+                    <span class="legend-label">Milwaukee County</span>
+                </div>
+                <div id="calendar-events" class="calendar-events" role="list" aria-live="polite" aria-busy="false">
+                    <!-- Event cards rendered here -->
+                </div>
+                <div id="calendar-detail" class="calendar-detail-section hidden" role="region"
+                    aria-labelledby="calendar-detail-heading" aria-live="polite">
+                    <div class="calendar-detail-header">
+                        <button id="calendar-detail-back" class="btn-icon" type="button"
+                            aria-label="Back to calendar events" title="Back to events">❮</button>
+                        <div class="calendar-detail-title-group">
+                            <h4 id="calendar-detail-heading">Meeting details</h4>
+                            <span id="calendar-detail-subtitle" class="calendar-detail-subtitle"></span>
+                        </div>
+                    </div>
+                    <div id="calendar-detail-content" class="calendar-detail-content">
+                        <!-- Calendar detail content will be injected here -->
+                    </div>
+                </div>
+            </div>
+
             <div class="officials-section" role="region" aria-labelledby="officials-heading">
                 <h3 id="officials-heading" class="visually-hidden">Your representatives</h3>
-                <div id="officials-list" class="officials-list" role="list" aria-live="polite" aria-busy="false">
-                    <!-- Officials will be dynamically populated -->
+                <button id="officials-toggle" class="officials-toggle" type="button" aria-controls="officials-list-wrapper"
+                    aria-expanded="false">
+                    Show elected officials
+                </button>
+                <div id="officials-list-wrapper" class="officials-list-wrapper collapsed">
+                    <div id="officials-list" class="officials-list" role="list" aria-live="polite" aria-busy="false">
+                        <!-- Officials will be dynamically populated -->
+                    </div>
                 </div>
             </div>
 
