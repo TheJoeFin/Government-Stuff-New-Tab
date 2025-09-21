@@ -8,7 +8,8 @@
     },
     "permissions": [
         "storage",
-        "search"
+        "search",
+        "alarms"
     ],
     "host_permissions": [
         "https://milwaukee-alder-apim.azure-api.net/*",
@@ -19,7 +20,10 @@
         "https://icons.duckduckgo.com/*",
         "https://*.com/favicon.ico",
         "https://*.org/favicon.ico",
-        "https://*.net/favicon.ico"
+        "https://*.net/favicon.ico",
+        "https://webapi.legistar.com/*",
+        "https://milwaukee.legistar.com/*",
+        "https://milwaukeecounty.legistar.com/*"
     ],
     "background": {
         "service_worker": "background.js"

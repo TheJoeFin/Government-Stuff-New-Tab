@@ -1100,76 +1100,109 @@ class NewTabApp {
     }
 
     events.forEach((event) => {
-      const item = document.createElement("div")
-      item.className = "calendar-event-item"
-      item.dataset.eventId = event.id
-      item.setAttribute("role", "listitem")
-
-      if (event.sourceColor) {
-        item.style.setProperty("--detail-accent", event.sourceColor)
-      } else {
-        item.style.removeProperty("--detail-accent")
-      }
-
-      const mainButton = document.createElement("button")
-      mainButton.type = "button"
-      mainButton.className = "calendar-event-main"
-      mainButton.setAttribute(
-        "aria-label",
-        `View details for ${event.title || "meeting"}`
-      )
-
-      const title = document.createElement("span")
-      title.className = "calendar-event-title"
-      title.textContent = event.title || "Government meeting"
-
-      const meta = document.createElement("div")
-      meta.className = "calendar-event-meta"
-
-      const sourceDot = document.createElement("span")
-      sourceDot.className = "calendar-event-source-dot"
-      sourceDot.style.backgroundColor =
-        event.sourceColor || CALENDAR_SOURCE_COLORS[event.source] ||
-        "var(--accent-color)"
-      sourceDot.setAttribute("aria-hidden", "true")
-
-      const dateLabel = this.formatCalendarDate(event.startDateTime)
-      const timeLabel = this.formatEventTime(event.startDateTime)
-
-      const timeEl = document.createElement("span")
-      timeEl.className = "calendar-event-time"
-      timeEl.textContent = timeLabel
-
-      const dateEl = document.createElement("span")
-      dateEl.className = "calendar-event-date"
-      dateEl.textContent = dateLabel
-
-      const bodyEl = document.createElement("span")
-      bodyEl.textContent = event.bodyName || event.sourceLabel || "Local meeting"
-
-      meta.appendChild(sourceDot)
-      meta.appendChild(timeEl)
-      meta.appendChild(document.createTextNode("•"))
-      meta.appendChild(dateEl)
-      meta.appendChild(document.createTextNode("•"))
-      meta.appendChild(bodyEl)
-
-      const location = document.createElement("span")
-      location.className = "calendar-event-location"
-      location.textContent = event.location || "Location TBD"
-
-      mainButton.appendChild(title)
-      mainButton.appendChild(meta)
-      mainButton.appendChild(location)
-
-      mainButton.addEventListener("click", () =>
-        this.showCalendarEventDetail(event, item)
-      )
-
-      item.appendChild(mainButton)
-
+      const item = this.createCalendarEventListItem(event)
       container.appendChild(item)
     })
+  }
+
+  createCalendarEventListItem(event, { onSelect } = {}) {
+    const item = document.createElement("div")
+    item.className = "calendar-event-item"
+    const eventId = this.getCalendarEventId(event)
+    if (eventId) {
+      item.dataset.eventId = eventId
+    }
+    item.setAttribute("role", "listitem")
+
+    if (event.sourceColor) {
+      item.style.setProperty("--detail-accent", event.sourceColor)
+    }
+
+    const mainButton = document.createElement("button")
+    mainButton.type = "button"
+    mainButton.className = "calendar-event-main"
+    mainButton.setAttribute(
+      "aria-label",
+      `View details for ${event.title || "meeting"}`
+    )
+
+    const title = document.createElement("span")
+    title.className = "calendar-event-title"
+    title.textContent = event.title || "Government meeting"
+
+    const meta = document.createElement("div")
+    meta.className = "calendar-event-meta"
+
+    const sourceDot = document.createElement("span")
+    sourceDot.className = "calendar-event-source-dot"
+    sourceDot.style.backgroundColor =
+      event.sourceColor || CALENDAR_SOURCE_COLORS[event.source] ||
+      "var(--accent-color)"
+    sourceDot.setAttribute("aria-hidden", "true")
+
+    const dateLabel = this.formatCalendarDate(event.startDateTime)
+    const timeLabel = this.formatEventTime(event.startDateTime)
+
+    const timeEl = document.createElement("span")
+    timeEl.className = "calendar-event-time"
+    timeEl.textContent = timeLabel
+
+    const dateEl = document.createElement("span")
+    dateEl.className = "calendar-event-date"
+    dateEl.textContent = dateLabel
+
+    const bodyEl = document.createElement("span")
+    bodyEl.textContent = event.bodyName || event.sourceLabel || "Local meeting"
+
+    meta.appendChild(sourceDot)
+    meta.appendChild(timeEl)
+    meta.appendChild(document.createTextNode("•"))
+    meta.appendChild(dateEl)
+    meta.appendChild(document.createTextNode("•"))
+    meta.appendChild(bodyEl)
+
+    const location = document.createElement("span")
+    location.className = "calendar-event-location"
+    location.textContent = event.location || "Location TBD"
+
+    mainButton.appendChild(title)
+    mainButton.appendChild(meta)
+    mainButton.appendChild(location)
+
+    mainButton.addEventListener("click", () => {
+      if (typeof onSelect === "function") {
+        onSelect({ event, item })
+      } else {
+        this.showCalendarEventDetail(event, item)
+      }
+    })
+
+    item.appendChild(mainButton)
+
+    return item
+  }
+
+  getCalendarEventId(event) {
+    if (!event) return ""
+    if (event._computedId) return event._computedId
+
+    const fallback = `${event.source || "event"}-${event.startDateTime || ""}-${
+      event.title || ""
+    }`
+
+    const candidate =
+      event.id ??
+      event.event_id ??
+      event.eventId ??
+      event.uid ??
+      event.guid ??
+      event.legistarEventId ??
+      event.slug ??
+      fallback
+
+    const result = String(candidate)
+    event._computedId = result
+    return result
   }
 
   appendCalendarLink(wrapper, href, label, options = {}) {
@@ -1568,6 +1601,39 @@ class NewTabApp {
 
       return true
     })
+  }
+
+  focusCalendarOnEvent(event) {
+    if (!event || !event.startDateTime) return
+
+    const eventDate = new Date(event.startDateTime)
+    if (Number.isNaN(eventDate.getTime())) return
+
+    this.calendarViewDate = new Date(
+      eventDate.getFullYear(),
+      eventDate.getMonth(),
+      1
+    )
+
+    this.selectedCalendarDate = this.buildDateKey(
+      eventDate.getFullYear(),
+      eventDate.getMonth(),
+      eventDate.getDate()
+    )
+
+    this.renderCalendar()
+    this.closeCalendarEventDetail({ silent: true })
+    this.renderCalendarEventsList()
+  }
+
+  getCalendarEventElementById(eventId) {
+    if (!this.calendarEventsContainer || !eventId) return null
+    const items = this.calendarEventsContainer.querySelectorAll(
+      "[data-event-id]"
+    )
+    return (
+      Array.from(items).find((el) => el.dataset.eventId === String(eventId)) || null
+    )
   }
 
   getEventSourcesForDate(dateKey) {
@@ -2021,12 +2087,19 @@ class NewTabApp {
         return
       }
       clearBtn.hidden = false
-      // Merge comprehensive officials with Milwaukee Council and County Board members
       const results = this.governmentOfficials.searchOfficials(query)
       const councilHits = this.milwaukeeCouncil.searchMembers(query)
       const countyHits = this.milwaukeeCountyBoard.searchMembers(query)
-      const merged = [...councilHits, ...countyHits, ...results]
-      this.renderOfficialsSearchResults(merged, query)
+      const mergedOfficials = this.dedupeOfficials([
+        ...councilHits,
+        ...countyHits,
+        ...results,
+      ])
+      const meetingHits = this.searchCalendarMeetings(query)
+      this.renderOfficialsSearchResults(
+        { officials: mergedOfficials, meetings: meetingHits },
+        query
+      )
     }
 
     input.addEventListener("input", () => {
@@ -2056,6 +2129,60 @@ class NewTabApp {
           focusToggle: true,
         })
       }
+    })
+  }
+
+  searchCalendarMeetings(query) {
+    if (!Array.isArray(this.calendarEvents)) return []
+    const normalized = query.toLowerCase()
+    const unique = new Set()
+    const matches = []
+
+    this.calendarEvents.forEach((event) => {
+      const eventId = this.getCalendarEventId(event)
+      if (unique.has(eventId)) return
+
+      const textFields = []
+      if (typeof event.title === "string") textFields.push(event.title)
+      if (typeof event.bodyName === "string") textFields.push(event.bodyName)
+      if (typeof event.sourceLabel === "string")
+        textFields.push(event.sourceLabel)
+      if (typeof event.location === "string") textFields.push(event.location)
+      if (typeof event.description === "string")
+        textFields.push(event.description)
+      if (typeof event.summary === "string") textFields.push(event.summary)
+      if (Array.isArray(event.topics)) textFields.push(event.topics.join(" "))
+      if (Array.isArray(event.keywords)) textFields.push(event.keywords.join(" "))
+
+      const haystack = textFields
+        .join(" \u2022 ")
+        .toLowerCase()
+
+      if (haystack.includes(normalized)) {
+        unique.add(eventId)
+        matches.push(event)
+      }
+    })
+
+    matches.sort((a, b) => {
+      const aDate = new Date(a.startDateTime)
+      const bDate = new Date(b.startDateTime)
+      return aDate - bDate
+    })
+
+    return matches.slice(0, 20)
+  }
+
+  dedupeOfficials(results = []) {
+    const seen = new Set()
+    return results.filter((official) => {
+      const key =
+        official.id || official.ocd_id || official.divisionId || official.name
+      if (!key) return true
+      const normalized = String(key).toLowerCase()
+      if (seen.has(normalized)) return false
+      seen.add(normalized)
+      return true
     })
   }
 
@@ -2150,7 +2277,7 @@ class NewTabApp {
     this.closeOfficialDetail({ silent: true })
   }
 
-  renderOfficialsSearchResults(results, query) {
+  renderOfficialsSearchResults(resultSets, query) {
     const listContainer = document.getElementById("officials-list")
     if (!listContainer) return
 
@@ -2165,60 +2292,137 @@ class NewTabApp {
     const prev = listContainer.querySelector(".search-results-group")
     if (prev) prev.remove()
 
+    const { officials = [], meetings = [] } = resultSets || {}
+    const totalResults = officials.length + meetings.length
+
     const group = document.createElement("div")
     group.className = "search-results-group"
     group.setAttribute("role", "region")
     group.setAttribute(
       "aria-label",
-      `Search results for "${query}" (${results.length})`
+      `Search results for "${query}" (${totalResults})`
     )
 
     // Header / count
     const count = document.createElement("div")
     count.className = "result-count"
-    count.textContent = `${results.length} result${
-      results.length === 1 ? "" : "s"
+    count.textContent = `${totalResults} result${
+      totalResults === 1 ? "" : "s"
     }`
     group.appendChild(count)
 
-    if (results.length === 0) {
+    if (totalResults === 0) {
       const empty = document.createElement("div")
       empty.className = "search-results-empty"
-      empty.textContent = "No officials match your search."
+      empty.textContent = "No officials or meetings match your search."
       group.appendChild(empty)
     } else {
-      // Render each result using existing compact creation
-      results.forEach((official) => {
-        const colorMap = {
-          city: "#ffa500",
-          county: "#0077be",
-          state: "#228b22",
-          federal: "#dc143c",
-        }
-        const element = this.createCompactOfficialElement(
-          official,
-          "comprehensive",
-          colorMap[official.level] || "var(--accent-color)"
-        )
-        // Add a small level badge
-        const nameEl = element.querySelector(".official-name")
-        if (nameEl) {
-          const badge = document.createElement("span")
-          badge.textContent = ` (${official.level})`
-          badge.style.fontSize = "0.7rem"
-          badge.style.color = "var(--text-muted)"
-          nameEl.appendChild(badge)
-        }
-        group.appendChild(element)
-      })
+      if (meetings.length) {
+        const meetingSection = document.createElement("div")
+        meetingSection.className = "search-results-section search-results-meetings"
+
+        const meetingHeading = document.createElement("div")
+        meetingHeading.className = "search-results-subheading"
+        meetingHeading.textContent = `Meetings (${meetings.length})`
+        meetingSection.appendChild(meetingHeading)
+
+        const meetingList = document.createElement("div")
+        meetingList.className = "search-meeting-result-list"
+
+        meetings.forEach((event) => {
+          const item = this.createCalendarEventListItem(event, {
+            onSelect: () => this.handleMeetingSearchResultSelection(event),
+          })
+          item.classList.add("search-meeting-item")
+          const button = item.querySelector(".calendar-event-main")
+          if (button) {
+            button.classList.add("search-meeting-button")
+          }
+          meetingList.appendChild(item)
+        })
+
+        meetingSection.appendChild(meetingList)
+        group.appendChild(meetingSection)
+      }
+
+      if (officials.length) {
+        const officialSection = document.createElement("div")
+        officialSection.className = "search-results-section search-results-officials"
+
+        const officialHeading = document.createElement("div")
+        officialHeading.className = "search-results-subheading"
+        officialHeading.textContent = `Officials (${officials.length})`
+        officialSection.appendChild(officialHeading)
+
+        const officialList = document.createElement("div")
+        officialList.className = "search-official-result-list"
+
+        officials.forEach((official) => {
+          const colorMap = {
+            city: "#ffa500",
+            county: "#0077be",
+            state: "#228b22",
+            federal: "#dc143c",
+          }
+          const element = this.createCompactOfficialElement(
+            official,
+            "comprehensive",
+            colorMap[official.level] || "var(--accent-color)"
+          )
+          element.classList.add("search-official-item")
+
+          const nameEl = element.querySelector(".official-name")
+          if (nameEl && official.level) {
+            const badge = document.createElement("span")
+            badge.textContent = ` (${official.level})`
+            badge.style.fontSize = "0.7rem"
+            badge.style.color = "var(--text-muted)"
+            nameEl.appendChild(badge)
+          }
+
+          officialList.appendChild(element)
+        })
+
+        officialSection.appendChild(officialList)
+        group.appendChild(officialSection)
+      }
     }
 
     listContainer.prepend(group)
-    this.announceToScreenReader(
-      `${results.length} official${
-        results.length === 1 ? "" : "s"
-      } found for ${query}`
-    )
+    const announceParts = [`${totalResults} result${totalResults === 1 ? "" : "s"}`]
+    if (meetings.length) {
+      announceParts.push(`${meetings.length} meeting${meetings.length === 1 ? "" : "s"}`)
+    }
+    if (officials.length) {
+      announceParts.push(
+        `${officials.length} official${officials.length === 1 ? "" : "s"}`
+      )
+    }
+    this.announceToScreenReader(`${announceParts.join(", ")} found for ${query}`)
+  }
+
+  handleMeetingSearchResultSelection(event) {
+    const input = document.getElementById("official-search-input")
+    const clearBtn = document.getElementById("official-search-clear")
+    if (input) {
+      input.value = ""
+    }
+    if (clearBtn) {
+      clearBtn.hidden = true
+    }
+
+    this.clearOfficialsSearchResults()
+    this.setCalendarVisibility(true)
+    this.focusCalendarOnEvent(event)
+
+    const eventId = this.getCalendarEventId(event)
+    const calendarElement = this.getCalendarEventElementById(eventId)
+
+    if (calendarElement && typeof calendarElement.scrollIntoView === "function") {
+      calendarElement.scrollIntoView({ block: "nearest", behavior: "smooth" })
+    }
+
+    this.showCalendarEventDetail(event, calendarElement || null)
   }
 
   // Favorites Management
