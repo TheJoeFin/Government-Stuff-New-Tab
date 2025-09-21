@@ -69,19 +69,22 @@
         <!-- Civic information sidebar -->
         <aside class="sidebar" id="civic-sidebar" role="complementary" aria-labelledby="sidebar-heading">
             <div class="sidebar-header unified-reps-bar">
-                <div class="reps-title-group">
-                    <h2 id="sidebar-heading">Representatives</h2>
-                    <span class="reps-context">local gov.</span>
-                    <div class="current-address inline" id="address-display" role="status" aria-live="polite">
+                <div class="reps-header-content">
+                    <h2 id="sidebar-heading" class="visually-hidden">Local Government</h2>
+                    <div class="reps-title-group" role="group" aria-label="Local government controls">
+                        <span class="reps-title-text">Local Gov.</span>
+                        <div class="reps-controls" id="current-address-controls">
+                            <button id="edit-address-btn" class="btn-icon reps-icon-btn" type="button" aria-pressed="false"
+                                title="Set location" aria-label="Set location">📍</button>
+                            <button id="toggle-official-search" class="btn-icon reps-icon-btn" type="button"
+                                aria-pressed="false" title="Show officials search"
+                                aria-label="Show officials search">🔍</button>
+                        </div>
+                    </div>
+                    <div class="current-address visually-hidden" id="address-display" role="status" aria-live="polite">
                         <span class="address-label">For:</span>
                         <span class="address-value" id="current-address-text"
                             aria-describedby="current-address-controls"></span>
-                        <div class="address-controls inline" id="current-address-controls">
-                            <button id="edit-address-btn" class="btn-icon btn-small" title="Change address"
-                                aria-label="Change address" aria-pressed="false">✏️</button>
-                            <button id="toggle-official-search" class="btn-icon btn-small" title="Show officials search"
-                                aria-label="Show officials search" aria-pressed="false">🔍</button>
-                        </div>
                     </div>
                 </div>
                 <button id="toggle-sidebar" class="btn-icon" aria-label="Hide representatives sidebar"

@@ -1058,7 +1058,7 @@ class NewTabApp {
     const header = document.createElement("div")
     header.className = "calendar-events-header"
     const heading = document.createElement("h4")
-    heading.textContent = this.buildCalendarHeading(events.length)
+    heading.textContent = this.buildCalendarHeading()
     heading.style.margin = "0"
     heading.style.fontSize = "0.95rem"
     heading.style.color = "var(--text-primary)"
@@ -1491,16 +1491,8 @@ class NewTabApp {
     })
   }
 
-  buildCalendarHeading(count) {
-    if (this.selectedCalendarDate) {
-      const label = this.formatSelectedDate(this.selectedCalendarDate)
-      return `${count} meeting${count === 1 ? "" : "s"} on ${label}`
-    }
-
-    const monthLabel = this.calendarLabelElement
-      ? this.calendarLabelElement.textContent
-      : "this month"
-    return `${count} meeting${count === 1 ? "" : "s"} in ${monthLabel}`
+  buildCalendarHeading() {
+    return this.selectedCalendarDate ? "Meetings" : "Local meetings"
   }
 
   formatSelectedDate(dateKey) {
@@ -2103,6 +2095,7 @@ class NewTabApp {
 
     toggleBtn.classList.toggle("active", isVisible)
     toggleBtn.setAttribute("aria-pressed", isVisible.toString())
+    toggleBtn.textContent = isVisible ? "✖" : "🔍"
     toggleBtn.title = isVisible ? hideLabel : showLabel
     toggleBtn.setAttribute("aria-label", isVisible ? hideLabel : showLabel)
 
@@ -3909,16 +3902,10 @@ class NewTabApp {
     const btn = document.getElementById("edit-address-btn")
     if (!btn) return
     btn.setAttribute("aria-pressed", isEditing.toString())
-    // Swap icon: pencil when inactive, X when editing
-    btn.textContent = isEditing ? "✖" : "✏️"
-    btn.setAttribute(
-      "title",
-      isEditing ? "Hide address input" : "Change address"
-    )
-    btn.setAttribute(
-      "aria-label",
-      isEditing ? "Hide address input" : "Change address"
-    )
+    const label = isEditing ? "Hide address input" : "Set location"
+    btn.textContent = isEditing ? "✖" : "📍"
+    btn.setAttribute("title", label)
+    btn.setAttribute("aria-label", label)
   }
 
   // Method to show locate button when no address is set
