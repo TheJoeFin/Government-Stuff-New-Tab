@@ -2201,17 +2201,26 @@ class NewTabApp {
         container.addEventListener("click", (e) => {
           const weekDay = e.target.closest(".week-day")
           if (weekDay) {
-            // Remove selected class from all week days
-            document.querySelectorAll(".week-day.selected").forEach(day => {
-              day.classList.remove("selected")
-            })
-
-            // Add selected class to clicked day
-            weekDay.classList.add("selected")
-
-            // Filter events by selected date
             const dateStr = weekDay.dataset.date
-            if (dateStr) {
+            if (!dateStr) return
+
+            // Check if this day is already selected (toggle functionality)
+            const isSelected = weekDay.classList.contains("selected")
+
+            if (isSelected) {
+              // Day is already selected, so clear the filter (toggle off)
+              this.clearDateFilter()
+            } else {
+              // Day is not selected, so filter to this day (toggle on)
+              // Remove selected class from all week days
+              document.querySelectorAll(".week-day.selected").forEach(day => {
+                day.classList.remove("selected")
+              })
+
+              // Add selected class to clicked day
+              weekDay.classList.add("selected")
+
+              // Filter events by selected date
               this.filterEventsByDate(dateStr)
             }
           }
@@ -2264,7 +2273,7 @@ class NewTabApp {
     // Filter events to only show those on the selected date
     const filteredEvents = this.calendarEvents.filter(event => {
       if (!event.startDateTime) return false
-      const eventDate = new Date(event.startDateTime).toISOString().split('T')[0]
+      const eventDate = this.getLocalDateString(new Date(event.startDateTime))
       return eventDate === dateStr
     })
 
@@ -2321,6 +2330,14 @@ class NewTabApp {
       month: 'long',
       day: 'numeric'
     })
+  }
+
+  // Helper function to get consistent date string in local timezone (YYYY-MM-DD)
+  getLocalDateString(date) {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
   }
 
   showDetailOverlay(type, data) {
@@ -2716,7 +2733,7 @@ class NewTabApp {
 
       const dayElement = document.createElement("div")
       dayElement.className = "week-day"
-      dayElement.dataset.date = date.toISOString().split('T')[0] // YYYY-MM-DD format
+      dayElement.dataset.date = this.getLocalDateString(date) // YYYY-MM-DD format
 
       const dayNumber = document.createElement("div")
       dayNumber.className = "day-number"
@@ -2737,12 +2754,12 @@ class NewTabApp {
   }
 
   addEventIndicators(dayElement, date) {
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = this.getLocalDateString(date)
 
     // Check if there are events on this date
     const eventsOnDate = this.calendarEvents.filter(event => {
       if (!event.startDateTime) return false
-      const eventDate = new Date(event.startDateTime).toISOString().split('T')[0]
+      const eventDate = this.getLocalDateString(new Date(event.startDateTime))
       return eventDate === dateStr
     })
 
