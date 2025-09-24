@@ -123,6 +123,7 @@ class NewTabApp {
       console.log("Last address loaded:", this.lastAddress)
       this.initializeUI()
       console.log("UI initialized")
+      await this.updateVersionDisplay()
       this.bindEvents()
       console.log("Events bound")
 
@@ -369,7 +370,7 @@ class NewTabApp {
     return [
       {
         id: "1",
-        name: "Milwaukee.Gov",
+        name: "MKE Gov",
         url: "https://www.milwaukee.gov/",
       },
       {
@@ -451,9 +452,7 @@ class NewTabApp {
   }
 
   setupSidebarDetailView() {
-    const listSection = document.querySelector(
-      ".sidebar .officials-section"
-    )
+    const listSection = document.querySelector(".sidebar .officials-section")
     const detailSection = document.getElementById("official-detail-section")
     const detailContent = document.getElementById("official-detail-content")
     const detailSubtitle = document.getElementById("official-detail-subtitle")
@@ -600,8 +599,11 @@ class NewTabApp {
   }
 
   renderCalendar() {
-    const grid = this.calendarGridElement || document.getElementById("calendar-grid")
-    const label = this.calendarLabelElement || document.getElementById("calendar-month-label")
+    const grid =
+      this.calendarGridElement || document.getElementById("calendar-grid")
+    const label =
+      this.calendarLabelElement ||
+      document.getElementById("calendar-month-label")
     if (!grid || !label) return
 
     // Ensure view date is anchored to first of month
@@ -676,7 +678,10 @@ class NewTabApp {
         }
         cell.tabIndex = 0
         const describe = this.describeEventCount(eventDateKey)
-        cell.setAttribute("aria-label", `${monthFormatter.format(viewDate)} ${day}. ${describe}`)
+        cell.setAttribute(
+          "aria-label",
+          `${monthFormatter.format(viewDate)} ${day}. ${describe}`
+        )
 
         const activate = () => {
           if (this.selectedCalendarDate === eventDateKey) {
@@ -760,7 +765,10 @@ class NewTabApp {
 
   setCalendarBusyState(isBusy) {
     if (!this.calendarEventsContainer) return
-    this.calendarEventsContainer.setAttribute("aria-busy", isBusy ? "true" : "false")
+    this.calendarEventsContainer.setAttribute(
+      "aria-busy",
+      isBusy ? "true" : "false"
+    )
   }
 
   getCachedCalendarEvents() {
@@ -784,9 +792,10 @@ class NewTabApp {
       const age = Date.now() - fetchedAt
       if (age > CALENDAR_STORAGE_TTL_MS) {
         console.log(
-          `[Calendar] Cached events expired (age ${(age / (60 * 60 * 1000)).toFixed(
-            1
-          )}h)`
+          `[Calendar] Cached events expired (age ${(
+            age /
+            (60 * 60 * 1000)
+          ).toFixed(1)}h)`
         )
         return null
       }
@@ -841,9 +850,7 @@ class NewTabApp {
     const fetchedAt =
       typeof fetchedAtRaw === "number" ? fetchedAtRaw : Date.parse(fetchedAtRaw)
 
-    const normalizedFetchedAt = Number.isNaN(fetchedAt)
-      ? Date.now()
-      : fetchedAt
+    const normalizedFetchedAt = Number.isNaN(fetchedAt) ? Date.now() : fetchedAt
 
     this.calendarEvents = payload.events
     this.calendarEventsMeta = {
@@ -910,14 +917,16 @@ class NewTabApp {
       const payload = await this.requestLegistarEvents(forceRefresh)
       console.log(
         `[Calendar] Received calendar payload:`,
-        payload ? {
-          events: Array.isArray(payload.events)
-            ? payload.events.length
-            : "missing",
-          fromCache: payload?.fromCache,
-          stale: payload?.stale,
-          fetchedAt: payload?.fetchedAt,
-        } : "null response"
+        payload
+          ? {
+              events: Array.isArray(payload.events)
+                ? payload.events.length
+                : "missing",
+              fromCache: payload?.fromCache,
+              stale: payload?.stale,
+              fetchedAt: payload?.fetchedAt,
+            }
+          : "null response"
       )
       if (!payload || !Array.isArray(payload.events)) {
         throw new Error("Calendar payload missing events")
@@ -943,13 +952,17 @@ class NewTabApp {
 
   async requestLegistarEvents(forceRefresh) {
     if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
-      console.warn("[Calendar] chrome.runtime missing; using mock calendar events")
+      console.warn(
+        "[Calendar] chrome.runtime missing; using mock calendar events"
+      )
       return { events: this.buildMockCalendarEvents(), fetchedAt: Date.now() }
     }
 
     return new Promise((resolve, reject) => {
       try {
-        console.log("[Calendar] Requesting Legistar events from background worker")
+        console.log(
+          "[Calendar] Requesting Legistar events from background worker"
+        )
         const timeoutId = setTimeout(() => {
           console.error(
             "[Calendar] Timed out waiting for background response (10s)"
@@ -1140,7 +1153,8 @@ class NewTabApp {
     const sourceDot = document.createElement("span")
     sourceDot.className = "calendar-event-source-dot"
     sourceDot.style.backgroundColor =
-      event.sourceColor || CALENDAR_SOURCE_COLORS[event.source] ||
+      event.sourceColor ||
+      CALENDAR_SOURCE_COLORS[event.source] ||
       "var(--accent-color)"
     sourceDot.setAttribute("aria-hidden", "true")
 
@@ -1234,7 +1248,6 @@ class NewTabApp {
     // Use the new detail overlay for event details
     this.showDetailOverlay("event", event)
   }
-
 
   buildCalendarDetailContent(event) {
     const detailView = this.calendarDetailView || {}
@@ -1447,7 +1460,9 @@ class NewTabApp {
     this.renderCalendar()
     this.closeCalendarEventDetail({ silent: true })
     this.renderCalendarEventsList()
-    this.announceToScreenReader(`Showing meetings for ${this.formatSelectedDate(dateKey)}`)
+    this.announceToScreenReader(
+      `Showing meetings for ${this.formatSelectedDate(dateKey)}`
+    )
   }
 
   clearCalendarSelection() {
@@ -1513,17 +1528,19 @@ class NewTabApp {
 
   getCalendarEventElementById(eventId) {
     if (!this.calendarEventsContainer || !eventId) return null
-    const items = this.calendarEventsContainer.querySelectorAll(
-      "[data-event-id]"
-    )
+    const items =
+      this.calendarEventsContainer.querySelectorAll("[data-event-id]")
     return (
-      Array.from(items).find((el) => el.dataset.eventId === String(eventId)) || null
+      Array.from(items).find((el) => el.dataset.eventId === String(eventId)) ||
+      null
     )
   }
 
   getEventSourcesForDate(dateKey) {
     const events = this.calendarEventIndex.get(dateKey) || []
-    const uniqueSources = new Set(events.map((event) => event.source).filter(Boolean))
+    const uniqueSources = new Set(
+      events.map((event) => event.source).filter(Boolean)
+    )
     return Array.from(uniqueSources)
   }
 
@@ -1535,7 +1552,9 @@ class NewTabApp {
       sources.length === 1
         ? CALENDAR_SOURCE_LABELS[sources[0]] || "local government"
         : "local governments"
-    return `${events.length} meeting${events.length === 1 ? "" : "s"} from ${sourceLabel}`
+    return `${events.length} meeting${
+      events.length === 1 ? "" : "s"
+    } from ${sourceLabel}`
   }
 
   renderCalendarError(error) {
@@ -1597,7 +1616,9 @@ class NewTabApp {
     this.closeCalendarEventDetail({ silent: true })
     this.renderCalendarEventsList()
 
-    const label = this.calendarLabelElement || document.getElementById("calendar-month-label")
+    const label =
+      this.calendarLabelElement ||
+      document.getElementById("calendar-month-label")
     if (label && label.textContent) {
       this.announceToScreenReader(`Showing ${label.textContent} calendar`)
     }
@@ -2021,11 +2042,10 @@ class NewTabApp {
         textFields.push(event.description)
       if (typeof event.summary === "string") textFields.push(event.summary)
       if (Array.isArray(event.topics)) textFields.push(event.topics.join(" "))
-      if (Array.isArray(event.keywords)) textFields.push(event.keywords.join(" "))
+      if (Array.isArray(event.keywords))
+        textFields.push(event.keywords.join(" "))
 
-      const haystack = textFields
-        .join(" \u2022 ")
-        .toLowerCase()
+      const haystack = textFields.join(" \u2022 ").toLowerCase()
 
       if (haystack.includes(normalized)) {
         unique.add(eventId)
@@ -2066,8 +2086,7 @@ class NewTabApp {
     })
 
     toggleBtn.addEventListener("click", () => {
-      const currentlyVisible =
-        toggleBtn.getAttribute("aria-pressed") === "true"
+      const currentlyVisible = toggleBtn.getAttribute("aria-pressed") === "true"
       const nextVisible = !currentlyVisible
       this.setOfficialsSearchVisible(nextVisible, {
         focusInput: nextVisible,
@@ -2077,7 +2096,12 @@ class NewTabApp {
 
   setOfficialsSearchVisible(
     isVisible,
-    { focusInput = false, focusToggle = false, silent = false, skipSave = false } = {}
+    {
+      focusInput = false,
+      focusToggle = false,
+      silent = false,
+      skipSave = false,
+    } = {}
   ) {
     const toggleBtn = document.getElementById("toggle-official-search")
     const searchBlock = document.querySelector(".official-search")
@@ -2162,12 +2186,12 @@ class NewTabApp {
       })
     }
 
-
     // Officials view toggle
     const toggleOfficialsBtn = document.getElementById("toggle-officials-view")
     if (toggleOfficialsBtn) {
       toggleOfficialsBtn.addEventListener("click", () => {
-        const isPressed = toggleOfficialsBtn.getAttribute("aria-pressed") === "true"
+        const isPressed =
+          toggleOfficialsBtn.getAttribute("aria-pressed") === "true"
         toggleOfficialsBtn.setAttribute("aria-pressed", (!isPressed).toString())
         this.switchContentView(isPressed ? "events" : "officials")
       })
@@ -2192,10 +2216,10 @@ class NewTabApp {
     const weekContainers = [
       "current-week-days",
       "next-week-days",
-      "two-weeks-out-days"
+      "two-weeks-out-days",
     ]
 
-    weekContainers.forEach(containerId => {
+    weekContainers.forEach((containerId) => {
       const container = document.getElementById(containerId)
       if (container) {
         container.addEventListener("click", (e) => {
@@ -2213,7 +2237,7 @@ class NewTabApp {
             } else {
               // Day is not selected, so filter to this day (toggle on)
               // Remove selected class from all week days
-              document.querySelectorAll(".week-day.selected").forEach(day => {
+              document.querySelectorAll(".week-day.selected").forEach((day) => {
                 day.classList.remove("selected")
               })
 
@@ -2231,7 +2255,7 @@ class NewTabApp {
 
   switchContentView(viewType) {
     // Hide all content views
-    document.querySelectorAll(".content-view").forEach(view => {
+    document.querySelectorAll(".content-view").forEach((view) => {
       view.classList.remove("active")
     })
 
@@ -2252,7 +2276,7 @@ class NewTabApp {
     }
 
     // Update navigation buttons
-    document.querySelectorAll(".nav-btn-icon").forEach(btn => {
+    document.querySelectorAll(".nav-btn-icon").forEach((btn) => {
       btn.setAttribute("aria-pressed", "false")
     })
 
@@ -2271,7 +2295,7 @@ class NewTabApp {
     if (!eventsContainer) return
 
     // Filter events to only show those on the selected date
-    const filteredEvents = this.calendarEvents.filter(event => {
+    const filteredEvents = this.calendarEvents.filter((event) => {
       if (!event.startDateTime) return false
       const eventDate = this.getLocalDateString(new Date(event.startDateTime))
       return eventDate === dateStr
@@ -2287,7 +2311,9 @@ class NewTabApp {
       noEventsDiv.className = "no-events-message"
 
       const message = document.createElement("p")
-      message.textContent = `No events scheduled for ${this.formatDisplayDate(dateStr)}`
+      message.textContent = `No events scheduled for ${this.formatDisplayDate(
+        dateStr
+      )}`
       noEventsDiv.appendChild(message)
 
       const clearButton = document.createElement("button")
@@ -2298,7 +2324,7 @@ class NewTabApp {
 
       eventsContainer.appendChild(noEventsDiv)
     } else {
-      filteredEvents.forEach(event => {
+      filteredEvents.forEach((event) => {
         const eventElement = this.createCalendarEventListItem(event)
         eventsContainer.appendChild(eventElement)
       })
@@ -2314,7 +2340,7 @@ class NewTabApp {
 
   clearDateFilter() {
     // Remove selected state from all week days
-    document.querySelectorAll(".week-day.selected").forEach(day => {
+    document.querySelectorAll(".week-day.selected").forEach((day) => {
       day.classList.remove("selected")
     })
 
@@ -2324,20 +2350,37 @@ class NewTabApp {
 
   formatDisplayDate(dateStr) {
     const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     })
   }
 
   // Helper function to get consistent date string in local timezone (YYYY-MM-DD)
   getLocalDateString(date) {
     const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, "0")
+    const day = String(date.getDate()).padStart(2, "0")
     return `${year}-${month}-${day}`
+  }
+
+  // Update version display from manifest.json
+  async updateVersionDisplay() {
+    try {
+      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getManifest) {
+        const manifest = chrome.runtime.getManifest()
+        const versionElement = document.querySelector('.version-indicator')
+        if (versionElement && manifest.version) {
+          versionElement.textContent = `v${manifest.version}`
+          versionElement.setAttribute('aria-label', `Application version ${manifest.version}`)
+          console.log(`Version updated to ${manifest.version}`)
+        }
+      }
+    } catch (error) {
+      console.warn('Could not update version display:', error)
+    }
   }
 
   showDetailOverlay(type, data) {
@@ -2374,26 +2417,40 @@ class NewTabApp {
     const startDate = event.startDateTime ? new Date(event.startDateTime) : null
     const endDate = event.endDateTime ? new Date(event.endDateTime) : null
 
-    const formatDate = (date) => date ? date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }) : 'N/A'
+    const formatDate = (date) =>
+      date
+        ? date.toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })
+        : "N/A"
 
-    const formatTime = (date) => date ? date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    }) : 'N/A'
+    const formatTime = (date) =>
+      date
+        ? date.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          })
+        : "N/A"
 
-    const sourceColor = event.sourceColor || CALENDAR_SOURCE_COLORS[event.source] || 'var(--accent-color)'
-    const sourceName = CALENDAR_SOURCE_LABELS[event.source] || event.sourceLabel || 'Local Government'
+    const sourceColor =
+      event.sourceColor ||
+      CALENDAR_SOURCE_COLORS[event.source] ||
+      "var(--accent-color)"
+    const sourceName =
+      CALENDAR_SOURCE_LABELS[event.source] ||
+      event.sourceLabel ||
+      "Local Government"
 
     return `
       <div class="event-detail">
         <div class="event-header">
-          <h4 class="event-title">${event.title || event.name || "Government Meeting"}</h4>
+          <h4 class="event-title">${
+            event.title || event.name || "Government Meeting"
+          }</h4>
           <div class="event-source" style="color: ${sourceColor}">
             <span class="source-dot" style="background-color: ${sourceColor}"></span>
             ${sourceName}
@@ -2405,32 +2462,48 @@ class NewTabApp {
             <h5>When</h5>
             <p class="event-date">${formatDate(startDate)}</p>
             <p class="event-time">
-              ${formatTime(startDate)}${endDate && endDate !== startDate ? ` - ${formatTime(endDate)}` : ''}
+              ${formatTime(startDate)}${
+      endDate && endDate !== startDate ? ` - ${formatTime(endDate)}` : ""
+    }
             </p>
           </div>
 
-          ${event.location ? `
+          ${
+            event.location
+              ? `
             <div class="info-section">
               <h5>Where</h5>
               <p class="event-location">${event.location}</p>
             </div>
-          ` : ''}
+          `
+              : ""
+          }
 
-          ${event.bodyName || event.body ? `
+          ${
+            event.bodyName || event.body
+              ? `
             <div class="info-section">
               <h5>Organizing Body</h5>
               <p class="event-body">${event.bodyName || event.body}</p>
             </div>
-          ` : ''}
+          `
+              : ""
+          }
 
-          ${event.description ? `
+          ${
+            event.description
+              ? `
             <div class="info-section">
               <h5>Description</h5>
               <div class="event-description">${event.description}</div>
             </div>
-          ` : ''}
+          `
+              : ""
+          }
 
-          ${event.agendaUrl ? `
+          ${
+            event.agendaUrl
+              ? `
             <div class="info-section">
               <h5>Resources</h5>
               <p class="event-links">
@@ -2439,9 +2512,13 @@ class NewTabApp {
                 </a>
               </p>
             </div>
-          ` : ''}
+          `
+              : ""
+          }
 
-          ${event.meetingUrl ? `
+          ${
+            event.meetingUrl
+              ? `
             <div class="info-section">
               <h5>Participation</h5>
               <p class="event-links">
@@ -2450,7 +2527,9 @@ class NewTabApp {
                 </a>
               </p>
             </div>
-          ` : ''}
+          `
+              : ""
+          }
         </div>
       </div>
     `
@@ -2469,10 +2548,12 @@ class NewTabApp {
       city: "#0077be",
       county: "#ffc107",
       state: "#228b22",
-      federal: "#dc143c"
+      federal: "#dc143c",
     }
-    const sourceColor = levelColorMap[level] || 'var(--accent-color)'
-    const levelLabel = level ? level.charAt(0).toUpperCase() + level.slice(1) : 'Government'
+    const sourceColor = levelColorMap[level] || "var(--accent-color)"
+    const levelLabel = level
+      ? level.charAt(0).toUpperCase() + level.slice(1)
+      : "Government"
 
     let detailHTML = `
       <div class="event-detail">
@@ -2494,7 +2575,11 @@ class NewTabApp {
           <h5>Position</h5>
           ${office !== "N/A" ? `<p class="event-body">${office}</p>` : ""}
           ${district ? `<p><strong>District:</strong> ${district}</p>` : ""}
-          ${official.department ? `<p><strong>Department:</strong> ${official.department}</p>` : ""}
+          ${
+            official.department
+              ? `<p><strong>Department:</strong> ${official.department}</p>`
+              : ""
+          }
           ${party ? `<p><strong>Party:</strong> ${party}</p>` : ""}
         </div>
       `
@@ -2527,18 +2612,28 @@ class NewTabApp {
           <div class="event-description">`
 
       official.committees.forEach((committee) => {
-        if (typeof committee === 'string') {
+        if (typeof committee === "string") {
           detailHTML += `<p>${committee}</p>`
         } else if (committee.name) {
-          const role = committee.role ? `<strong>${committee.role}</strong> - ` : ""
+          const role = committee.role
+            ? `<strong>${committee.role}</strong> - `
+            : ""
           detailHTML += `<p>${role}${committee.name}</p>`
 
           // Add committee description if available
           let description = ""
-          if (this.milwaukeeCouncil && this.milwaukeeCouncil.committeeDescriptions[committee.name]) {
-            description = this.milwaukeeCouncil.committeeDescriptions[committee.name]
-          } else if (this.milwaukeeCountyBoard && this.milwaukeeCountyBoard.committeeDescriptions[committee.name]) {
-            description = this.milwaukeeCountyBoard.committeeDescriptions[committee.name]
+          if (
+            this.milwaukeeCouncil &&
+            this.milwaukeeCouncil.committeeDescriptions[committee.name]
+          ) {
+            description =
+              this.milwaukeeCouncil.committeeDescriptions[committee.name]
+          } else if (
+            this.milwaukeeCountyBoard &&
+            this.milwaukeeCountyBoard.committeeDescriptions[committee.name]
+          ) {
+            description =
+              this.milwaukeeCountyBoard.committeeDescriptions[committee.name]
           }
 
           if (description) {
@@ -2555,7 +2650,14 @@ class NewTabApp {
 
     // Contact Information Section
     const contact = official.contact || {}
-    const hasContactInfo = official.phones || official.emails || official.phone || official.email || contact.phone || contact.email || contact.office
+    const hasContactInfo =
+      official.phones ||
+      official.emails ||
+      official.phone ||
+      official.email ||
+      contact.phone ||
+      contact.email ||
+      contact.office
 
     if (hasContactInfo) {
       detailHTML += `
@@ -2564,7 +2666,9 @@ class NewTabApp {
 
       // Phone numbers
       if (official.phones && official.phones.length > 0) {
-        detailHTML += `<p><strong>📞 Phone:</strong> ${official.phones.join(", ")}</p>`
+        detailHTML += `<p><strong>📞 Phone:</strong> ${official.phones.join(
+          ", "
+        )}</p>`
       } else if (official.phone) {
         detailHTML += `<p><strong>📞 Phone:</strong> ${official.phone}</p>`
       } else if (contact.phone) {
@@ -2573,7 +2677,9 @@ class NewTabApp {
 
       // Email addresses
       if (official.emails && official.emails.length > 0) {
-        detailHTML += `<p><strong>📧 Email:</strong> ${official.emails.map(email => `<a href="mailto:${email}">${email}</a>`).join(", ")}</p>`
+        detailHTML += `<p><strong>📧 Email:</strong> ${official.emails
+          .map((email) => `<a href="mailto:${email}">${email}</a>`)
+          .join(", ")}</p>`
       } else if (official.email) {
         detailHTML += `<p><strong>📧 Email:</strong> <a href="mailto:${official.email}">${official.email}</a></p>`
       } else if (contact.email) {
@@ -2589,7 +2695,10 @@ class NewTabApp {
     }
 
     // Website Section
-    const hasWebsites = (official.urls && official.urls.length > 0) || official.website || contact.website
+    const hasWebsites =
+      (official.urls && official.urls.length > 0) ||
+      official.website ||
+      contact.website
     if (hasWebsites) {
       detailHTML += `
         <div class="info-section">
@@ -2597,7 +2706,7 @@ class NewTabApp {
           <p class="event-links">`
 
       if (official.urls && official.urls.length > 0) {
-        official.urls.forEach(url => {
+        official.urls.forEach((url) => {
           detailHTML += `<a href="${url}" target="_blank" rel="noopener noreferrer" class="event-link">🔗 Official Website</a><br>`
         })
       } else if (official.website) {
@@ -2616,11 +2725,14 @@ class NewTabApp {
           <h5>Term Information</h5>`
 
       if (official.term_start) {
-        const startDate = new Date(official.term_start).toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        })
+        const startDate = new Date(official.term_start).toLocaleDateString(
+          "en-US",
+          {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }
+        )
         detailHTML += `<p><strong>Term Started:</strong> ${startDate}</p>`
       }
 
@@ -2666,7 +2778,8 @@ class NewTabApp {
             <div class="event-description">
               <ul>`
 
-        const bills = official.details.sponsored_legislation.results[0]?.bills || []
+        const bills =
+          official.details.sponsored_legislation.results[0]?.bills || []
         bills.slice(0, 5).forEach((bill) => {
           detailHTML += `<li><strong>${bill.number}:</strong> ${bill.title}</li>`
         })
@@ -2722,7 +2835,7 @@ class NewTabApp {
     startOfWeek.setDate(diff)
 
     // Add week offset
-    startOfWeek.setDate(startOfWeek.getDate() + (weekOffset * 7))
+    startOfWeek.setDate(startOfWeek.getDate() + weekOffset * 7)
 
     container.innerHTML = ""
 
@@ -2741,7 +2854,9 @@ class NewTabApp {
 
       const dayName = document.createElement("div")
       dayName.className = "day-name"
-      dayName.textContent = date.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase()
+      dayName.textContent = date
+        .toLocaleDateString("en-US", { weekday: "short" })
+        .toLowerCase()
 
       dayElement.appendChild(dayNumber)
       dayElement.appendChild(dayName)
@@ -2757,7 +2872,7 @@ class NewTabApp {
     const dateStr = this.getLocalDateString(date)
 
     // Check if there are events on this date
-    const eventsOnDate = this.calendarEvents.filter(event => {
+    const eventsOnDate = this.calendarEvents.filter((event) => {
       if (!event.startDateTime) return false
       const eventDate = this.getLocalDateString(new Date(event.startDateTime))
       return eventDate === dateStr
@@ -2766,8 +2881,12 @@ class NewTabApp {
     if (eventsOnDate.length === 0) return
 
     // Determine event sources
-    const hasCityEvents = eventsOnDate.some(event => event.source === 'milwaukee')
-    const hasCountyEvents = eventsOnDate.some(event => event.source === 'milwaukeecounty')
+    const hasCityEvents = eventsOnDate.some(
+      (event) => event.source === "milwaukee"
+    )
+    const hasCountyEvents = eventsOnDate.some(
+      (event) => event.source === "milwaukeecounty"
+    )
 
     dayElement.classList.add("has-events")
 
@@ -2790,7 +2909,9 @@ class NewTabApp {
   clearOfficialsSearchResults() {
     // Clear search results containers
     const searchEventsContainer = document.getElementById("search-events-list")
-    const searchOfficialsContainer = document.getElementById("search-officials-list")
+    const searchOfficialsContainer = document.getElementById(
+      "search-officials-list"
+    )
 
     if (searchEventsContainer) {
       searchEventsContainer.innerHTML = ""
@@ -2811,7 +2932,9 @@ class NewTabApp {
 
     // Get search results containers
     const searchEventsContainer = document.getElementById("search-events-list")
-    const searchOfficialsContainer = document.getElementById("search-officials-list")
+    const searchOfficialsContainer = document.getElementById(
+      "search-officials-list"
+    )
 
     if (!searchEventsContainer || !searchOfficialsContainer) return
 
@@ -2885,16 +3008,22 @@ class NewTabApp {
       }
     }
 
-    const announceParts = [`${totalResults} result${totalResults === 1 ? "" : "s"}`]
+    const announceParts = [
+      `${totalResults} result${totalResults === 1 ? "" : "s"}`,
+    ]
     if (meetings.length) {
-      announceParts.push(`${meetings.length} meeting${meetings.length === 1 ? "" : "s"}`)
+      announceParts.push(
+        `${meetings.length} meeting${meetings.length === 1 ? "" : "s"}`
+      )
     }
     if (officials.length) {
       announceParts.push(
         `${officials.length} official${officials.length === 1 ? "" : "s"}`
       )
     }
-    this.announceToScreenReader(`${announceParts.join(", ")} found for ${query}`)
+    this.announceToScreenReader(
+      `${announceParts.join(", ")} found for ${query}`
+    )
   }
 
   handleMeetingSearchResultSelection(event) {
@@ -2910,7 +3039,10 @@ class NewTabApp {
     const eventId = this.getCalendarEventId(event)
     const calendarElement = this.getCalendarEventElementById(eventId)
 
-    if (calendarElement && typeof calendarElement.scrollIntoView === "function") {
+    if (
+      calendarElement &&
+      typeof calendarElement.scrollIntoView === "function"
+    ) {
       calendarElement.scrollIntoView({ block: "nearest", behavior: "smooth" })
     }
 
@@ -3880,11 +4012,7 @@ class NewTabApp {
     }
 
     const normalizeName = (value) =>
-      (value || "")
-        .toString()
-        .replace(/\s+/g, " ")
-        .trim()
-        .toLowerCase()
+      (value || "").toString().replace(/\s+/g, " ").trim().toLowerCase()
 
     const districtNumber = parseDistrictNumber(enriched.district)
     const normalizedName = normalizeName(enriched.name)
@@ -3894,7 +4022,10 @@ class NewTabApp {
       if (!Number.isNaN(districtNumber)) {
         const byDistrict = collection.find((member) => {
           const candidateDistrict = parseDistrictNumber(member.district)
-          return !Number.isNaN(candidateDistrict) && candidateDistrict === districtNumber
+          return (
+            !Number.isNaN(candidateDistrict) &&
+            candidateDistrict === districtNumber
+          )
         })
         if (byDistrict) return byDistrict
       }
@@ -3977,7 +4108,8 @@ class NewTabApp {
     themeColor,
     options = {}
   ) {
-    if (!Array.isArray(responsibilities) || responsibilities.length === 0) return
+    if (!Array.isArray(responsibilities) || responsibilities.length === 0)
+      return
 
     const {
       label = "Key Responsibilities",
@@ -4052,7 +4184,9 @@ class NewTabApp {
     mainButton.className = "official-main"
     mainButton.setAttribute(
       "aria-label",
-      `View details for ${detailModel.name || detailModel.title || "representative"}`
+      `View details for ${
+        detailModel.name || detailModel.title || "representative"
+      }`
     )
 
     const nameContainer = document.createElement("div")
@@ -4105,7 +4239,10 @@ class NewTabApp {
       return
     }
 
-    if (detailView.activeTrigger && detailView.activeTrigger !== sourceElement) {
+    if (
+      detailView.activeTrigger &&
+      detailView.activeTrigger !== sourceElement
+    ) {
       detailView.activeTrigger.classList.remove("active")
       detailView.activeTrigger.style.removeProperty("--detail-accent")
       detailView.activeTrigger.style.removeProperty("borderColor")
@@ -4165,8 +4302,7 @@ class NewTabApp {
       detailModel.name || detailModel.title || "Representative"
     identity.appendChild(nameHeading)
 
-    const roleText =
-      detailModel.office || detailModel.title || detailModel.role
+    const roleText = detailModel.office || detailModel.title || detailModel.role
     if (roleText) {
       const role = document.createElement("div")
       role.className = "official-detail-role"
@@ -4215,11 +4351,7 @@ class NewTabApp {
     if (type === "local") {
       this.buildLocalOfficialDetails(metadata, detailModel, themeColor)
     } else {
-      this.buildComprehensiveOfficialDetails(
-        metadata,
-        detailModel,
-        themeColor
-      )
+      this.buildComprehensiveOfficialDetails(metadata, detailModel, themeColor)
     }
 
     if (metadata.childElementCount > 0) {
@@ -4473,10 +4605,7 @@ class NewTabApp {
         return link
       }
 
-      const websiteLink = createContactLink(
-        official.contact.website,
-        "Website"
-      )
+      const websiteLink = createContactLink(official.contact.website, "Website")
       if (websiteLink) {
         contactContainer.appendChild(websiteLink)
       }
