@@ -68,27 +68,36 @@
 
         <!-- Civic information sidebar -->
         <aside class="sidebar" id="civic-sidebar" role="complementary" aria-labelledby="sidebar-heading">
-            <div class="sidebar-header unified-reps-bar">
-                <div class="reps-header-content">
-                    <h2 id="sidebar-heading" class="visually-hidden">Local Government</h2>
-                    <div class="reps-title-group" role="group" aria-label="Local government controls">
-                        <span class="reps-title-text">Local Gov.</span>
-                        <div class="reps-controls" id="current-address-controls">
-                            <button id="edit-address-btn" class="btn-icon reps-icon-btn" type="button" aria-pressed="false"
-                                title="Set location" aria-label="Set location">📍</button>
-                            <button id="toggle-official-search" class="btn-icon reps-icon-btn" type="button"
-                                aria-pressed="false" title="Show officials search"
-                                aria-label="Show officials search">🔍</button>
-                        </div>
-                    </div>
-                    <div class="current-address visually-hidden" id="address-display" role="status" aria-live="polite">
-                        <span class="address-label">For:</span>
-                        <span class="address-value" id="current-address-text"
-                            aria-describedby="current-address-controls"></span>
+            <!-- Simplified top navigation row -->
+            <div class="sidebar-header simplified-nav">
+                <h2 id="sidebar-heading" class="visually-hidden">Local Government</h2>
+                <div class="nav-row" role="toolbar" aria-label="Local government navigation">
+                    <div class="nav-controls">
+                        <button id="edit-address-btn" class="nav-btn-icon" type="button" aria-pressed="false"
+                            title="Set location" aria-label="Set location">📌</button>
+                        <button id="toggle-officials-view" class="nav-btn-icon" type="button" aria-pressed="false"
+                            title="Show elected officials" aria-label="Show elected officials">👤</button>
+                        <button id="toggle-search" class="nav-btn-icon" type="button" aria-pressed="false"
+                            title="Search" aria-label="Search">🔍</button>
+                        <button id="toggle-sidebar" class="nav-btn-icon" aria-label="Hide pane"
+                            title="Hide pane">❯</button>
                     </div>
                 </div>
-                <button id="toggle-sidebar" class="btn-icon" aria-label="Hide representatives sidebar"
-                    title="Hide sidebar">❯</button>
+                <div class="current-address visually-hidden" id="address-display" role="status" aria-live="polite">
+                    <span class="address-label">For:</span>
+                    <span class="address-value" id="current-address-text"></span>
+                </div>
+            </div>
+
+            <!-- Collapsible search row (hidden by default) -->
+            <div class="search-row hidden" id="search-row" role="search" aria-label="Search officials and meetings">
+                <div class="search-row-content">
+                    <input type="search" id="official-search-input" placeholder="Search officials or meetings (e.g., sheriff, budget)"
+                        aria-label="Search officials or meetings by name, title, department, topic or responsibility" autocomplete="off">
+                    <button id="clear-search" class="search-action-btn" aria-label="Clear search" title="Clear search">clear</button>
+                    <button id="hide-search" class="search-action-btn" aria-label="Hide search" title="Hide search">hide search</button>
+                </div>
+                <small class="search-hint">Type at least 2 characters to search local officials and upcoming meetings</small>
             </div>
 
             <!-- Address input section (shown when no data) -->
@@ -113,81 +122,93 @@
                 </div>
             </div>
 
-            <!-- Officials and meetings search -->
-            <div class="official-search" role="search" aria-label="Search officials and meetings">
-                <label for="official-search-input" class="visually-hidden">Search officials</label>
-                <div class="official-search-group">
-                    <input type="search" id="official-search-input" placeholder="Search officials or meetings (e.g., sheriff, budget)"
-                        aria-label="Search officials or meetings by name, title, department, topic or responsibility" autocomplete="off">
-                    <button id="official-search-clear" class="btn-icon" aria-label="Clear officials search"
-                        title="Clear search" hidden>✖</button>
-                </div>
-                <small class="official-search-hint" id="official-search-hint">Type at least 2 characters to search local officials and upcoming meetings</small>
-            </div>
-
-            <!-- (Removed separate compact address display; merged into sidebar-header) -->
-
-            <!-- Monthly calendar and officials section -->
-            <div class="officials-calendar" role="region" aria-label="Monthly calendar">
-                <div class="calendar-header">
-                    <button id="calendar-prev" class="calendar-nav" type="button" aria-label="Show previous month">❮</button>
-                    <div id="calendar-month-label" class="calendar-month-label" aria-live="polite"></div>
-                    <button id="calendar-next" class="calendar-nav" type="button" aria-label="Show next month">❯</button>
-                </div>
-                <div id="calendar-grid" class="calendar-grid" role="grid" aria-readonly="true">
-                    <!-- Calendar days will be injected -->
-                </div>
-                <div id="calendar-legend" class="calendar-legend" aria-hidden="true">
-                    <span class="legend-dot city"></span>
-                    <span class="legend-label">City of Milwaukee</span>
-                    <span class="legend-dot county"></span>
-                    <span class="legend-label">Milwaukee County</span>
-                </div>
-                <div id="calendar-events" class="calendar-events" role="list" aria-live="polite" aria-busy="false">
-                    <!-- Event cards rendered here -->
-                </div>
-                <div id="calendar-detail" class="calendar-detail-section hidden" role="region"
-                    aria-labelledby="calendar-detail-heading" aria-live="polite">
-                    <div class="calendar-detail-header">
-                        <button id="calendar-detail-back" class="btn-icon" type="button"
-                            aria-label="Back to calendar events" title="Back to events">❮</button>
-                        <div class="calendar-detail-title-group">
-                            <h4 id="calendar-detail-heading">Meeting details</h4>
-                            <span id="calendar-detail-subtitle" class="calendar-detail-subtitle"></span>
-                        </div>
+            <!-- Simplified calendar with week rows -->
+            <div class="simplified-calendar" id="simplified-calendar" role="region" aria-label="Calendar weeks">
+                <!-- Current week row -->
+                <div class="week-row current-week" role="row">
+                    <div class="week-days" id="current-week-days">
+                        <!-- Current week days will be populated -->
                     </div>
-                    <div id="calendar-detail-content" class="calendar-detail-content">
-                        <!-- Calendar detail content will be injected here -->
+                </div>
+
+                <!-- Next week row -->
+                <div class="week-row next-week" role="row">
+                    <div class="week-days" id="next-week-days">
+                        <!-- Next week days will be populated -->
                     </div>
+                </div>
+
+                <!-- 2 weeks out row -->
+                <div class="week-row two-weeks-out" role="row">
+                    <div class="week-days" id="two-weeks-out-days">
+                        <!-- Two weeks out days will be populated -->
+                    </div>
+                </div>
+
+                <!-- Calendar key -->
+                <div class="calendar-key" id="calendar-key">
+                    <span class="key-item">
+                        <span class="key-dot city"></span>
+                        <span class="key-label">City of Milwaukee</span>
+                    </span>
+                    <span class="key-item">
+                        <span class="key-dot county"></span>
+                        <span class="key-label">Milwaukee County</span>
+                    </span>
                 </div>
             </div>
 
-            <div class="officials-section" role="region" aria-labelledby="officials-heading">
-                <h3 id="officials-heading" class="visually-hidden">Your representatives</h3>
-                <button id="officials-toggle" class="officials-toggle" type="button" aria-controls="officials-list-wrapper"
-                    aria-expanded="false">
-                    Show elected officials
-                </button>
-                <div id="officials-list-wrapper" class="officials-list-wrapper collapsed">
+            <!-- Content scroll view - takes up all remaining vertical space -->
+            <div class="content-scroll-view" id="content-scroll-view" role="region" aria-label="Main content">
+
+                <!-- Default view: upcoming calendar events -->
+                <div class="content-view events-view active" id="events-view" role="tabpanel" aria-labelledby="events-view-label">
+                    <div id="events-view-label" class="visually-hidden">Upcoming calendar events</div>
+                    <div id="calendar-events" class="events-list" role="list" aria-live="polite" aria-busy="false">
+                        <!-- Event cards rendered here -->
+                    </div>
+                </div>
+
+                <!-- Government officials view -->
+                <div class="content-view officials-view" id="officials-view" role="tabpanel" aria-labelledby="officials-view-label">
+                    <div id="officials-view-label" class="visually-hidden">Government officials</div>
                     <div id="officials-list" class="officials-list" role="list" aria-live="polite" aria-busy="false">
                         <!-- Officials will be dynamically populated -->
                     </div>
                 </div>
-            </div>
 
-            <!-- Official detail view -->
-            <div id="official-detail-section" class="official-detail-section hidden" role="region"
-                aria-labelledby="official-detail-heading" aria-live="polite">
-                <div class="official-detail-header">
-                    <button id="official-detail-back" class="btn-icon" aria-label="Back to officials list"
-                        title="Back to officials">❮</button>
-                    <div class="official-detail-title-group">
-                        <h3 id="official-detail-heading">Representative Details</h3>
-                        <span id="official-detail-subtitle" class="official-detail-subtitle"></span>
+                <!-- Search results view: mixed calendar events and officials -->
+                <div class="content-view search-results-view" id="search-results-view" role="tabpanel" aria-labelledby="search-results-label">
+                    <div id="search-results-label" class="visually-hidden">Search results</div>
+                    <div class="search-results-content">
+                        <div class="search-results-section" id="search-events-section">
+                            <h4 class="search-section-title">Meetings & Events</h4>
+                            <div id="search-events-list" class="search-results-list" role="list">
+                                <!-- Matching events will be rendered here -->
+                            </div>
+                        </div>
+                        <div class="search-results-section" id="search-officials-section">
+                            <h4 class="search-section-title">Officials</h4>
+                            <div id="search-officials-list" class="search-results-list" role="list">
+                                <!-- Matching officials will be rendered here -->
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div id="official-detail-content" class="official-detail-content">
-                    <!-- Official detail content will be injected here -->
+
+            </div>
+
+            <!-- Detail page overlay (for events and officials) -->
+            <div id="detail-overlay" class="detail-overlay hidden" role="region" aria-labelledby="detail-heading" aria-live="polite">
+                <div class="detail-header">
+                    <button id="detail-back" class="detail-back-btn" type="button" aria-label="Back" title="Back">❮</button>
+                    <div class="detail-title-group">
+                        <h3 id="detail-heading">Details</h3>
+                        <span id="detail-subtitle" class="detail-subtitle"></span>
+                    </div>
+                </div>
+                <div id="detail-content" class="detail-content">
+                    <!-- Detail content will be injected here -->
                 </div>
             </div>
 
