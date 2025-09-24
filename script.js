@@ -8,7 +8,7 @@ const CALENDAR_SOURCE_LABELS = {
 
 const CALENDAR_SOURCE_COLORS = {
   milwaukee: "#0077be",
-  milwaukeecounty: "#ffa500",
+  milwaukeecounty: "#ffc107",
 }
 
 const CALENDAR_STORAGE_KEY = "govtab_calendar_events_v2"
@@ -405,6 +405,7 @@ class NewTabApp {
     this.applyTheme()
     this.setupSidebarDetailView()
     this.setupCalendar()
+    this.setupSimplifiedCalendar() // Initialize simplified calendar weeks
     this.setupOfficialsToggle()
     this.loadCalendarEvents()
     this.renderFavorites()
@@ -1103,6 +1104,9 @@ class NewTabApp {
       const item = this.createCalendarEventListItem(event)
       container.appendChild(item)
     })
+
+    // Refresh week calendar indicators after events are rendered
+    this.refreshWeekCalendarIndicators()
   }
 
   createCalendarEventListItem(event, { onSelect } = {}) {
@@ -1227,129 +1231,10 @@ class NewTabApp {
   }
 
   showCalendarEventDetail(event, sourceElement) {
-    const detailView = this.calendarDetailView || {}
-    const {
-      listContainer,
-      detailSection,
-      detailContent,
-      detailSubtitle,
-    } = detailView
-
-    if (!detailSection || !detailContent) {
-      return
-    }
-
-    if (detailView.activeTrigger && detailView.activeTrigger !== sourceElement) {
-      if (detailView.activeTrigger.isConnected) {
-        detailView.activeTrigger.classList.remove("active")
-        detailView.activeTrigger.style.removeProperty("--detail-accent")
-      }
-    }
-
-    if (sourceElement) {
-      sourceElement.classList.add("active")
-      if (event.sourceColor) {
-        sourceElement.style.setProperty("--detail-accent", event.sourceColor)
-      } else {
-        sourceElement.style.removeProperty("--detail-accent")
-      }
-      detailView.activeTrigger = sourceElement
-      detailView.activeButton = sourceElement.querySelector(
-        ".calendar-event-main"
-      )
-    } else {
-      detailView.activeTrigger = null
-      detailView.activeButton = null
-    }
-
-    if (listContainer) {
-      listContainer.classList.add("hidden")
-    }
-
-    detailSection.classList.remove("hidden")
-    detailSection.scrollTop = 0
-    if (event.sourceColor) {
-      detailSection.style.setProperty("--detail-accent", event.sourceColor)
-    } else {
-      detailSection.style.removeProperty("--detail-accent")
-    }
-
-    this.setCalendarStructureHidden(true)
-
-    if (detailSubtitle) {
-      detailSubtitle.textContent = this.buildCalendarDetailSubtitle(event)
-    }
-
-    this.buildCalendarDetailContent(event)
-    this.activeCalendarEvent = event
-
-    if (detailView.backButton) {
-      detailView.backButton.focus({ preventScroll: true })
-    }
-
-    this.announceToScreenReader(
-      `Showing details for ${event.title || "meeting"}`
-    )
+    // Use the new detail overlay for event details
+    this.showDetailOverlay("event", event)
   }
 
-  closeCalendarEventDetail(options = {}) {
-    const detailView = this.calendarDetailView || {}
-    const {
-      listContainer,
-      detailSection,
-      detailContent,
-      detailSubtitle,
-      activeTrigger,
-      activeButton,
-    } = detailView
-
-    const wasVisible = detailSection
-      ? !detailSection.classList.contains("hidden")
-      : false
-
-    if (activeTrigger && activeTrigger.isConnected) {
-      activeTrigger.classList.remove("active")
-      activeTrigger.style.removeProperty("--detail-accent")
-    }
-    detailView.activeTrigger = null
-
-    if (detailSection) {
-      detailSection.classList.add("hidden")
-      detailSection.style.removeProperty("--detail-accent")
-    }
-
-    if (listContainer) {
-      listContainer.classList.remove("hidden")
-    }
-
-    if (detailContent) {
-      detailContent.innerHTML = ""
-    }
-
-    if (detailSubtitle) {
-      detailSubtitle.textContent = ""
-    }
-
-    this.setCalendarStructureHidden(false)
-
-    this.activeCalendarEvent = null
-    detailView.activeButton = null
-
-    const returnFocus =
-      activeButton && activeButton.isConnected ? activeButton : null
-
-    if (!options.silent && returnFocus) {
-      setTimeout(() => {
-        if (returnFocus.isConnected) {
-          returnFocus.focus({ preventScroll: true })
-        }
-      }, 0)
-    }
-
-    if (!options.silent && wasVisible) {
-      this.announceToScreenReader("Back to calendar events")
-    }
-  }
 
   buildCalendarDetailContent(event) {
     const detailView = this.calendarDetailView || {}
@@ -2012,6 +1897,9 @@ class NewTabApp {
       console.log("Test button event bound")
     }
 
+    // Simplified UI Event Handlers (Issue #11)
+    this.setupSimplifiedUIEvents()
+
     // Officials local search (sidebar)
     this.setupOfficialsSearch()
     this.setupOfficialsSearchToggle()
@@ -2263,6 +2151,440 @@ class NewTabApp {
     }
   }
 
+  setupSimplifiedUIEvents() {
+    console.log("Setting up simplified UI events...")
+
+    // Toggle search row visibility
+    const toggleSearchBtn = document.getElementById("toggle-search")
+    const searchRow = document.getElementById("search-row")
+    if (toggleSearchBtn && searchRow) {
+      toggleSearchBtn.addEventListener("click", () => {
+        const isVisible = !searchRow.classList.contains("hidden")
+        searchRow.classList.toggle("hidden", isVisible)
+        toggleSearchBtn.setAttribute("aria-pressed", (!isVisible).toString())
+
+        // Add/remove searching class to sidebar for calendar hiding
+        const sidebar = document.getElementById("civic-sidebar")
+        if (sidebar) {
+          sidebar.classList.toggle("searching", !isVisible)
+        }
+
+        if (!isVisible) {
+          // Focus search input when showing
+          const searchInput = document.getElementById("official-search-input")
+          if (searchInput) {
+            setTimeout(() => searchInput.focus(), 100)
+          }
+        }
+      })
+    }
+
+    // Hide search row
+    const hideSearchBtn = document.getElementById("hide-search")
+    if (hideSearchBtn && searchRow) {
+      hideSearchBtn.addEventListener("click", () => {
+        searchRow.classList.add("hidden")
+        const sidebar = document.getElementById("civic-sidebar")
+        if (sidebar) {
+          sidebar.classList.remove("searching")
+        }
+        if (toggleSearchBtn) {
+          toggleSearchBtn.setAttribute("aria-pressed", "false")
+        }
+      })
+    }
+
+    // Clear search
+    const clearSearchBtn = document.getElementById("clear-search")
+    if (clearSearchBtn) {
+      clearSearchBtn.addEventListener("click", () => {
+        const searchInput = document.getElementById("official-search-input")
+        if (searchInput) {
+          searchInput.value = ""
+          searchInput.dispatchEvent(new Event("input"))
+        }
+      })
+    }
+
+    // Officials view toggle
+    const toggleOfficialsBtn = document.getElementById("toggle-officials-view")
+    if (toggleOfficialsBtn) {
+      toggleOfficialsBtn.addEventListener("click", () => {
+        const isPressed = toggleOfficialsBtn.getAttribute("aria-pressed") === "true"
+        toggleOfficialsBtn.setAttribute("aria-pressed", (!isPressed).toString())
+        this.switchContentView(isPressed ? "events" : "officials")
+      })
+    }
+
+    // Week day clicks for calendar filtering
+    this.setupWeekDayClicks()
+
+    // Detail overlay back button
+    const detailBackBtn = document.getElementById("detail-back")
+    if (detailBackBtn) {
+      detailBackBtn.addEventListener("click", () => {
+        this.hideDetailOverlay()
+      })
+    }
+
+    console.log("Simplified UI events set up")
+  }
+
+  setupWeekDayClicks() {
+    // Event delegation for week day clicks
+    const weekContainers = [
+      "current-week-days",
+      "next-week-days",
+      "two-weeks-out-days"
+    ]
+
+    weekContainers.forEach(containerId => {
+      const container = document.getElementById(containerId)
+      if (container) {
+        container.addEventListener("click", (e) => {
+          const weekDay = e.target.closest(".week-day")
+          if (weekDay) {
+            // Remove selected class from all week days
+            document.querySelectorAll(".week-day.selected").forEach(day => {
+              day.classList.remove("selected")
+            })
+
+            // Add selected class to clicked day
+            weekDay.classList.add("selected")
+
+            // Filter events by selected date
+            const dateStr = weekDay.dataset.date
+            if (dateStr) {
+              this.filterEventsByDate(dateStr)
+            }
+          }
+        })
+      }
+    })
+  }
+
+  switchContentView(viewType) {
+    // Hide all content views
+    document.querySelectorAll(".content-view").forEach(view => {
+      view.classList.remove("active")
+    })
+
+    // Show the selected view
+    const targetView = document.getElementById(`${viewType}-view`)
+    if (targetView) {
+      targetView.classList.add("active")
+    }
+
+    // Hide/show calendar weeks based on view type
+    const calendarWeeks = document.getElementById("simplified-calendar")
+    if (calendarWeeks) {
+      if (viewType === "officials") {
+        calendarWeeks.classList.add("hidden")
+      } else {
+        calendarWeeks.classList.remove("hidden")
+      }
+    }
+
+    // Update navigation buttons
+    document.querySelectorAll(".nav-btn-icon").forEach(btn => {
+      btn.setAttribute("aria-pressed", "false")
+    })
+
+    if (viewType === "officials") {
+      const officialsBtn = document.getElementById("toggle-officials-view")
+      if (officialsBtn) {
+        officialsBtn.setAttribute("aria-pressed", "true")
+      }
+    }
+  }
+
+  filterEventsByDate(dateStr) {
+    console.log("Filtering events by date:", dateStr)
+
+    const eventsContainer = document.getElementById("calendar-events")
+    if (!eventsContainer) return
+
+    // Filter events to only show those on the selected date
+    const filteredEvents = this.calendarEvents.filter(event => {
+      if (!event.startDateTime) return false
+      const eventDate = new Date(event.startDateTime).toISOString().split('T')[0]
+      return eventDate === dateStr
+    })
+
+    console.log(`Found ${filteredEvents.length} events for ${dateStr}`)
+
+    // Clear and re-render events
+    eventsContainer.innerHTML = ""
+
+    if (filteredEvents.length === 0) {
+      const noEventsDiv = document.createElement("div")
+      noEventsDiv.className = "no-events-message"
+
+      const message = document.createElement("p")
+      message.textContent = `No events scheduled for ${this.formatDisplayDate(dateStr)}`
+      noEventsDiv.appendChild(message)
+
+      const clearButton = document.createElement("button")
+      clearButton.className = "clear-filter-btn"
+      clearButton.textContent = "Show all events"
+      clearButton.addEventListener("click", () => this.clearDateFilter())
+      noEventsDiv.appendChild(clearButton)
+
+      eventsContainer.appendChild(noEventsDiv)
+    } else {
+      filteredEvents.forEach(event => {
+        const eventElement = this.createCalendarEventListItem(event)
+        eventsContainer.appendChild(eventElement)
+      })
+
+      // Add clear filter button
+      const clearButton = document.createElement("button")
+      clearButton.className = "clear-filter-btn"
+      clearButton.textContent = "Show all events"
+      clearButton.onclick = () => this.clearDateFilter()
+      eventsContainer.appendChild(clearButton)
+    }
+  }
+
+  clearDateFilter() {
+    // Remove selected state from all week days
+    document.querySelectorAll(".week-day.selected").forEach(day => {
+      day.classList.remove("selected")
+    })
+
+    // Re-render all events
+    this.renderCalendarEventsList()
+  }
+
+  formatDisplayDate(dateStr) {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
+
+  showDetailOverlay(type, data) {
+    const overlay = document.getElementById("detail-overlay")
+    const heading = document.getElementById("detail-heading")
+    const subtitle = document.getElementById("detail-subtitle")
+    const content = document.getElementById("detail-content")
+
+    if (!overlay || !heading || !content) return
+
+    // Set title and content based on type
+    if (type === "event") {
+      heading.textContent = data.name || "Meeting Details"
+      if (subtitle) subtitle.textContent = data.body || ""
+      content.innerHTML = this.renderEventDetail(data)
+    } else if (type === "official") {
+      heading.textContent = data.name || "Official Details"
+      if (subtitle) subtitle.textContent = data.office || ""
+      content.innerHTML = this.renderOfficialDetail(data)
+    }
+
+    overlay.classList.remove("hidden")
+  }
+
+  hideDetailOverlay() {
+    const overlay = document.getElementById("detail-overlay")
+    if (overlay) {
+      overlay.classList.add("hidden")
+    }
+  }
+
+  renderEventDetail(event) {
+    // Render detailed event information with comprehensive data
+    const startDate = event.startDateTime ? new Date(event.startDateTime) : null
+    const endDate = event.endDateTime ? new Date(event.endDateTime) : null
+
+    const formatDate = (date) => date ? date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }) : 'N/A'
+
+    const formatTime = (date) => date ? date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    }) : 'N/A'
+
+    const sourceColor = event.sourceColor || CALENDAR_SOURCE_COLORS[event.source] || 'var(--accent-color)'
+    const sourceName = CALENDAR_SOURCE_LABELS[event.source] || event.sourceLabel || 'Local Government'
+
+    return `
+      <div class="event-detail">
+        <div class="event-header">
+          <h4 class="event-title">${event.title || event.name || "Government Meeting"}</h4>
+          <div class="event-source" style="color: ${sourceColor}">
+            <span class="source-dot" style="background-color: ${sourceColor}"></span>
+            ${sourceName}
+          </div>
+        </div>
+
+        <div class="event-info">
+          <div class="info-section">
+            <h5>When</h5>
+            <p class="event-date">${formatDate(startDate)}</p>
+            <p class="event-time">
+              ${formatTime(startDate)}${endDate && endDate !== startDate ? ` - ${formatTime(endDate)}` : ''}
+            </p>
+          </div>
+
+          ${event.location ? `
+            <div class="info-section">
+              <h5>Where</h5>
+              <p class="event-location">${event.location}</p>
+            </div>
+          ` : ''}
+
+          ${event.bodyName || event.body ? `
+            <div class="info-section">
+              <h5>Organizing Body</h5>
+              <p class="event-body">${event.bodyName || event.body}</p>
+            </div>
+          ` : ''}
+
+          ${event.description ? `
+            <div class="info-section">
+              <h5>Description</h5>
+              <div class="event-description">${event.description}</div>
+            </div>
+          ` : ''}
+
+          ${event.agendaUrl ? `
+            <div class="info-section">
+              <h5>Resources</h5>
+              <p class="event-links">
+                <a href="${event.agendaUrl}" target="_blank" rel="noopener noreferrer" class="event-link">
+                  📄 View Agenda
+                </a>
+              </p>
+            </div>
+          ` : ''}
+
+          ${event.meetingUrl ? `
+            <div class="info-section">
+              <h5>Participation</h5>
+              <p class="event-links">
+                <a href="${event.meetingUrl}" target="_blank" rel="noopener noreferrer" class="event-link">
+                  🔗 Join Meeting
+                </a>
+              </p>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `
+  }
+
+  renderOfficialDetail(official) {
+    // Render detailed official information
+    return `
+      <div class="official-detail">
+        <h4>${official.name || "Official"}</h4>
+        <p><strong>Office:</strong> ${official.office || "N/A"}</p>
+        ${official.party ? `<p><strong>Party:</strong> ${official.party}</p>` : ""}
+        ${official.phones ? `<p><strong>Phone:</strong> ${official.phones.join(", ")}</p>` : ""}
+        ${official.emails ? `<p><strong>Email:</strong> ${official.emails.join(", ")}</p>` : ""}
+        ${official.urls ? `<p><strong>Website:</strong> ${official.urls.map(url => `<a href="${url}" target="_blank">${url}</a>`).join(", ")}</p>` : ""}
+      </div>
+    `
+  }
+
+  setupSimplifiedCalendar() {
+    console.log("Setting up simplified calendar...")
+
+    // Populate week days for current week, next week, and 2 weeks out
+    this.populateWeekDays("current-week-days", 0)
+    this.populateWeekDays("next-week-days", 1)
+    this.populateWeekDays("two-weeks-out-days", 2)
+
+    console.log("Simplified calendar set up")
+  }
+
+  populateWeekDays(containerId, weekOffset) {
+    const container = document.getElementById(containerId)
+    if (!container) return
+
+    const today = new Date()
+    const startOfWeek = new Date(today)
+
+    // Get Monday of the current week
+    const day = startOfWeek.getDay()
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1) // Adjust for Sunday being 0
+    startOfWeek.setDate(diff)
+
+    // Add week offset
+    startOfWeek.setDate(startOfWeek.getDate() + (weekOffset * 7))
+
+    container.innerHTML = ""
+
+    // Create 7 days (Monday to Sunday)
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startOfWeek)
+      date.setDate(startOfWeek.getDate() + i)
+
+      const dayElement = document.createElement("div")
+      dayElement.className = "week-day"
+      dayElement.dataset.date = date.toISOString().split('T')[0] // YYYY-MM-DD format
+
+      const dayNumber = document.createElement("div")
+      dayNumber.className = "day-number"
+      dayNumber.textContent = date.getDate()
+
+      const dayName = document.createElement("div")
+      dayName.className = "day-name"
+      dayName.textContent = date.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase()
+
+      dayElement.appendChild(dayNumber)
+      dayElement.appendChild(dayName)
+
+      // Check for actual events on this date
+      this.addEventIndicators(dayElement, date)
+
+      container.appendChild(dayElement)
+    }
+  }
+
+  addEventIndicators(dayElement, date) {
+    const dateStr = date.toISOString().split('T')[0]
+
+    // Check if there are events on this date
+    const eventsOnDate = this.calendarEvents.filter(event => {
+      if (!event.startDateTime) return false
+      const eventDate = new Date(event.startDateTime).toISOString().split('T')[0]
+      return eventDate === dateStr
+    })
+
+    if (eventsOnDate.length === 0) return
+
+    // Determine event sources
+    const hasCityEvents = eventsOnDate.some(event => event.source === 'milwaukee')
+    const hasCountyEvents = eventsOnDate.some(event => event.source === 'milwaukeecounty')
+
+    dayElement.classList.add("has-events")
+
+    if (hasCityEvents && hasCountyEvents) {
+      dayElement.classList.add("has-both-events")
+    } else if (hasCityEvents) {
+      dayElement.classList.add("has-city-events")
+    } else if (hasCountyEvents) {
+      dayElement.classList.add("has-county-events")
+    }
+  }
+
+  refreshWeekCalendarIndicators() {
+    // Refresh all week day indicators when events are updated
+    this.populateWeekDays("current-week-days", 0)
+    this.populateWeekDays("next-week-days", 1)
+    this.populateWeekDays("two-weeks-out-days", 2)
+  }
+
   clearOfficialsSearchResults() {
     const listContainer = document.getElementById("officials-list")
     if (!listContainer) return
@@ -2359,8 +2681,8 @@ class NewTabApp {
 
         officials.forEach((official) => {
           const colorMap = {
-            city: "#ffa500",
-            county: "#0077be",
+            city: "#0077be",
+            county: "#ffc107",
             state: "#228b22",
             federal: "#dc143c",
           }
@@ -3134,12 +3456,12 @@ class NewTabApp {
     // Define the division structure with both local and comprehensive officials
     const divisionStructure = {
       "City of Milwaukee": {
-        color: "#ffa500",
+        color: "#0077be",
         localReps: [],
         allOfficials: this.governmentOfficials.getOfficialsByLevel("city"),
       },
       "Milwaukee County": {
-        color: "#0077be",
+        color: "#ffc107",
         localReps: [],
         allOfficials: this.governmentOfficials.getOfficialsByLevel("county"),
       },
@@ -4261,12 +4583,12 @@ class NewTabApp {
     // Create Milwaukee County section
     const milwaukeeSection = document.createElement("div")
     milwaukeeSection.className = "division-group fade-in milwaukee-section"
-    milwaukeeSection.style.borderLeft = "4px solid #0077be" // Milwaukee blue
+    milwaukeeSection.style.borderLeft = "4px solid #ffc107" // Milwaukee County
 
     const header = document.createElement("div")
     header.className = "division-header"
     header.textContent = "Milwaukee County Local Officials"
-    header.style.color = "#0077be"
+    header.style.color = "#ffc107"
     milwaukeeSection.appendChild(header)
     // Make headers collapsible
     this.addCollapsibleBehavior(header)
@@ -4679,7 +5001,7 @@ class NewTabApp {
 document.addEventListener("DOMContentLoaded", () => {
   console.log("DOM Content Loaded - Starting Government Tab App")
   try {
-    new NewTabApp()
+    window.app = new NewTabApp()
   } catch (error) {
     console.error("Failed to initialize Government Tab App:", error)
   }
