@@ -2338,7 +2338,7 @@ class NewTabApp {
       content.innerHTML = this.renderEventDetail(data)
     } else if (type === "official") {
       heading.textContent = data.name || "Official Details"
-      if (subtitle) subtitle.textContent = data.office || ""
+      if (subtitle) subtitle.textContent = data.office || data.title || ""
       content.innerHTML = this.renderOfficialDetail(data)
     }
 
@@ -2440,17 +2440,245 @@ class NewTabApp {
   }
 
   renderOfficialDetail(official) {
-    // Render detailed official information
-    return `
-      <div class="official-detail">
-        <h4>${official.name || "Official"}</h4>
-        <p><strong>Office:</strong> ${official.office || "N/A"}</p>
-        ${official.party ? `<p><strong>Party:</strong> ${official.party}</p>` : ""}
-        ${official.phones ? `<p><strong>Phone:</strong> ${official.phones.join(", ")}</p>` : ""}
-        ${official.emails ? `<p><strong>Email:</strong> ${official.emails.join(", ")}</p>` : ""}
-        ${official.urls ? `<p><strong>Website:</strong> ${official.urls.map(url => `<a href="${url}" target="_blank">${url}</a>`).join(", ")}</p>` : ""}
+    // Render detailed official information using event detail styling
+    const name = official.name || "Official"
+    const office = official.office || official.title || "N/A"
+    const party = official.party
+    const district = official.district
+    const level = official.level
+
+    // Determine source color based on level
+    const levelColorMap = {
+      city: "#0077be",
+      county: "#ffc107",
+      state: "#228b22",
+      federal: "#dc143c"
+    }
+    const sourceColor = levelColorMap[level] || 'var(--accent-color)'
+    const levelLabel = level ? level.charAt(0).toUpperCase() + level.slice(1) : 'Government'
+
+    let detailHTML = `
+      <div class="event-detail">
+        <div class="event-header">
+          <h4 class="event-title">${name}</h4>
+          <div class="event-source" style="color: ${sourceColor}">
+            <span class="source-dot" style="background-color: ${sourceColor}"></span>
+            ${levelLabel} Official
+          </div>
+        </div>
+
+        <div class="event-info">
+    `
+
+    // Basic Information Section
+    if (office !== "N/A" || district || party || official.department) {
+      detailHTML += `
+        <div class="info-section">
+          <h5>Position</h5>
+          ${office !== "N/A" ? `<p class="event-body">${office}</p>` : ""}
+          ${district ? `<p><strong>District:</strong> ${district}</p>` : ""}
+          ${official.department ? `<p><strong>Department:</strong> ${official.department}</p>` : ""}
+          ${party ? `<p><strong>Party:</strong> ${party}</p>` : ""}
+        </div>
+      `
+    }
+
+    // Responsibilities Section
+    if (official.responsibilities && official.responsibilities.length > 0) {
+      detailHTML += `
+        <div class="info-section">
+          <h5>Key Responsibilities</h5>
+          <div class="event-description">
+            <ul>`
+
+      official.responsibilities.forEach((responsibility) => {
+        detailHTML += `<li>${responsibility}</li>`
+      })
+
+      detailHTML += `
+            </ul>
+          </div>
+        </div>
+      `
+    }
+
+    // Committees Section
+    if (official.committees && official.committees.length > 0) {
+      detailHTML += `
+        <div class="info-section">
+          <h5>Committee Assignments</h5>
+          <div class="event-description">`
+
+      official.committees.forEach((committee) => {
+        if (typeof committee === 'string') {
+          detailHTML += `<p>${committee}</p>`
+        } else if (committee.name) {
+          const role = committee.role ? `<strong>${committee.role}</strong> - ` : ""
+          detailHTML += `<p>${role}${committee.name}</p>`
+
+          // Add committee description if available
+          let description = ""
+          if (this.milwaukeeCouncil && this.milwaukeeCouncil.committeeDescriptions[committee.name]) {
+            description = this.milwaukeeCouncil.committeeDescriptions[committee.name]
+          } else if (this.milwaukeeCountyBoard && this.milwaukeeCountyBoard.committeeDescriptions[committee.name]) {
+            description = this.milwaukeeCountyBoard.committeeDescriptions[committee.name]
+          }
+
+          if (description) {
+            detailHTML += `<p style="font-size: 0.9rem; color: var(--text-muted); margin-left: 1rem; font-style: italic;">${description}</p>`
+          }
+        }
+      })
+
+      detailHTML += `
+          </div>
+        </div>
+      `
+    }
+
+    // Contact Information Section
+    const contact = official.contact || {}
+    const hasContactInfo = official.phones || official.emails || official.phone || official.email || contact.phone || contact.email || contact.office
+
+    if (hasContactInfo) {
+      detailHTML += `
+        <div class="info-section">
+          <h5>Contact Information</h5>`
+
+      // Phone numbers
+      if (official.phones && official.phones.length > 0) {
+        detailHTML += `<p><strong>📞 Phone:</strong> ${official.phones.join(", ")}</p>`
+      } else if (official.phone) {
+        detailHTML += `<p><strong>📞 Phone:</strong> ${official.phone}</p>`
+      } else if (contact.phone) {
+        detailHTML += `<p><strong>📞 Phone:</strong> ${contact.phone}</p>`
+      }
+
+      // Email addresses
+      if (official.emails && official.emails.length > 0) {
+        detailHTML += `<p><strong>📧 Email:</strong> ${official.emails.map(email => `<a href="mailto:${email}">${email}</a>`).join(", ")}</p>`
+      } else if (official.email) {
+        detailHTML += `<p><strong>📧 Email:</strong> <a href="mailto:${official.email}">${official.email}</a></p>`
+      } else if (contact.email) {
+        detailHTML += `<p><strong>📧 Email:</strong> <a href="mailto:${contact.email}">${contact.email}</a></p>`
+      }
+
+      // Office address
+      if (contact.office) {
+        detailHTML += `<p><strong>🏢 Office:</strong> ${contact.office}</p>`
+      }
+
+      detailHTML += `</div>`
+    }
+
+    // Website Section
+    const hasWebsites = (official.urls && official.urls.length > 0) || official.website || contact.website
+    if (hasWebsites) {
+      detailHTML += `
+        <div class="info-section">
+          <h5>Resources</h5>
+          <p class="event-links">`
+
+      if (official.urls && official.urls.length > 0) {
+        official.urls.forEach(url => {
+          detailHTML += `<a href="${url}" target="_blank" rel="noopener noreferrer" class="event-link">🔗 Official Website</a><br>`
+        })
+      } else if (official.website) {
+        detailHTML += `<a href="${official.website}" target="_blank" rel="noopener noreferrer" class="event-link">🔗 Official Website</a><br>`
+      } else if (contact.website) {
+        detailHTML += `<a href="${contact.website}" target="_blank" rel="noopener noreferrer" class="event-link">🔗 Official Website</a><br>`
+      }
+
+      detailHTML += `</p></div>`
+    }
+
+    // Term Information Section
+    if (official.term_start || official.term_length_years || official.tenure) {
+      detailHTML += `
+        <div class="info-section">
+          <h5>Term Information</h5>`
+
+      if (official.term_start) {
+        const startDate = new Date(official.term_start).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+        detailHTML += `<p><strong>Term Started:</strong> ${startDate}</p>`
+      }
+
+      if (official.term_length_years) {
+        detailHTML += `<p><strong>Term Length:</strong> ${official.term_length_years} years</p>`
+      }
+
+      if (official.tenure) {
+        detailHTML += `<p><strong>Tenure:</strong> ${official.tenure}</p>`
+      }
+
+      detailHTML += `</div>`
+    }
+
+    // Background Section
+    if (official.bio || official.education || official.profession) {
+      detailHTML += `
+        <div class="info-section">
+          <h5>Background</h5>
+          <div class="event-description">`
+
+      if (official.bio) {
+        detailHTML += `<p>${official.bio}</p>`
+      }
+
+      if (official.education) {
+        detailHTML += `<p><strong>Education:</strong> ${official.education}</p>`
+      }
+
+      if (official.profession) {
+        detailHTML += `<p><strong>Profession:</strong> ${official.profession}</p>`
+      }
+
+      detailHTML += `</div></div>`
+    }
+
+    // Federal Officials Legislation Section
+    if (official.details) {
+      if (official.details.sponsored_legislation) {
+        detailHTML += `
+          <div class="info-section">
+            <h5>Recent Sponsored Bills</h5>
+            <div class="event-description">
+              <ul>`
+
+        const bills = official.details.sponsored_legislation.results[0]?.bills || []
+        bills.slice(0, 5).forEach((bill) => {
+          detailHTML += `<li><strong>${bill.number}:</strong> ${bill.title}</li>`
+        })
+
+        detailHTML += `</ul></div></div>`
+      }
+
+      if (official.details.recent_votes) {
+        detailHTML += `
+          <div class="info-section">
+            <h5>Recent Votes</h5>
+            <div class="event-description">
+              <ul>`
+
+        const votes = official.details.recent_votes.results?.votes || []
+        votes.slice(0, 5).forEach((vote) => {
+          detailHTML += `<li><strong>${vote.position}:</strong> ${vote.description}</li>`
+        })
+
+        detailHTML += `</ul></div></div>`
+      }
+    }
+
+    detailHTML += `
+        </div>
       </div>
     `
+
+    return detailHTML
   }
 
   setupSimplifiedCalendar() {
@@ -3838,7 +4066,7 @@ class NewTabApp {
     mainButton.appendChild(indicator)
 
     mainButton.addEventListener("click", () => {
-      this.showOfficialDetail(detailModel, type, themeColor, element)
+      this.showDetailOverlay("official", detailModel)
     })
 
     element.appendChild(mainButton)
@@ -4422,6 +4650,10 @@ class NewTabApp {
   createOfficialElement(official) {
     const element = document.createElement("div")
     element.className = "official"
+    element.style.cursor = "pointer"
+    element.setAttribute("role", "button")
+    element.setAttribute("tabindex", "0")
+    element.setAttribute("aria-label", `View details for ${official.name}`)
 
     const info = document.createElement("div")
     info.className = "official-info"
@@ -4449,6 +4681,9 @@ class NewTabApp {
       website.target = "_blank"
       website.rel = "noopener noreferrer"
       website.textContent = "Website"
+      website.addEventListener("click", (e) => {
+        e.stopPropagation()
+      })
       links.appendChild(website)
 
       element.appendChild(links)
@@ -4494,6 +4729,19 @@ class NewTabApp {
 
       element.appendChild(detailsElement)
     }
+
+    // Add click handler for details view
+    const handleClick = () => {
+      this.showDetailOverlay("official", official)
+    }
+
+    element.addEventListener("click", handleClick)
+    element.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault()
+        handleClick()
+      }
+    })
 
     return element
   }
