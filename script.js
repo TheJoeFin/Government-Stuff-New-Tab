@@ -1961,7 +1961,6 @@ class NewTabApp {
   // --- Officials Search Feature ---
   setupOfficialsSearch() {
     const input = document.getElementById("official-search-input")
-    const clearBtn = document.getElementById("official-search-clear")
     const listContainer = document.getElementById("officials-list")
     if (!input || !listContainer) return
 
@@ -1971,10 +1970,8 @@ class NewTabApp {
       const query = input.value.trim()
       if (query.length < 2) {
         this.clearOfficialsSearchResults()
-        clearBtn.hidden = true
         return
       }
-      clearBtn.hidden = false
       const results = this.governmentOfficials.searchOfficials(query)
       const councilHits = this.milwaukeeCouncil.searchMembers(query)
       const countyHits = this.milwaukeeCountyBoard.searchMembers(query)
@@ -1999,23 +1996,7 @@ class NewTabApp {
       if (e.key === "Escape" && input.value) {
         input.value = ""
         this.clearOfficialsSearchResults()
-        clearBtn.hidden = true
         input.blur()
-      }
-    })
-
-    clearBtn?.addEventListener("click", () => {
-      const hadValue = Boolean(input.value.trim())
-      input.value = ""
-      this.clearOfficialsSearchResults()
-      clearBtn.hidden = true
-
-      if (hadValue) {
-        input.focus()
-      } else {
-        this.setOfficialsSearchVisible(false, {
-          focusToggle: true,
-        })
       }
     })
   }
@@ -2101,7 +2082,6 @@ class NewTabApp {
     const toggleBtn = document.getElementById("toggle-official-search")
     const searchBlock = document.querySelector(".official-search")
     const input = document.getElementById("official-search-input")
-    const clearBtn = document.getElementById("official-search-clear")
 
     if (!toggleBtn || !searchBlock) return
 
@@ -2115,10 +2095,6 @@ class NewTabApp {
     toggleBtn.setAttribute("aria-label", isVisible ? hideLabel : showLabel)
 
     searchBlock.classList.toggle("hidden", !isVisible)
-
-    if (clearBtn) {
-      clearBtn.hidden = true
-    }
 
     if (input) {
       if (isVisible) {
@@ -2175,36 +2151,17 @@ class NewTabApp {
           if (searchInput) {
             setTimeout(() => searchInput.focus(), 100)
           }
+        } else {
+          // Clear search input when hiding
+          const searchInput = document.getElementById("official-search-input")
+          if (searchInput && searchInput.value) {
+            searchInput.value = ""
+            searchInput.dispatchEvent(new Event("input"))
+          }
         }
       })
     }
 
-    // Hide search row
-    const hideSearchBtn = document.getElementById("hide-search")
-    if (hideSearchBtn && searchRow) {
-      hideSearchBtn.addEventListener("click", () => {
-        searchRow.classList.add("hidden")
-        const sidebar = document.getElementById("civic-sidebar")
-        if (sidebar) {
-          sidebar.classList.remove("searching")
-        }
-        if (toggleSearchBtn) {
-          toggleSearchBtn.setAttribute("aria-pressed", "false")
-        }
-      })
-    }
-
-    // Clear search
-    const clearSearchBtn = document.getElementById("clear-search")
-    if (clearSearchBtn) {
-      clearSearchBtn.addEventListener("click", () => {
-        const searchInput = document.getElementById("official-search-input")
-        if (searchInput) {
-          searchInput.value = ""
-          searchInput.dispatchEvent(new Event("input"))
-        }
-      })
-    }
 
     // Officials view toggle
     const toggleOfficialsBtn = document.getElementById("toggle-officials-view")
@@ -2586,99 +2543,64 @@ class NewTabApp {
   }
 
   clearOfficialsSearchResults() {
-    const listContainer = document.getElementById("officials-list")
-    if (!listContainer) return
-    listContainer.classList.remove("search-active")
-    const existing = listContainer.querySelector(".search-results-group")
-    if (existing) existing.remove()
-    this.setCalendarVisibility(true)
-    if (this.officialsListExpandedBySearch) {
-      this.setOfficialsListExpanded(false, { silent: true })
-      this.officialsListExpandedBySearch = false
+    // Clear search results containers
+    const searchEventsContainer = document.getElementById("search-events-list")
+    const searchOfficialsContainer = document.getElementById("search-officials-list")
+
+    if (searchEventsContainer) {
+      searchEventsContainer.innerHTML = ""
     }
+    if (searchOfficialsContainer) {
+      searchOfficialsContainer.innerHTML = ""
+    }
+
+    // Switch back to events view and show calendar
+    this.switchContentView("events")
+    this.setCalendarVisibility(true)
     this.closeOfficialDetail({ silent: true })
   }
 
   renderOfficialsSearchResults(resultSets, query) {
-    const listContainer = document.getElementById("officials-list")
-    if (!listContainer) return
+    // Switch to search results view
+    this.switchContentView("search-results")
+
+    // Get search results containers
+    const searchEventsContainer = document.getElementById("search-events-list")
+    const searchOfficialsContainer = document.getElementById("search-officials-list")
+
+    if (!searchEventsContainer || !searchOfficialsContainer) return
 
     this.closeOfficialDetail({ silent: true })
-    this.ensureOfficialsListForSearch()
     this.setCalendarVisibility(false)
 
-    // Activate search mode
-    listContainer.classList.add("search-active")
-
-    // Remove previous results
-    const prev = listContainer.querySelector(".search-results-group")
-    if (prev) prev.remove()
+    // Clear previous results
+    searchEventsContainer.innerHTML = ""
+    searchOfficialsContainer.innerHTML = ""
 
     const { officials = [], meetings = [] } = resultSets || {}
     const totalResults = officials.length + meetings.length
-
-    const group = document.createElement("div")
-    group.className = "search-results-group"
-    group.setAttribute("role", "region")
-    group.setAttribute(
-      "aria-label",
-      `Search results for "${query}" (${totalResults})`
-    )
-
-    // Header / count
-    const count = document.createElement("div")
-    count.className = "result-count"
-    count.textContent = `${totalResults} result${
-      totalResults === 1 ? "" : "s"
-    }`
-    group.appendChild(count)
 
     if (totalResults === 0) {
       const empty = document.createElement("div")
       empty.className = "search-results-empty"
       empty.textContent = "No officials or meetings match your search."
-      group.appendChild(empty)
+      searchEventsContainer.appendChild(empty)
     } else {
       if (meetings.length) {
-        const meetingSection = document.createElement("div")
-        meetingSection.className = "search-results-section search-results-meetings"
-
-        const meetingHeading = document.createElement("div")
-        meetingHeading.className = "search-results-subheading"
-        meetingHeading.textContent = `Meetings (${meetings.length})`
-        meetingSection.appendChild(meetingHeading)
-
-        const meetingList = document.createElement("div")
-        meetingList.className = "search-meeting-result-list"
-
         meetings.forEach((event) => {
           const item = this.createCalendarEventListItem(event, {
-            onSelect: () => this.handleMeetingSearchResultSelection(event),
+            onSelect: () => this.showDetailOverlay("event", event),
           })
           item.classList.add("search-meeting-item")
           const button = item.querySelector(".calendar-event-main")
           if (button) {
             button.classList.add("search-meeting-button")
           }
-          meetingList.appendChild(item)
+          searchEventsContainer.appendChild(item)
         })
-
-        meetingSection.appendChild(meetingList)
-        group.appendChild(meetingSection)
       }
 
       if (officials.length) {
-        const officialSection = document.createElement("div")
-        officialSection.className = "search-results-section search-results-officials"
-
-        const officialHeading = document.createElement("div")
-        officialHeading.className = "search-results-subheading"
-        officialHeading.textContent = `Officials (${officials.length})`
-        officialSection.appendChild(officialHeading)
-
-        const officialList = document.createElement("div")
-        officialList.className = "search-official-result-list"
-
         officials.forEach((official) => {
           const colorMap = {
             city: "#0077be",
@@ -2702,15 +2624,22 @@ class NewTabApp {
             nameEl.appendChild(badge)
           }
 
-          officialList.appendChild(element)
-        })
+          // Override the click handler to use detail overlay instead of sidebar detail
+          const button = element.querySelector("button")
+          if (button) {
+            // Remove existing click listeners
+            button.replaceWith(button.cloneNode(true))
+            const newButton = element.querySelector("button")
+            newButton.addEventListener("click", () => {
+              this.showDetailOverlay("official", official)
+            })
+          }
 
-        officialSection.appendChild(officialList)
-        group.appendChild(officialSection)
+          searchOfficialsContainer.appendChild(element)
+        })
       }
     }
 
-    listContainer.prepend(group)
     const announceParts = [`${totalResults} result${totalResults === 1 ? "" : "s"}`]
     if (meetings.length) {
       announceParts.push(`${meetings.length} meeting${meetings.length === 1 ? "" : "s"}`)
@@ -2725,12 +2654,8 @@ class NewTabApp {
 
   handleMeetingSearchResultSelection(event) {
     const input = document.getElementById("official-search-input")
-    const clearBtn = document.getElementById("official-search-clear")
     if (input) {
       input.value = ""
-    }
-    if (clearBtn) {
-      clearBtn.hidden = true
     }
 
     this.clearOfficialsSearchResults()
