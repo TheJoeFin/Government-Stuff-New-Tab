@@ -97,10 +97,24 @@ class LegistarApiClient {
   }
 
   buildUpcomingFilter() {
-    const now = new Date()
-    const lookback = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    const lookback = this.getPreviousWeekMonday()
     const formatted = this.formatDateForFilter(lookback)
+    console.log('[Legistar API] Building filter with lookback date:', lookback.toISOString(), 'formatted:', formatted)
     return `EventDate ge datetime'${formatted}'`
+  }
+  
+  getPreviousWeekMonday() {
+    const today = new Date()
+    const currentDay = today.getDay()
+    // Calculate days back to last Monday (1-7 days)
+    const daysToLastMonday = currentDay === 0 ? 6 : currentDay - 1
+    // Then go back another 7 days to get previous week's Monday
+    const daysToSubtract = daysToLastMonday + 7
+    const previousMonday = new Date(today)
+    previousMonday.setDate(today.getDate() - daysToSubtract)
+    previousMonday.setHours(0, 0, 0, 0)
+    console.log('[Legistar API] getPreviousWeekMonday:', 'today =', today.toDateString(), 'result =', previousMonday.toDateString())
+    return previousMonday
   }
 
   formatDateForFilter(date) {
@@ -407,12 +421,18 @@ class LegistarAggregator {
     const now = new Date()
     const horizon = new Date(now.getTime())
     horizon.setDate(horizon.getDate() + 90)
+    
+    // Allow events from previous Monday onwards
+    const previousMonday = this.getPreviousWeekMonday()
+    
+    console.log('[Legistar] filterUpcomingEvents: now =', now.toISOString(), 'previousMonday =', previousMonday.toISOString(), 'horizon =', horizon.toISOString())
+    console.log('[Legistar] Filtering', events.length, 'events')
 
     const isWithinWindow = (eventDate) => {
       if (!eventDate) return false
       const date = new Date(eventDate)
       if (Number.isNaN(date.getTime())) return false
-      return date >= now && date <= horizon
+      return date >= previousMonday && date <= horizon
     }
 
     const filtered = events.filter((event) => {
@@ -422,23 +442,27 @@ class LegistarAggregator {
       if (!within && sourceDate) {
         const debugDate = new Date(sourceDate)
         if (!Number.isNaN(debugDate.getTime())) {
-          const delta = (debugDate - now) / (1000 * 60 * 60 * 24)
-          if (Math.abs(delta) > 200) {
-            // Only log a handful of out-of-range events for debugging
-            console.debug(
-              `[Legistar] Excluding event outside window (${delta.toFixed(
-                1
-              )} days):`,
-              event.title || event.EventBodyName || event.EventName,
-              sourceDate
-            )
-          }
+          const delta = (debugDate - previousMonday) / (1000 * 60 * 60 * 24)
+          console.log('[Legistar] EXCLUDING event:', event.title || event.EventBodyName, 'date:', sourceDate, 'delta from prevMonday:', delta.toFixed(1), 'days')
         }
       }
       return within
     })
+    
+    console.log('[Legistar] After filtering:', filtered.length, 'events remain')
 
     return filtered
+  }
+  
+  getPreviousWeekMonday() {
+    const today = new Date()
+    const currentDay = today.getDay()
+    const daysToLastMonday = currentDay === 0 ? 6 : currentDay - 1
+    const daysToSubtract = daysToLastMonday + 7
+    const previousMonday = new Date(today)
+    previousMonday.setDate(today.getDate() - daysToSubtract)
+    previousMonday.setHours(0, 0, 0, 0)
+    return previousMonday
   }
 }
 
