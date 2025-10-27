@@ -39,8 +39,11 @@ class NewTabApp {
     }
 
     this.activeOfficialDetail = null
-    this.calendarViewDate = new Date()
-    this.calendarViewDate.setDate(1)
+    this.calendarViewDate = new Date() // Start with current month
+    console.log(
+      "[Calendar Init] calendarViewDate set to:",
+      this.calendarViewDate.toDateString()
+    )
     this.calendarContainer = null
     this.officialsToggleControls = null
     this.officialsListExpandedBySearch = false
@@ -84,6 +87,27 @@ class NewTabApp {
     this.editingAddress = false
 
     this.init()
+  }
+
+  // Get the Monday of the previous week
+  getPreviousWeekMonday() {
+    const today = new Date()
+    const currentDay = today.getDay()
+    // Calculate days back to last Monday (1-7 days)
+    const daysToLastMonday = currentDay === 0 ? 6 : currentDay - 1
+    // Then go back another 7 days to get previous week's Monday
+    const daysToSubtract = daysToLastMonday + 7
+    const previousMonday = new Date(today)
+    previousMonday.setDate(today.getDate() - daysToSubtract)
+    previousMonday.setHours(0, 0, 0, 0)
+    console.log(
+      "[Frontend] getPreviousWeekMonday: today =",
+      today.toDateString(),
+      "(day",
+      currentDay + ") result =",
+      previousMonday.toDateString()
+    )
+    return previousMonday
   }
 
   // Initialize theme before DOM is fully loaded
@@ -372,6 +396,7 @@ class NewTabApp {
         id: "1",
         name: "MKE Gov",
         url: "https://www.milwaukee.gov/",
+        icon: "Peoples-Flag-of-Milwaukee.svg",
       },
       {
         id: "2",
@@ -606,24 +631,47 @@ class NewTabApp {
       document.getElementById("calendar-month-label")
     if (!grid || !label) return
 
-    // Ensure view date is anchored to first of month
     if (!this.calendarViewDate) {
       this.calendarViewDate = new Date()
-      this.calendarViewDate.setDate(1)
     }
 
-    const viewDate = new Date(this.calendarViewDate.getTime())
-    viewDate.setDate(1)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // Calculate start of current week (MONDAY, not Sunday)
+    const currentWeekStart = new Date(today)
+    currentWeekStart.setDate(today.getDate() - 7) // Start from 7 days ago
+    const dayOfWeek = currentWeekStart.getDay()
+    // Convert Sunday (0) to 7, so Monday becomes 0
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+    currentWeekStart.setDate(currentWeekStart.getDate() - daysFromMonday)
+
+    // Calculate previous week start (7 days before current week Monday)
+    const previousWeekStart = new Date(currentWeekStart)
+    previousWeekStart.setDate(currentWeekStart.getDate() - 7)
+
+    // Calculate next week start (7 days after current week Monday)
+    const nextWeekStart = new Date(currentWeekStart)
+    nextWeekStart.setDate(currentWeekStart.getDate() + 7)
+
+    // Display date range in label
+    const startDate = previousWeekStart
+    const endDate = new Date(nextWeekStart)
+    endDate.setDate(endDate.getDate() + 6) // End of next week (Sunday)
 
     const monthFormatter = new Intl.DateTimeFormat(undefined, {
-      month: "long",
+      month: "short",
+      day: "numeric",
       year: "numeric",
     })
-    label.textContent = monthFormatter.format(viewDate)
+    label.textContent = `${monthFormatter.format(
+      startDate
+    )} - ${monthFormatter.format(endDate)}`
 
     grid.innerHTML = ""
 
-    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    // Add day name headers (Mon, Tue, Wed, Thu, Fri, Sat, Sun)
+    const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     dayNames.forEach((day) => {
       const cell = document.createElement("div")
       cell.className = "calendar-cell is-label"
@@ -632,41 +680,29 @@ class NewTabApp {
       grid.appendChild(cell)
     })
 
-    const firstDayOfWeek = viewDate.getDay()
-    const daysInMonth = new Date(
-      viewDate.getFullYear(),
-      viewDate.getMonth() + 1,
-      0
-    ).getDate()
+    // Render 3 weeks: previous, current, next (starting from Monday)
+    const startOfDisplay = previousWeekStart
+    const totalDays = 21 // 3 weeks * 7 days
 
-    for (let pad = 0; pad < firstDayOfWeek; pad += 1) {
-      const filler = document.createElement("div")
-      filler.className = "calendar-cell is-empty"
-      filler.setAttribute("aria-hidden", "true")
-      filler.setAttribute("role", "presentation")
-      grid.appendChild(filler)
-    }
+    for (let i = 0; i < totalDays; i++) {
+      const currentDate = new Date(startOfDisplay)
+      currentDate.setDate(startOfDisplay.getDate() + i)
 
-    const today = new Date()
-    const isCurrentMonth =
-      today.getFullYear() === viewDate.getFullYear() &&
-      today.getMonth() === viewDate.getMonth()
-
-    for (let day = 1; day <= daysInMonth; day += 1) {
       const cell = document.createElement("div")
       cell.className = "calendar-cell"
       cell.setAttribute("role", "gridcell")
-      cell.textContent = day.toString()
+      cell.textContent = currentDate.getDate().toString()
 
-      if (isCurrentMonth && today.getDate() === day) {
+      // Mark today
+      if (currentDate.toDateString() === today.toDateString()) {
         cell.classList.add("is-today")
         cell.setAttribute("aria-current", "date")
       }
 
       const eventDateKey = this.buildDateKey(
-        viewDate.getFullYear(),
-        viewDate.getMonth(),
-        day
+        currentDate.getFullYear(),
+        currentDate.getMonth(),
+        currentDate.getDate()
       )
 
       if (this.calendarEventIndex.has(eventDateKey)) {
@@ -678,9 +714,14 @@ class NewTabApp {
         }
         cell.tabIndex = 0
         const describe = this.describeEventCount(eventDateKey)
+        const dateFormatter = new Intl.DateTimeFormat(undefined, {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        })
         cell.setAttribute(
           "aria-label",
-          `${monthFormatter.format(viewDate)} ${day}. ${describe}`
+          `${dateFormatter.format(currentDate)}. ${describe}`
         )
 
         const activate = () => {
@@ -705,19 +746,6 @@ class NewTabApp {
       }
 
       grid.appendChild(cell)
-    }
-
-    const filledSlots = firstDayOfWeek + daysInMonth
-    const remainder = filledSlots % 7
-    if (remainder !== 0) {
-      const trailing = 7 - remainder
-      for (let pad = 0; pad < trailing; pad += 1) {
-        const filler = document.createElement("div")
-        filler.className = "calendar-cell is-empty"
-        filler.setAttribute("aria-hidden", "true")
-        filler.setAttribute("role", "presentation")
-        grid.appendChild(filler)
-      }
     }
   }
 
@@ -866,6 +894,12 @@ class NewTabApp {
       `[Calendar] Grouped events into ${this.calendarEventIndex.size} date buckets`
     )
 
+    // Log which dates have events
+    console.log(
+      "[Calendar] Dates with events:",
+      Array.from(this.calendarEventIndex.keys()).sort().join(", ")
+    )
+
     if (this.calendarLegendElement) {
       this.calendarLegendElement.classList.toggle(
         "hidden",
@@ -874,6 +908,10 @@ class NewTabApp {
     }
 
     this.renderCalendar()
+
+    // Don't auto-select a date - show all upcoming events by default
+    console.log("[Calendar] Showing all upcoming events from today onwards")
+
     this.renderCalendarEventsList()
   }
 
@@ -1069,27 +1107,6 @@ class NewTabApp {
     const container = this.calendarEventsContainer
     container.innerHTML = ""
 
-    const header = document.createElement("div")
-    header.className = "calendar-events-header"
-    const heading = document.createElement("h4")
-    heading.textContent = this.buildCalendarHeading()
-    heading.style.margin = "0"
-    heading.style.fontSize = "0.95rem"
-    heading.style.color = "var(--text-primary)"
-    header.appendChild(heading)
-
-    if (this.selectedCalendarDate) {
-      const clearBtn = document.createElement("button")
-      clearBtn.className = "btn-small"
-      clearBtn.type = "button"
-      clearBtn.textContent = "Show all"
-      clearBtn.setAttribute("aria-label", "Show all meetings this month")
-      clearBtn.addEventListener("click", () => this.clearCalendarSelection())
-      header.appendChild(clearBtn)
-    }
-
-    container.appendChild(header)
-
     const statusElement = this.buildCalendarStatusElement()
     if (statusElement) {
       container.appendChild(statusElement)
@@ -1105,10 +1122,47 @@ class NewTabApp {
     if (!events.length) {
       const empty = document.createElement("div")
       empty.className = "calendar-empty"
-      empty.textContent = "No meetings found for this month."
       empty.style.fontSize = "0.85rem"
       empty.style.color = "var(--text-muted)"
       empty.style.padding = "0.5rem 0"
+
+      // Provide context-specific message
+      if (this.selectedCalendarDate) {
+        const selectedDate = this.formatSelectedDate(this.selectedCalendarDate)
+        const message = document.createElement("p")
+        message.textContent = `No meetings scheduled for ${selectedDate}.`
+        message.style.marginBottom = "0.5rem"
+        empty.appendChild(message)
+
+        // Add helpful hint if there are other events
+        if (this.calendarEvents.length > 0) {
+          const hint = document.createElement("p")
+          hint.textContent =
+            "Try clicking a date with a colored dot to see meetings."
+          hint.style.fontSize = "0.75rem"
+          hint.style.opacity = "0.7"
+          hint.style.margin = "0"
+          empty.appendChild(hint)
+        }
+      } else {
+        // No date selected - showing upcoming events view
+        const message = document.createElement("p")
+        message.textContent = "No upcoming meetings scheduled."
+        message.style.marginBottom = "0.5rem"
+        empty.appendChild(message)
+
+        // Add hint about past events if calendar has events
+        if (this.calendarEvents.length > 0) {
+          const hint = document.createElement("p")
+          hint.textContent =
+            "Check previous dates in the calendar for past meetings."
+          hint.style.fontSize = "0.75rem"
+          hint.style.opacity = "0.7"
+          hint.style.margin = "0"
+          empty.appendChild(hint)
+        }
+      }
+
       container.appendChild(empty)
       return
     }
@@ -1169,15 +1223,18 @@ class NewTabApp {
     dateEl.className = "calendar-event-date"
     dateEl.textContent = dateLabel
 
-    const bodyEl = document.createElement("span")
-    bodyEl.textContent = event.bodyName || event.sourceLabel || "Local meeting"
-
     meta.appendChild(sourceDot)
     meta.appendChild(timeEl)
     meta.appendChild(document.createTextNode("•"))
     meta.appendChild(dateEl)
-    meta.appendChild(document.createTextNode("•"))
-    meta.appendChild(bodyEl)
+
+    // Only show body name if it's different from the title
+    if (event.bodyName && event.bodyName !== event.title) {
+      const bodyEl = document.createElement("span")
+      bodyEl.textContent = event.bodyName
+      meta.appendChild(document.createTextNode("•"))
+      meta.appendChild(bodyEl)
+    }
 
     const location = document.createElement("span")
     location.className = "calendar-event-location"
@@ -1423,7 +1480,7 @@ class NewTabApp {
   }
 
   buildCalendarHeading() {
-    return this.selectedCalendarDate ? "Meetings" : "Local meetings"
+    return this.selectedCalendarDate ? "Meetings" : "Upcoming meetings"
   }
 
   formatSelectedDate(dateKey) {
@@ -1470,36 +1527,49 @@ class NewTabApp {
     this.renderCalendar()
     this.closeCalendarEventDetail({ silent: true })
     this.renderCalendarEventsList()
-    this.announceToScreenReader("Showing all meetings for this month")
+    this.announceToScreenReader("Showing upcoming meetings from today onwards")
   }
 
   getEventsForCurrentView() {
     if (!Array.isArray(this.calendarEvents)) return []
 
-    const start = new Date(this.calendarViewDate)
-    const currentMonth = start.getMonth()
-    const currentYear = start.getFullYear()
+    // If a specific date is selected, show only events for that date
+    if (this.selectedCalendarDate) {
+      return this.calendarEvents.filter((event) => {
+        if (!event.startDateTime) return false
+        const eventDate = new Date(event.startDateTime)
+        if (Number.isNaN(eventDate.getTime())) return false
 
-    return this.calendarEvents.filter((event) => {
-      if (!event.startDateTime) return false
-      const eventDate = new Date(event.startDateTime)
-      if (Number.isNaN(eventDate.getTime())) return false
-
-      const sameMonth =
-        eventDate.getMonth() === currentMonth &&
-        eventDate.getFullYear() === currentYear
-      if (!sameMonth) return false
-
-      if (this.selectedCalendarDate) {
         const key = this.buildDateKey(
           eventDate.getFullYear(),
           eventDate.getMonth(),
           eventDate.getDate()
         )
         return key === this.selectedCalendarDate
-      }
+      })
+    }
 
-      return true
+    // Otherwise, show upcoming events starting from today onwards
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // Calculate end of next week for upper bound
+    const currentWeekStart = new Date(today)
+    const dayOfWeek = today.getDay()
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+    currentWeekStart.setDate(today.getDate() - daysFromMonday)
+
+    const nextWeekEnd = new Date(currentWeekStart)
+    nextWeekEnd.setDate(currentWeekStart.getDate() + 20) // End of next week (2 weeks ahead)
+    nextWeekEnd.setHours(23, 59, 59, 999)
+
+    return this.calendarEvents.filter((event) => {
+      if (!event.startDateTime) return false
+      const eventDate = new Date(event.startDateTime)
+      if (Number.isNaN(eventDate.getTime())) return false
+
+      // Show events from today onwards, up to the end of the calendar view
+      return eventDate >= today && eventDate <= nextWeekEnd
     })
   }
 
@@ -1579,9 +1649,8 @@ class NewTabApp {
     status.className = "calendar-status"
 
     if (this.calendarEventsMeta.stale) {
-      status.classList.add("warning")
-      status.textContent =
-        "Showing cached meetings while we reconnect to city servers."
+      // Don't show stale warning message
+      return null
     } else if (this.calendarEventsMeta.fromCache) {
       status.classList.add("muted")
       const fetched = new Date(this.calendarEventsMeta.fetchedAt)
@@ -1604,12 +1673,11 @@ class NewTabApp {
 
     if (!this.calendarViewDate) {
       this.calendarViewDate = new Date()
-      this.calendarViewDate.setDate(1)
     }
 
+    // Navigate by 1 week at a time
     const nextDate = new Date(this.calendarViewDate.getTime())
-    nextDate.setMonth(this.calendarViewDate.getMonth() + offset)
-    nextDate.setDate(1)
+    nextDate.setDate(this.calendarViewDate.getDate() + offset * 7)
     this.calendarViewDate = nextDate
     this.selectedCalendarDate = null
     this.renderCalendar()
@@ -2369,17 +2437,24 @@ class NewTabApp {
   // Update version display from manifest.json
   async updateVersionDisplay() {
     try {
-      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getManifest) {
+      if (
+        typeof chrome !== "undefined" &&
+        chrome.runtime &&
+        chrome.runtime.getManifest
+      ) {
         const manifest = chrome.runtime.getManifest()
-        const versionElement = document.querySelector('.version-indicator')
+        const versionElement = document.querySelector(".version-indicator")
         if (versionElement && manifest.version) {
           versionElement.textContent = `v${manifest.version}`
-          versionElement.setAttribute('aria-label', `Application version ${manifest.version}`)
+          versionElement.setAttribute(
+            "aria-label",
+            `Application version ${manifest.version}`
+          )
           console.log(`Version updated to ${manifest.version}`)
         }
       }
     } catch (error) {
-      console.warn('Could not update version display:', error)
+      console.warn("Could not update version display:", error)
     }
   }
 
@@ -2523,7 +2598,7 @@ class NewTabApp {
               <h5>Participation</h5>
               <p class="event-links">
                 <a href="${event.meetingUrl}" target="_blank" rel="noopener noreferrer" class="event-link">
-                  🔗 Join Meeting
+                  Meeting Details ↗
                 </a>
               </p>
             </div>
@@ -2829,7 +2904,10 @@ class NewTabApp {
     const today = new Date()
     const startOfWeek = new Date(today)
 
-    // Get Monday of the current week
+    // Start from 7 days ago
+    startOfWeek.setDate(today.getDate() - 7)
+
+    // Get Monday of that week (from 7 days ago)
     const day = startOfWeek.getDay()
     const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1) // Adjust for Sunday being 0
     startOfWeek.setDate(diff)
