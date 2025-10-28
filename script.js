@@ -1484,10 +1484,8 @@ class NewTabApp {
   }
 
   formatSelectedDate(dateKey) {
-    // Parse YYYY-MM-DD string in local timezone to avoid UTC conversion issues
-    const [year, month, day] = dateKey.split('-').map(Number)
-    const date = new Date(year, month - 1, day)
-    if (Number.isNaN(date.getTime())) return dateKey
+    const date = this.parseLocalDate(dateKey)
+    if (!date || Number.isNaN(date.getTime())) return dateKey
     return date.toLocaleDateString(undefined, {
       weekday: "long",
       month: "long",
@@ -2419,15 +2417,22 @@ class NewTabApp {
   }
 
   formatDisplayDate(dateStr) {
-    // Parse YYYY-MM-DD string in local timezone to avoid UTC conversion issues
-    const [year, month, day] = dateStr.split('-').map(Number)
-    const date = new Date(year, month - 1, day)
+    const date = this.parseLocalDate(dateStr)
+    if (!date || Number.isNaN(date.getTime())) return dateStr
     return date.toLocaleDateString("en-US", {
       weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric",
     })
+  }
+
+  // Helper function to parse YYYY-MM-DD string in local timezone to avoid UTC conversion issues
+  parseLocalDate(dateStr) {
+    const parts = dateStr.split('-')
+    if (parts.length !== 3) return null
+    const [year, month, day] = parts.map(Number)
+    return new Date(year, month - 1, day)
   }
 
   // Helper function to get consistent date string in local timezone (YYYY-MM-DD)
