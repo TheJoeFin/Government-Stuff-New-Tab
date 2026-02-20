@@ -15,6 +15,10 @@ const SOURCE_COLORS = {
   milwaukeecounty: "#ffa500",
 }
 
+const GRANICUS_VIDEO_BASES = {
+  milwaukee: "https://milwaukee.granicus.com/player/clip/",
+}
+
 class StorageLayer {
   constructor() {
     this.session = chrome.storage.session ?? null
@@ -58,6 +62,12 @@ class LegistarApiClient {
       console.log(`[Legistar] First raw event for ${client}:`, payload[0])
     }
     return Array.isArray(payload) ? payload : []
+  }
+
+  async fetchSingleEvent(client, eventId) {
+    const url = `${this.baseUrl}${client}/Events/${eventId}`
+    console.log(`[Legistar] Fetching single event: ${url}`)
+    return await this.fetchWithRetry(url)
   }
 
   async fetchWithRetry(url, attempt = 0) {
@@ -170,7 +180,12 @@ class EventNormalizer {
         ? event.EventInSiteAgendaLink
         : null)
     const minutesUrl = event.EventMinutesFile
-    const videoUrl = event.EventVideoPath || event.EventVideoHtml5Path
+    const videoUrl =
+      event.EventVideoPath ||
+      event.EventVideoHtml5Path ||
+      (event.EventMedia && GRANICUS_VIDEO_BASES[this.source]
+        ? `${GRANICUS_VIDEO_BASES[this.source]}${event.EventMedia}`
+        : null)
 
     return {
       id: key,
@@ -528,6 +543,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .getEvents({ forceRefresh: Boolean(message.forceRefresh) })
       .then((payload) => {
         sendResponse({ status: "ok", data: payload })
+      })
+      .catch((error) => {
+        sendResponse({
+          status: "error",
+          error: error?.message ?? "Unknown Legistar error",
+        })
+      })
+    return true
+  }
+
+  if (message.type === "legistar:getEventDetail") {
+    const { client, eventId } = message
+    if (!client || !eventId) {
+      sendResponse({ status: "error", error: "Missing client or eventId" })
+      return false
+    }
+    aggregator.apiClient
+      .fetchSingleEvent(client, eventId)
+      .then((raw) => {
+        const videoUrl =
+          raw.EventVideoPath ||
+          raw.EventVideoHtml5Path ||
+          (raw.EventMedia && GRANICUS_VIDEO_BASES[client]
+            ? `${GRANICUS_VIDEO_BASES[client]}${raw.EventMedia}`
+            : null)
+        const minutesUrl = raw.EventMinutesFile || null
+        sendResponse({ status: "ok", data: { videoUrl, minutesUrl } })
       })
       .catch((error) => {
         sendResponse({

@@ -2480,6 +2480,7 @@ class NewTabApp {
       heading.textContent = data.name || "Meeting Details"
       if (subtitle) subtitle.textContent = data.body || ""
       content.innerHTML = this.renderEventDetail(data)
+      this.fetchEventDetailVideoUrl(data, content)
     } else if (type === "official") {
       heading.textContent = data.name || "Official Details"
       if (subtitle) subtitle.textContent = data.office || data.title || ""
@@ -2494,6 +2495,59 @@ class NewTabApp {
     if (overlay) {
       overlay.classList.add("hidden")
     }
+  }
+
+  fetchEventDetailVideoUrl(event, contentElement) {
+    // Only fetch if we're missing video/minutes and have enough info to query
+    if (event.videoUrl && event.minutesUrl) return
+    if (!event.rawEventId || !event.source) return
+
+    const client = event.source // "milwaukee" or "milwaukeecounty"
+    if (client !== "milwaukee" && client !== "milwaukeecounty") return
+
+    chrome.runtime.sendMessage(
+      { type: "legistar:getEventDetail", client, eventId: event.rawEventId },
+      (response) => {
+        if (chrome.runtime.lastError || !response || response.status !== "ok") {
+          return
+        }
+        const { videoUrl, minutesUrl } = response.data
+        const newLinks = []
+        if (videoUrl && !event.videoUrl) {
+          event.videoUrl = videoUrl
+          newLinks.push(
+            `<a href="${videoUrl}" target="_blank" rel="noopener noreferrer" class="event-link">🎬 Watch Video</a>`,
+          )
+        }
+        if (minutesUrl && !event.minutesUrl) {
+          event.minutesUrl = minutesUrl
+          newLinks.push(
+            `<a href="${minutesUrl}" target="_blank" rel="noopener noreferrer" class="event-link">📋 View Minutes</a>`,
+          )
+        }
+        if (!newLinks.length) return
+
+        // Try to append to existing resources section
+        const extraSlot = contentElement.querySelector(
+          "#detail-extra-resources",
+        )
+        if (extraSlot) {
+          extraSlot.innerHTML = newLinks.join("")
+          return
+        }
+
+        // If no resources section existed, fill the placeholder
+        const placeholder = contentElement.querySelector(
+          "#detail-resources-placeholder",
+        )
+        if (placeholder) {
+          placeholder.innerHTML = `
+            <h5>Resources</h5>
+            <p class="event-links">${newLinks.join("")}</p>
+          `
+        }
+      },
+    )
   }
 
   renderEventDetail(event) {
@@ -2588,18 +2642,19 @@ class NewTabApp {
           }
 
           ${
-            event.agendaUrl
+            event.agendaUrl || event.minutesUrl || event.videoUrl
               ? `
             <div class="info-section">
               <h5>Resources</h5>
               <p class="event-links">
-                <a href="${event.agendaUrl}" target="_blank" rel="noopener noreferrer" class="event-link">
-                  📄 View Agenda
-                </a>
+                ${event.agendaUrl ? `<a href="${event.agendaUrl}" target="_blank" rel="noopener noreferrer" class="event-link">📄 View Agenda</a>` : ""}
+                ${event.minutesUrl ? `<a href="${event.minutesUrl}" target="_blank" rel="noopener noreferrer" class="event-link">📋 View Minutes</a>` : ""}
+                ${event.videoUrl ? `<a href="${event.videoUrl}" target="_blank" rel="noopener noreferrer" class="event-link">🎬 Watch Video</a>` : ""}
               </p>
+              <p class="event-links" id="detail-extra-resources"></p>
             </div>
           `
-              : ""
+              : `<div class="info-section" id="detail-resources-placeholder"></div>`
           }
 
           ${

@@ -2987,7 +2987,7 @@ body {
 /* Calendar Key */
 .calendar-key {
   display: flex;
-  gap: 8px;
+  gap: 16px;
   justify-content: center;
   padding: var(--space-3);
   border-top: none;
@@ -3018,6 +3018,21 @@ body {
   font-size: 12px;
   color: var(--text-muted);
   line-height: normal;
+}
+
+.key-livestream {
+  font-size: 11px;
+  color: var(--accent-color);
+  text-decoration: none;
+  margin-left: 4px;
+  opacity: 0.8;
+  transition: opacity 0.15s ease;
+}
+
+.key-livestream:hover,
+.key-livestream:focus-visible {
+  opacity: 1;
+  text-decoration: underline;
 }
 
 /* Content Scroll View */
