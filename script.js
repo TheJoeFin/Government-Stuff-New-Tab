@@ -1215,26 +1215,38 @@ class NewTabApp {
     const dateLabel = this.formatCalendarDate(event.startDateTime)
     const timeLabel = this.formatEventTime(event.startDateTime)
 
+    const isNow = this.isEventHappeningNow(event)
+
     const timeEl = document.createElement("span")
     timeEl.className = "calendar-event-time"
-    timeEl.textContent = timeLabel
+    if (isNow) {
+      timeEl.classList.add("is-now")
+      const nowBadge = document.createElement("span")
+      nowBadge.className = "now-badge"
+      nowBadge.textContent = "NOW"
+      timeEl.appendChild(nowBadge)
+      timeEl.appendChild(document.createTextNode(" " + timeLabel))
+    } else {
+      timeEl.textContent = timeLabel
+    }
 
     const dateEl = document.createElement("span")
     dateEl.className = "calendar-event-date"
     dateEl.textContent = dateLabel
 
+    const dayBadgeLabel = this.getRelativeDayLabel(event.startDateTime)
+    if (dayBadgeLabel) {
+      const dayBadge = document.createElement("span")
+      dayBadge.className = "day-badge"
+      dayBadge.textContent = dayBadgeLabel
+      dateEl.appendChild(document.createTextNode(" "))
+      dateEl.appendChild(dayBadge)
+    }
+
     meta.appendChild(sourceDot)
     meta.appendChild(timeEl)
     meta.appendChild(document.createTextNode("•"))
     meta.appendChild(dateEl)
-
-    // Only show body name if it's different from the title
-    if (event.bodyName && event.bodyName !== event.title) {
-      const bodyEl = document.createElement("span")
-      bodyEl.textContent = event.bodyName
-      meta.appendChild(document.createTextNode("•"))
-      meta.appendChild(bodyEl)
-    }
 
     const location = document.createElement("span")
     location.className = "calendar-event-location"
@@ -1510,6 +1522,39 @@ class NewTabApp {
       hour: "numeric",
       minute: "2-digit",
     })
+  }
+
+  getRelativeDayLabel(value) {
+    if (!value) return null
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return null
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const eventDay = new Date(date)
+    eventDay.setHours(0, 0, 0, 0)
+    if (eventDay.getTime() === today.getTime()) return "Today"
+    if (eventDay.getTime() === tomorrow.getTime()) return "Tomorrow"
+    return null
+  }
+
+  isEventHappeningNow(event) {
+    if (!event.startDateTime) return false
+    const now = new Date()
+    const start = new Date(event.startDateTime)
+    if (Number.isNaN(start.getTime())) return false
+    if (now < start) return false
+    let end
+    if (event.endDateTime) {
+      end = new Date(event.endDateTime)
+    }
+    if (!end || Number.isNaN(end.getTime())) {
+      // Default to 1 hour duration when no end time is provided
+      end = new Date(start.getTime() + 60 * 60 * 1000)
+    }
+    if (now > end) return false
+    return true
   }
 
   selectCalendarDate(dateKey) {
@@ -2583,6 +2628,8 @@ class NewTabApp {
       event.sourceLabel ||
       "Local Government"
 
+    const isNow = this.isEventHappeningNow(event)
+
     return `
       <div class="event-detail">
         <div class="event-header">
@@ -2599,8 +2646,8 @@ class NewTabApp {
           <div class="info-section">
             <h5>When</h5>
             <p class="event-date">${formatDate(startDate)}</p>
-            <p class="event-time">
-              ${formatTime(startDate)}${
+            <p class="event-time${isNow ? " is-now" : ""}">
+              ${isNow ? '<span class="now-badge">NOW</span> ' : ""}${formatTime(startDate)}${
                 endDate && endDate !== startDate
                   ? ` - ${formatTime(endDate)}`
                   : ""

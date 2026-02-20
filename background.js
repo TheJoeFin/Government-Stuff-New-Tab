@@ -15,10 +15,6 @@ const SOURCE_COLORS = {
   milwaukeecounty: "#ffa500",
 }
 
-const GRANICUS_VIDEO_BASES = {
-  milwaukee: "https://milwaukee.granicus.com/player/clip/",
-}
-
 class StorageLayer {
   constructor() {
     this.session = chrome.storage.session ?? null
@@ -181,11 +177,7 @@ class EventNormalizer {
         : null)
     const minutesUrl = event.EventMinutesFile
     const videoUrl =
-      event.EventVideoPath ||
-      event.EventVideoHtml5Path ||
-      (event.EventMedia && GRANICUS_VIDEO_BASES[this.source]
-        ? `${GRANICUS_VIDEO_BASES[this.source]}${event.EventMedia}`
-        : null)
+      event.EventVideoPath || event.EventVideoHtml5Path || null
 
     return {
       id: key,
@@ -563,11 +555,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .fetchSingleEvent(client, eventId)
       .then((raw) => {
         const videoUrl =
-          raw.EventVideoPath ||
-          raw.EventVideoHtml5Path ||
-          (raw.EventMedia && GRANICUS_VIDEO_BASES[client]
-            ? `${GRANICUS_VIDEO_BASES[client]}${raw.EventMedia}`
-            : null)
+          raw.EventVideoPath || raw.EventVideoHtml5Path || null
         const minutesUrl = raw.EventMinutesFile || null
         sendResponse({ status: "ok", data: { videoUrl, minutesUrl } })
       })
