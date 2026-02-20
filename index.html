@@ -92,8 +92,10 @@
             <!-- Collapsible search row (hidden by default) -->
             <div class="search-row hidden" id="search-row" role="search" aria-label="Search officials and meetings">
                 <div class="search-row-content">
-                    <input type="search" id="official-search-input" placeholder="Search officials or meetings (e.g., sheriff, budget)"
-                        aria-label="Search officials or meetings by name, title, department, topic or responsibility" autocomplete="off">
+                    <input type="search" id="official-search-input"
+                        placeholder="Search officials or meetings (e.g., sheriff, budget)"
+                        aria-label="Search officials or meetings by name, title, department, topic or responsibility"
+                        autocomplete="off">
                 </div>
             </div>
 
@@ -159,7 +161,8 @@
             <div class="content-scroll-view" id="content-scroll-view" role="region" aria-label="Main content">
 
                 <!-- Default view: upcoming calendar events -->
-                <div class="content-view events-view active" id="events-view" role="tabpanel" aria-labelledby="events-view-label">
+                <div class="content-view events-view active" id="events-view" role="tabpanel"
+                    aria-labelledby="events-view-label">
                     <div id="events-view-label" class="visually-hidden">Upcoming calendar events</div>
                     <div id="calendar-events" class="events-list" role="list" aria-live="polite" aria-busy="false">
                         <!-- Event cards rendered here -->
@@ -167,7 +170,8 @@
                 </div>
 
                 <!-- Government officials view -->
-                <div class="content-view officials-view" id="officials-view" role="tabpanel" aria-labelledby="officials-view-label">
+                <div class="content-view officials-view" id="officials-view" role="tabpanel"
+                    aria-labelledby="officials-view-label">
                     <div id="officials-view-label" class="visually-hidden">Government officials</div>
                     <div id="officials-list" class="officials-list" role="list" aria-live="polite" aria-busy="false">
                         <!-- Officials will be dynamically populated -->
@@ -175,7 +179,8 @@
                 </div>
 
                 <!-- Search results view: mixed calendar events and officials -->
-                <div class="content-view search-results-view" id="search-results-view" role="tabpanel" aria-labelledby="search-results-label">
+                <div class="content-view search-results-view" id="search-results-view" role="tabpanel"
+                    aria-labelledby="search-results-label">
                     <div id="search-results-label" class="visually-hidden">Search results</div>
                     <div class="search-results-content">
                         <div class="search-results-section" id="search-events-section">
@@ -196,9 +201,11 @@
             </div>
 
             <!-- Detail page overlay (for events and officials) -->
-            <div id="detail-overlay" class="detail-overlay hidden" role="region" aria-labelledby="detail-heading" aria-live="polite">
+            <div id="detail-overlay" class="detail-overlay hidden" role="region" aria-labelledby="detail-heading"
+                aria-live="polite">
                 <div class="detail-header">
-                    <button id="detail-back" class="detail-back-btn" type="button" aria-label="Back" title="Back">❮</button>
+                    <button id="detail-back" class="detail-back-btn" type="button" aria-label="Back"
+                        title="Back">❮</button>
                     <div class="detail-title-group">
                         <h3 id="detail-heading">Details</h3>
                         <span id="detail-subtitle" class="detail-subtitle"></span>
@@ -248,6 +255,25 @@
                         <strong>Local Representatives</strong><br>
                         This extension shows local government officials for Milwaukee area addresses.
                     </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Results Modal -->
+    <div id="test-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="test-modal-title">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="test-modal-title">🧪 Test Results</h3>
+                <button id="close-test-modal" class="btn-icon" aria-label="Close test results dialog"
+                    title="Close">×</button>
+            </div>
+            <div class="modal-body">
+                <div id="test-results-container">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">Running tests…</div>
+                    </div>
                 </div>
             </div>
         </div>
