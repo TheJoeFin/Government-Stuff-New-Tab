@@ -73,14 +73,21 @@
                 <h2 id="sidebar-heading" class="visually-hidden">Local Government</h2>
                 <div class="nav-row" role="toolbar" aria-label="Local government navigation">
                     <div class="nav-controls">
-                        <button id="edit-address-btn" class="nav-btn-icon" type="button" aria-pressed="false"
-                            title="Set location" aria-label="Set location">📌</button>
-                        <button id="toggle-officials-view" class="nav-btn-icon" type="button" aria-pressed="false"
-                            title="Show elected officials" aria-label="Show elected officials">👤</button>
-                        <button id="toggle-search" class="nav-btn-icon" type="button" aria-pressed="false"
-                            title="Search" aria-label="Search">🔍</button>
-                        <button id="toggle-sidebar" class="nav-btn-icon" aria-label="Hide pane"
-                            title="Hide pane">❯</button>
+                        <div class="nav-toggle-group" role="radiogroup" aria-label="View selector">
+                            <button id="toggle-calendar-view" class="nav-btn-icon" type="button" aria-pressed="true"
+                                title="Calendar" aria-label="Calendar view">📅</button>
+                            <button id="toggle-officials-view" class="nav-btn-icon" type="button" aria-pressed="false"
+                                title="People" aria-label="People view">👤</button>
+                            <button id="toggle-search" class="nav-btn-icon" type="button" aria-pressed="false"
+                                title="Search" aria-label="Search view">🔍</button>
+                        </div>
+                        <div class="nav-spacer" aria-hidden="true"></div>
+                        <div class="nav-utility-group">
+                            <button id="sidebar-settings-btn" class="nav-btn-icon" type="button" title="Settings"
+                                aria-label="Settings">⚙️</button>
+                            <button id="toggle-sidebar" class="nav-btn-icon" aria-label="Hide pane"
+                                title="Hide pane">❯</button>
+                        </div>
                     </div>
                 </div>
                 <div class="current-address visually-hidden" id="address-display" role="status" aria-live="polite">
@@ -198,6 +205,77 @@
                                 <!-- Matching officials will be rendered here -->
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Settings pane view -->
+                <div class="content-view settings-view" id="settings-pane-view" role="tabpanel"
+                    aria-labelledby="settings-pane-label">
+                    <div id="settings-pane-label" class="visually-hidden">Settings</div>
+                    <div class="settings-pane-content">
+
+                        <!-- Address / Location -->
+                        <section class="settings-pane-section">
+                            <h4 class="settings-pane-section-title">📍 Location</h4>
+                            <div class="settings-pane-field">
+                                <label for="pane-address-input">Your Milwaukee Area Address</label>
+                                <div class="settings-pane-address-row">
+                                    <input type="text" id="pane-address-input"
+                                        placeholder="e.g., 200 E Wells St, Milwaukee, WI 53202"
+                                        autocomplete="street-address">
+                                    <button id="pane-locate-btn" class="btn-icon" title="Use current location"
+                                        aria-label="Use current location">📍</button>
+                                </div>
+                                <div class="settings-pane-actions">
+                                    <button id="pane-update-address" class="btn-primary">Update Address</button>
+                                    <button id="pane-refresh-btn" class="btn-secondary" title="Refresh data"
+                                        aria-label="Refresh data">🔄 Refresh</button>
+                                </div>
+                            </div>
+                            <div class="settings-pane-current-address" id="pane-current-address">
+                                <!-- Shows current address if set -->
+                            </div>
+                            <div class="settings-pane-status hidden" id="pane-address-status" role="status"
+                                aria-live="polite">
+                                <span class="status-icon"></span>
+                                <span class="status-text"></span>
+                            </div>
+                        </section>
+
+                        <!-- Display -->
+                        <section class="settings-pane-section">
+                            <h4 class="settings-pane-section-title">🎨 Display</h4>
+                            <div class="settings-pane-field">
+                                <label class="settings-pane-toggle">
+                                    <input type="checkbox" id="pane-show-sidebar">
+                                    <span>Show sidebar on new tab</span>
+                                </label>
+                            </div>
+                            <div class="settings-pane-field">
+                                <label class="settings-pane-toggle">
+                                    <input type="checkbox" id="pane-auto-location">
+                                    <span>Automatically detect location</span>
+                                </label>
+                            </div>
+                            <div class="settings-pane-field">
+                                <label class="settings-pane-toggle">
+                                    <span>Theme</span>
+                                    <button id="pane-theme-toggle" class="btn-secondary settings-pane-theme-btn"
+                                        aria-label="Toggle theme">🌙 Dark</button>
+                                </label>
+                            </div>
+                        </section>
+
+                        <!-- About -->
+                        <section class="settings-pane-section">
+                            <h4 class="settings-pane-section-title">ℹ️ About</h4>
+                            <p class="settings-pane-about">
+                                <strong>Milwaukee Government New Tab</strong><br>
+                                View local government officials, meetings, and events for Milwaukee area addresses.
+                            </p>
+                            <p class="settings-pane-version" id="pane-version-info"></p>
+                        </section>
+
                     </div>
                 </div>
 

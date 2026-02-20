@@ -1994,20 +1994,24 @@ class NewTabApp {
       }
     })
 
-    // Compact address display buttons
-    document
-      .getElementById("edit-address-btn")
-      .addEventListener("click", () => {
-        // Toggle purely on internal state for reliability
-        if (this.editingAddress) {
-          // Leaving edit mode
-          this.showCompactAddressDisplay()
+    // Sidebar settings button - toggles settings pane view
+    const sidebarSettingsBtn = document.getElementById("sidebar-settings-btn")
+    if (sidebarSettingsBtn) {
+      sidebarSettingsBtn.addEventListener("click", () => {
+        const isActive =
+          sidebarSettingsBtn.getAttribute("aria-pressed") === "true"
+        if (isActive) {
+          // Return to calendar view
+          this.switchContentView("events")
+          this.setCalendarVisibility(true)
         } else {
-          // Entering edit mode
-          this.showAddressInput()
+          // Show settings pane
+          this.switchContentView("settings-pane")
+          this.setCalendarVisibility(false)
+          this.populateSettingsPane()
         }
-        this.updateEditButtonState(this.editingAddress)
       })
+    }
 
     // Removed separate refresh control from unified bar
 
@@ -2033,6 +2037,9 @@ class NewTabApp {
 
     // Simplified UI Event Handlers (Issue #11)
     this.setupSimplifiedUIEvents()
+
+    // Settings pane events
+    this.setupSettingsPaneEvents()
 
     // Officials local search (sidebar)
     this.setupOfficialsSearch()
@@ -2267,46 +2274,70 @@ class NewTabApp {
   setupSimplifiedUIEvents() {
     console.log("Setting up simplified UI events...")
 
-    // Toggle search row visibility
+    // Three toggle state buttons: calendar, officials, search
+    const toggleCalendarBtn = document.getElementById("toggle-calendar-view")
+    const toggleOfficialsBtn = document.getElementById("toggle-officials-view")
     const toggleSearchBtn = document.getElementById("toggle-search")
     const searchRow = document.getElementById("search-row")
-    if (toggleSearchBtn && searchRow) {
-      toggleSearchBtn.addEventListener("click", () => {
-        const isVisible = !searchRow.classList.contains("hidden")
-        searchRow.classList.toggle("hidden", isVisible)
-        toggleSearchBtn.setAttribute("aria-pressed", (!isVisible).toString())
 
-        // Add/remove searching class to sidebar for calendar hiding
-        const sidebar = document.getElementById("civic-sidebar")
-        if (sidebar) {
-          sidebar.classList.toggle("searching", !isVisible)
-        }
+    const toggleButtons = [
+      toggleCalendarBtn,
+      toggleOfficialsBtn,
+      toggleSearchBtn,
+    ]
 
-        if (!isVisible) {
-          // Focus search input when showing
-          const searchInput = document.getElementById("official-search-input")
-          if (searchInput) {
-            setTimeout(() => searchInput.focus(), 100)
-          }
-        } else {
-          // Clear search input when hiding
-          const searchInput = document.getElementById("official-search-input")
-          if (searchInput && searchInput.value) {
-            searchInput.value = ""
-            searchInput.dispatchEvent(new Event("input"))
-          }
-        }
+    // Helper to set one toggle active and deactivate others
+    const activateToggle = (activeBtn) => {
+      toggleButtons.forEach((btn) => {
+        if (btn)
+          btn.setAttribute("aria-pressed", (btn === activeBtn).toString())
       })
     }
 
-    // Officials view toggle
-    const toggleOfficialsBtn = document.getElementById("toggle-officials-view")
+    if (toggleCalendarBtn) {
+      toggleCalendarBtn.addEventListener("click", () => {
+        activateToggle(toggleCalendarBtn)
+        // Hide search row
+        if (searchRow) searchRow.classList.add("hidden")
+        // Clear search
+        const searchInput = document.getElementById("official-search-input")
+        if (searchInput && searchInput.value) {
+          searchInput.value = ""
+          searchInput.dispatchEvent(new Event("input"))
+        }
+        this.switchContentView("events")
+        this.setCalendarVisibility(true)
+      })
+    }
+
     if (toggleOfficialsBtn) {
       toggleOfficialsBtn.addEventListener("click", () => {
-        const isPressed =
-          toggleOfficialsBtn.getAttribute("aria-pressed") === "true"
-        toggleOfficialsBtn.setAttribute("aria-pressed", (!isPressed).toString())
-        this.switchContentView(isPressed ? "events" : "officials")
+        activateToggle(toggleOfficialsBtn)
+        // Hide search row
+        if (searchRow) searchRow.classList.add("hidden")
+        // Clear search
+        const searchInput = document.getElementById("official-search-input")
+        if (searchInput && searchInput.value) {
+          searchInput.value = ""
+          searchInput.dispatchEvent(new Event("input"))
+        }
+        this.switchContentView("officials")
+      })
+    }
+
+    if (toggleSearchBtn) {
+      toggleSearchBtn.addEventListener("click", () => {
+        activateToggle(toggleSearchBtn)
+        // Show search row
+        if (searchRow) searchRow.classList.remove("hidden")
+        // Show search results view (or events if no query yet)
+        this.switchContentView("search-results")
+        this.setCalendarVisibility(false)
+        // Focus search input
+        const searchInput = document.getElementById("official-search-input")
+        if (searchInput) {
+          setTimeout(() => searchInput.focus(), 100)
+        }
       })
     }
 
@@ -2381,22 +2412,63 @@ class NewTabApp {
     // Hide/show calendar weeks based on view type
     const calendarWeeks = document.getElementById("simplified-calendar")
     if (calendarWeeks) {
-      if (viewType === "officials") {
-        calendarWeeks.classList.add("hidden")
-      } else {
+      if (viewType === "events") {
         calendarWeeks.classList.remove("hidden")
+      } else {
+        calendarWeeks.classList.add("hidden")
       }
     }
 
-    // Update navigation buttons
-    document.querySelectorAll(".nav-btn-icon").forEach((btn) => {
-      btn.setAttribute("aria-pressed", "false")
+    // Update navigation toggle button states (only the 3 main toggles)
+    const viewToButtonId = {
+      events: "toggle-calendar-view",
+      officials: "toggle-officials-view",
+      "search-results": "toggle-search",
+    }
+
+    const toggleButtons = [
+      "toggle-calendar-view",
+      "toggle-officials-view",
+      "toggle-search",
+    ]
+    toggleButtons.forEach((btnId) => {
+      const btn = document.getElementById(btnId)
+      if (btn) {
+        btn.setAttribute(
+          "aria-pressed",
+          (btnId === viewToButtonId[viewType]).toString(),
+        )
+      }
     })
 
-    if (viewType === "officials") {
-      const officialsBtn = document.getElementById("toggle-officials-view")
-      if (officialsBtn) {
-        officialsBtn.setAttribute("aria-pressed", "true")
+    // Update settings button state
+    const settingsBtn = document.getElementById("sidebar-settings-btn")
+    if (settingsBtn) {
+      const isSettings = viewType === "settings-pane"
+      settingsBtn.setAttribute("aria-pressed", isSettings.toString())
+      settingsBtn.textContent = isSettings ? "✖" : "⚙️"
+      settingsBtn.title = isSettings ? "Close settings" : "Settings"
+      settingsBtn.setAttribute(
+        "aria-label",
+        isSettings ? "Close settings" : "Settings",
+      )
+    }
+
+    // Show/hide search row based on view type
+    const searchRow = document.getElementById("search-row")
+    if (searchRow) {
+      if (viewType === "search-results") {
+        searchRow.classList.remove("hidden")
+      } else {
+        searchRow.classList.add("hidden")
+      }
+    }
+
+    // Hide address section when not in settings
+    if (viewType !== "settings-pane") {
+      const addressSection = document.getElementById("address-section")
+      if (addressSection) {
+        addressSection.classList.add("hidden")
       }
     }
   }
@@ -3111,7 +3183,7 @@ class NewTabApp {
       searchOfficialsContainer.innerHTML = ""
     }
 
-    // Switch back to events view and show calendar
+    // Switch back to events/calendar view and show calendar
     this.switchContentView("events")
     this.setCalendarVisibility(true)
     this.closeOfficialDetail({ silent: true })
@@ -3646,6 +3718,330 @@ class NewTabApp {
 
     // Announce modal opening to screen readers
     this.announceToScreenReader("Application settings dialog opened")
+  }
+
+  // Settings Pane Management
+  populateSettingsPane() {
+    // Sync address
+    const paneAddressInput = document.getElementById("pane-address-input")
+    if (paneAddressInput) {
+      paneAddressInput.value = this.currentAddress || this.lastAddress || ""
+    }
+
+    // Show current address if set
+    const currentAddressEl = document.getElementById("pane-current-address")
+    const addr = this.currentAddress || this.lastAddress || ""
+    if (currentAddressEl) {
+      if (addr) {
+        currentAddressEl.textContent = `Current: ${addr}`
+        currentAddressEl.classList.add("visible")
+      } else {
+        currentAddressEl.classList.remove("visible")
+      }
+    }
+
+    // Sync checkboxes
+    const showSidebar = document.getElementById("pane-show-sidebar")
+    if (showSidebar) showSidebar.checked = this.settings.showSidebar
+
+    const autoLocation = document.getElementById("pane-auto-location")
+    if (autoLocation) autoLocation.checked = this.settings.autoLocation
+
+    // Sync theme button
+    this.updatePaneThemeButton()
+
+    // Version info
+    const versionEl = document.getElementById("pane-version-info")
+    const versionIndicator = document.querySelector(".version-indicator")
+    if (versionEl && versionIndicator) {
+      versionEl.textContent = versionIndicator.textContent
+    }
+  }
+
+  updatePaneThemeButton() {
+    const themeBtn = document.getElementById("pane-theme-toggle")
+    if (themeBtn) {
+      themeBtn.textContent =
+        this.settings.theme === "dark" ? "☀️ Light" : "🌙 Dark"
+    }
+  }
+
+  setupSettingsPaneEvents() {
+    // Address update
+    const paneUpdateBtn = document.getElementById("pane-update-address")
+    if (paneUpdateBtn) {
+      paneUpdateBtn.addEventListener("click", async () => {
+        const input = document.getElementById("pane-address-input")
+        if (!input) return
+        const addr = input.value.trim()
+        if (!addr) {
+          this.showPaneStatus(
+            "pane-address-status",
+            "error",
+            "Please enter an address.",
+          )
+          return
+        }
+
+        // Sync to main input
+        const mainInput = document.getElementById("address-input")
+        if (mainInput) mainInput.value = addr
+
+        // Disable buttons during load
+        this.setPaneButtonsDisabled(true)
+        this.showPaneStatus(
+          "pane-address-status",
+          "loading",
+          "Loading representatives...",
+        )
+
+        try {
+          this.currentAddress = addr
+          await this.loadCivicData(addr)
+
+          // Update pane display
+          const currentAddressEl = document.getElementById(
+            "pane-current-address",
+          )
+          if (currentAddressEl) {
+            currentAddressEl.textContent = `Current: ${addr}`
+            currentAddressEl.classList.add("visible")
+          }
+
+          this.showPaneStatus(
+            "pane-address-status",
+            "success",
+            "Representatives loaded successfully.",
+          )
+          this.autoClearPaneStatus("pane-address-status", 4000)
+        } catch (error) {
+          console.error("Settings pane address update failed:", error)
+          this.showPaneStatus(
+            "pane-address-status",
+            "error",
+            `Failed to load: ${error.message || "Unknown error"}`,
+          )
+        } finally {
+          this.setPaneButtonsDisabled(false)
+        }
+      })
+    }
+
+    // Address enter key
+    const paneAddressInput = document.getElementById("pane-address-input")
+    if (paneAddressInput) {
+      paneAddressInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault()
+          const paneUpdateBtn = document.getElementById("pane-update-address")
+          if (paneUpdateBtn) paneUpdateBtn.click()
+        }
+      })
+    }
+
+    // Locate button
+    const paneLocateBtn = document.getElementById("pane-locate-btn")
+    if (paneLocateBtn) {
+      paneLocateBtn.addEventListener("click", async () => {
+        this.setPaneButtonsDisabled(true)
+        this.showPaneStatus(
+          "pane-address-status",
+          "loading",
+          "Detecting your location...",
+        )
+
+        try {
+          await this.getPaneUserLocation()
+        } catch (error) {
+          this.showPaneStatus(
+            "pane-address-status",
+            "error",
+            error.message || "Could not detect location.",
+          )
+          this.setPaneButtonsDisabled(false)
+        }
+      })
+    }
+
+    // Refresh button
+    const paneRefreshBtn = document.getElementById("pane-refresh-btn")
+    if (paneRefreshBtn) {
+      paneRefreshBtn.addEventListener("click", async () => {
+        this.setPaneButtonsDisabled(true)
+        this.showPaneStatus(
+          "pane-address-status",
+          "loading",
+          "Refreshing calendar and representatives...",
+        )
+
+        try {
+          await this.loadCalendarEvents({ forceRefresh: true })
+          if (this.currentAddress) {
+            await this.loadCivicData(this.currentAddress, true)
+          }
+          this.showPaneStatus(
+            "pane-address-status",
+            "success",
+            "Data refreshed successfully.",
+          )
+          this.autoClearPaneStatus("pane-address-status", 4000)
+        } catch (error) {
+          console.error("Settings pane refresh failed:", error)
+          this.showPaneStatus(
+            "pane-address-status",
+            "error",
+            `Refresh failed: ${error.message || "Unknown error"}`,
+          )
+        } finally {
+          this.setPaneButtonsDisabled(false)
+        }
+      })
+    }
+
+    // Show sidebar checkbox
+    const paneShowSidebar = document.getElementById("pane-show-sidebar")
+    if (paneShowSidebar) {
+      paneShowSidebar.addEventListener("change", (e) => {
+        this.settings.showSidebar = e.target.checked
+        // Sync with main settings checkbox
+        const mainCheckbox = document.getElementById("show-sidebar")
+        if (mainCheckbox) mainCheckbox.checked = e.target.checked
+        this.updateSidebarVisibility()
+        this.saveSettings()
+      })
+    }
+
+    // Auto location checkbox
+    const paneAutoLocation = document.getElementById("pane-auto-location")
+    if (paneAutoLocation) {
+      paneAutoLocation.addEventListener("change", (e) => {
+        this.settings.autoLocation = e.target.checked
+        // Sync with main settings checkbox
+        const mainCheckbox = document.getElementById("auto-location")
+        if (mainCheckbox) mainCheckbox.checked = e.target.checked
+        this.saveSettings()
+      })
+    }
+
+    // Theme toggle
+    const paneThemeToggle = document.getElementById("pane-theme-toggle")
+    if (paneThemeToggle) {
+      paneThemeToggle.addEventListener("click", (e) => {
+        e.preventDefault()
+        const newTheme = this.settings.theme === "light" ? "dark" : "light"
+        this.settings.theme = newTheme
+        this.applyTheme()
+        this.saveSettings()
+        this.updatePaneThemeButton()
+      })
+    }
+  }
+
+  // --- Settings Pane Status Helpers ---
+
+  showPaneStatus(elementId, type, message) {
+    const el = document.getElementById(elementId)
+    if (!el) return
+    const icon = el.querySelector(".status-icon")
+    const text = el.querySelector(".status-text")
+
+    el.classList.remove("hidden", "loading", "success", "error")
+    el.classList.add(type)
+
+    const icons = { loading: "⏳", success: "✅", error: "❌" }
+    if (icon) icon.textContent = icons[type] || ""
+    if (text) text.textContent = message
+
+    this.announceToScreenReader(message)
+  }
+
+  hidePaneStatus(elementId) {
+    const el = document.getElementById(elementId)
+    if (!el) return
+    el.classList.remove("loading", "success", "error")
+    el.classList.add("hidden")
+  }
+
+  autoClearPaneStatus(elementId, delay = 4000) {
+    if (this._paneStatusTimer) clearTimeout(this._paneStatusTimer)
+    this._paneStatusTimer = setTimeout(() => {
+      this.hidePaneStatus(elementId)
+    }, delay)
+  }
+
+  setPaneButtonsDisabled(disabled) {
+    const ids = ["pane-update-address", "pane-refresh-btn", "pane-locate-btn"]
+    ids.forEach((id) => {
+      const btn = document.getElementById(id)
+      if (btn) btn.disabled = disabled
+    })
+    const input = document.getElementById("pane-address-input")
+    if (input) input.disabled = disabled
+  }
+
+  getPaneUserLocation() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("Geolocation is not supported by this browser."))
+        return
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords
+          try {
+            const response = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
+            )
+            const data = await response.json()
+            const address = `${data.locality}, ${data.principalSubdivision}, ${data.countryCode}`
+
+            // Fill both inputs
+            const paneInput = document.getElementById("pane-address-input")
+            const mainInput = document.getElementById("address-input")
+            if (paneInput) paneInput.value = address
+            if (mainInput) mainInput.value = address
+
+            this.currentAddress = address
+            this.showPaneStatus(
+              "pane-address-status",
+              "loading",
+              `Located: ${address}. Loading representatives...`,
+            )
+
+            await this.loadCivicData(address)
+
+            const currentAddressEl = document.getElementById(
+              "pane-current-address",
+            )
+            if (currentAddressEl) {
+              currentAddressEl.textContent = `Current: ${address}`
+              currentAddressEl.classList.add("visible")
+            }
+
+            this.showPaneStatus(
+              "pane-address-status",
+              "success",
+              `Location set to ${address}. Representatives loaded.`,
+            )
+            this.autoClearPaneStatus("pane-address-status", 4000)
+            this.setPaneButtonsDisabled(false)
+            resolve()
+          } catch (error) {
+            this.setPaneButtonsDisabled(false)
+            reject(new Error("Could not determine address from location."))
+          }
+        },
+        (error) => {
+          this.setPaneButtonsDisabled(false)
+          reject(
+            new Error(
+              "Could not access your location. Please check permissions.",
+            ),
+          )
+        },
+      )
+    })
   }
 
   // Address and Location Management
@@ -4873,7 +5269,6 @@ class NewTabApp {
 
     // No longer editing
     this.editingAddress = false
-    this.updateEditButtonState(false)
   }
 
   showAddressInput() {
@@ -4894,7 +5289,6 @@ class NewTabApp {
 
     // Entering edit mode
     this.editingAddress = true
-    this.updateEditButtonState(true)
 
     // Show location pin button when no address is set or when editing
     if (locateBtn) {
@@ -4912,16 +5306,6 @@ class NewTabApp {
         addressInput.select()
       }, 300) // Wait for animation to complete
     }
-  }
-
-  updateEditButtonState(isEditing) {
-    const btn = document.getElementById("edit-address-btn")
-    if (!btn) return
-    btn.setAttribute("aria-pressed", isEditing.toString())
-    const label = isEditing ? "Hide address input" : "Set location"
-    btn.textContent = isEditing ? "✖" : "📍"
-    btn.setAttribute("title", label)
-    btn.setAttribute("aria-label", label)
   }
 
   // Method to show locate button when no address is set
