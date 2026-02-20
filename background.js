@@ -176,8 +176,7 @@ class EventNormalizer {
         ? event.EventInSiteAgendaLink
         : null)
     const minutesUrl = event.EventMinutesFile
-    const videoUrl =
-      event.EventVideoPath || event.EventVideoHtml5Path || null
+    const videoUrl = event.EventVideoPath || event.EventVideoHtml5Path || null
 
     return {
       id: key,
@@ -554,8 +553,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     aggregator.apiClient
       .fetchSingleEvent(client, eventId)
       .then((raw) => {
-        const videoUrl =
-          raw.EventVideoPath || raw.EventVideoHtml5Path || null
+        const videoUrl = raw.EventVideoPath || raw.EventVideoHtml5Path || null
         const minutesUrl = raw.EventMinutesFile || null
         sendResponse({ status: "ok", data: { videoUrl, minutesUrl } })
       })
