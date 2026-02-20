@@ -55,10 +55,7 @@ class LegistarApiClient {
     const count = Array.isArray(payload) ? payload.length : 0
     console.log(`[Legistar] Received ${count} raw events for ${client}`)
     if (count > 0) {
-      console.log(
-        `[Legistar] First raw event for ${client}:`,
-        payload[0]
-      )
+      console.log(`[Legistar] First raw event for ${client}:`, payload[0])
     }
     return Array.isArray(payload) ? payload : []
   }
@@ -74,14 +71,14 @@ class LegistarApiClient {
       if (attempt >= this.maxRetries - 1) {
         console.warn(
           `[Legistar] Fetch failed after retries (${attempt + 1}) for ${url}:`,
-          error
+          error,
         )
         throw error
       }
       const delay = Math.pow(2, attempt) * 500
       console.warn(
         `[Legistar] Fetch failed (attempt ${attempt + 1}) for ${url}. Retrying in ${delay}ms`,
-        error
+        error,
       )
       await new Promise((resolve) => setTimeout(resolve, delay))
       return this.fetchWithRetry(url, attempt + 1)
@@ -99,10 +96,15 @@ class LegistarApiClient {
   buildUpcomingFilter() {
     const lookback = this.getPreviousWeekMonday()
     const formatted = this.formatDateForFilter(lookback)
-    console.log('[Legistar API] Building filter with lookback date:', lookback.toISOString(), 'formatted:', formatted)
+    console.log(
+      "[Legistar API] Building filter with lookback date:",
+      lookback.toISOString(),
+      "formatted:",
+      formatted,
+    )
     return `EventDate ge datetime'${formatted}'`
   }
-  
+
   getPreviousWeekMonday() {
     const today = new Date()
     const currentDay = today.getDay()
@@ -113,15 +115,21 @@ class LegistarApiClient {
     const previousMonday = new Date(today)
     previousMonday.setDate(today.getDate() - daysToSubtract)
     previousMonday.setHours(0, 0, 0, 0)
-    console.log('[Legistar API] getPreviousWeekMonday:', 'today =', today.toDateString(), 'result =', previousMonday.toDateString())
+    console.log(
+      "[Legistar API] getPreviousWeekMonday:",
+      "today =",
+      today.toDateString(),
+      "result =",
+      previousMonday.toDateString(),
+    )
     return previousMonday
   }
 
   formatDateForFilter(date) {
     const pad = (value) => String(value).padStart(2, "0")
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-      date.getDate()
-    )}T00:00:00`
+      date.getDate(),
+    )}`
   }
 }
 
@@ -132,9 +140,7 @@ class EventNormalizer {
   }
 
   normalize(events) {
-    return events
-      .map((event) => this.toNormalizedEvent(event))
-      .filter(Boolean)
+    return events.map((event) => this.toNormalizedEvent(event)).filter(Boolean)
   }
 
   toNormalizedEvent(event) {
@@ -146,7 +152,7 @@ class EventNormalizer {
     const startDate = this.combineDateTime(
       event.EventDate,
       event.EventTime,
-      event.EventDate
+      event.EventDate,
     )
 
     if (!startDate) return null
@@ -154,12 +160,13 @@ class EventNormalizer {
     const endDate = this.combineDateTime(
       event.EventEnd,
       event.EventEnd,
-      event.EventDate
+      event.EventDate,
     )
 
     const agendaUrl =
       event.EventAgendaFile ||
-      (event.EventInSiteAgendaLink && event.EventInSiteAgendaLink !== event.EventInSiteURL
+      (event.EventInSiteAgendaLink &&
+      event.EventInSiteAgendaLink !== event.EventInSiteURL
         ? event.EventInSiteAgendaLink
         : null)
     const minutesUrl = event.EventMinutesFile
@@ -183,7 +190,7 @@ class EventNormalizer {
       videoUrl,
       meetingUrl: event.EventInSiteURL || null,
       lastModified: this.normalizeDateValue(
-        event.EventLastModifiedUtc || event.EventLastModified
+        event.EventLastModifiedUtc || event.EventLastModified,
       ),
       richText: event.EventAgendaNote || "",
     }
@@ -202,7 +209,7 @@ class EventNormalizer {
           timeAsDate.getHours(),
           timeAsDate.getMinutes(),
           timeAsDate.getSeconds(),
-          0
+          0,
         )
       } else if (typeof timeString === "string") {
         const parsed = this.parseTimeString(timeString)
@@ -211,7 +218,7 @@ class EventNormalizer {
             parsed.hours,
             parsed.minutes,
             parsed.seconds ?? 0,
-            0
+            0,
           )
         }
       }
@@ -234,7 +241,9 @@ class EventNormalizer {
       return { hours, minutes, seconds: 0 }
     }
 
-    const twentyFourMatch = /^\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*$/.exec(trimmed)
+    const twentyFourMatch = /^\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*$/.exec(
+      trimmed,
+    )
     if (twentyFourMatch) {
       const hours = parseInt(twentyFourMatch[1], 10)
       const minutes = parseInt(twentyFourMatch[2], 10)
@@ -275,7 +284,7 @@ class EventNormalizer {
       const numeric = Number(trimmed)
       if (!Number.isNaN(numeric)) {
         const fromNumber = new Date(
-          trimmed.length <= 10 ? numeric * 1000 : numeric
+          trimmed.length <= 10 ? numeric * 1000 : numeric,
         )
         if (!Number.isNaN(fromNumber.getTime())) {
           return fromNumber
@@ -326,7 +335,7 @@ class EventConsolidator {
     }
 
     ;["agendaUrl", "minutesUrl", "videoUrl", "meetingUrl", "richText"].forEach(
-      preferB
+      preferB,
     )
 
     return prioritized
@@ -372,11 +381,11 @@ class LegistarAggregator {
         const normalizer = new EventNormalizer(client)
         const normalizedRaw = normalizer.normalize(events)
         console.log(
-          `[Legistar] Normalized raw count for ${client}: ${normalizedRaw.length}`
+          `[Legistar] Normalized raw count for ${client}: ${normalizedRaw.length}`,
         )
         const upcoming = this.filterUpcomingEvents(normalizedRaw)
         console.log(
-          `[Legistar] Upcoming events for ${client}: ${upcoming.length}`
+          `[Legistar] Upcoming events for ${client}: ${upcoming.length}`,
         )
         return { status: "fulfilled", value: upcoming }
       } catch (error) {
@@ -392,7 +401,7 @@ class LegistarAggregator {
 
     if (!successful.length) {
       console.warn(
-        "[Legistar] No upcoming meetings returned from Legistar sources"
+        "[Legistar] No upcoming meetings returned from Legistar sources",
       )
     }
 
@@ -401,7 +410,7 @@ class LegistarAggregator {
       .sort((a, b) => new Date(a.startDateTime) - new Date(b.startDateTime))
 
     console.log(
-      `[Legistar] Consolidated ${consolidated.length} total events across clients`
+      `[Legistar] Consolidated ${consolidated.length} total events across clients`,
     )
 
     const payload = {
@@ -412,7 +421,7 @@ class LegistarAggregator {
 
     await this.storage.set(CACHE_KEY, payload)
     console.log(
-      `[Legistar] Cache updated at ${new Date(payload.fetchedAt).toISOString()}`
+      `[Legistar] Cache updated at ${new Date(payload.fetchedAt).toISOString()}`,
     )
     return payload
   }
@@ -421,12 +430,19 @@ class LegistarAggregator {
     const now = new Date()
     const horizon = new Date(now.getTime())
     horizon.setDate(horizon.getDate() + 90)
-    
+
     // Allow events from previous Monday onwards
     const previousMonday = this.getPreviousWeekMonday()
-    
-    console.log('[Legistar] filterUpcomingEvents: now =', now.toISOString(), 'previousMonday =', previousMonday.toISOString(), 'horizon =', horizon.toISOString())
-    console.log('[Legistar] Filtering', events.length, 'events')
+
+    console.log(
+      "[Legistar] filterUpcomingEvents: now =",
+      now.toISOString(),
+      "previousMonday =",
+      previousMonday.toISOString(),
+      "horizon =",
+      horizon.toISOString(),
+    )
+    console.log("[Legistar] Filtering", events.length, "events")
 
     const isWithinWindow = (eventDate) => {
       if (!eventDate) return false
@@ -443,17 +459,25 @@ class LegistarAggregator {
         const debugDate = new Date(sourceDate)
         if (!Number.isNaN(debugDate.getTime())) {
           const delta = (debugDate - previousMonday) / (1000 * 60 * 60 * 24)
-          console.log('[Legistar] EXCLUDING event:', event.title || event.EventBodyName, 'date:', sourceDate, 'delta from prevMonday:', delta.toFixed(1), 'days')
+          console.log(
+            "[Legistar] EXCLUDING event:",
+            event.title || event.EventBodyName,
+            "date:",
+            sourceDate,
+            "delta from prevMonday:",
+            delta.toFixed(1),
+            "days",
+          )
         }
       }
       return within
     })
-    
-    console.log('[Legistar] After filtering:', filtered.length, 'events remain')
+
+    console.log("[Legistar] After filtering:", filtered.length, "events remain")
 
     return filtered
   }
-  
+
   getPreviousWeekMonday() {
     const today = new Date()
     const currentDay = today.getDay()
