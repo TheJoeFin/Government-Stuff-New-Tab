@@ -1880,18 +1880,7 @@ class NewTabApp {
       console.error("Theme toggle button not found")
     }
 
-    // Settings modal
-    const settingsBtn = document.getElementById("settings-btn")
-    if (settingsBtn) {
-      settingsBtn.addEventListener("click", () => {
-        console.log("Settings button clicked")
-        this.showSettingsModal()
-      })
-      console.log("Settings button event bound")
-    } else {
-      console.error("Settings button not found")
-    }
-
+    // Settings modal (close handler still needed for modal)
     const closeSettings = document.getElementById("close-settings")
     if (closeSettings) {
       closeSettings.addEventListener("click", () => {
