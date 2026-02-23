@@ -42,7 +42,7 @@ class NewTabApp {
     this.calendarViewDate = new Date() // Start with current month
     console.log(
       "[Calendar Init] calendarViewDate set to:",
-      this.calendarViewDate.toDateString()
+      this.calendarViewDate.toDateString(),
     )
     this.calendarContainer = null
     this.officialsToggleControls = null
@@ -105,7 +105,7 @@ class NewTabApp {
       today.toDateString(),
       "(day",
       currentDay + ") result =",
-      previousMonday.toDateString()
+      previousMonday.toDateString(),
     )
     return previousMonday
   }
@@ -177,9 +177,9 @@ class NewTabApp {
         () => {
           // Announce to screen reader
           this.announceToScreenReader(
-            `Searching for "${query.trim()}" using your default search provider`
+            `Searching for "${query.trim()}" using your default search provider`,
           )
-        }
+        },
       )
     } else {
       // Fallback for testing environment - use Google
@@ -311,8 +311,8 @@ class NewTabApp {
 
         console.log(
           `Cache found for "${address}", age: ${Math.round(
-            cacheAge / 1000 / 60
-          )} minutes`
+            cacheAge / 1000 / 60,
+          )} minutes`,
         )
 
         if (cacheAge < this.cacheExpiry) {
@@ -372,7 +372,7 @@ class NewTabApp {
       if (typeof chrome !== "undefined" && chrome.storage) {
         const allData = await chrome.storage.local.get(null)
         const cacheKeys = Object.keys(allData).filter((key) =>
-          key.startsWith("milwaukee_")
+          key.startsWith("milwaukee_"),
         )
         if (cacheKeys.length > 0) {
           await chrome.storage.local.remove(cacheKeys)
@@ -455,11 +455,11 @@ class NewTabApp {
     // Log the current attribute for debugging
     console.log(
       "HTML data-theme attribute:",
-      document.documentElement.getAttribute("data-theme")
+      document.documentElement.getAttribute("data-theme"),
     )
     console.log(
       "Body data-theme attribute:",
-      document.body.getAttribute("data-theme")
+      document.body.getAttribute("data-theme"),
     )
 
     const themeButton = document.getElementById("theme-toggle")
@@ -549,7 +549,7 @@ class NewTabApp {
       searchInput.placeholder = "Search the web..."
       searchInput.setAttribute(
         "aria-label",
-        "Search the web using your default search provider"
+        "Search the web using your default search provider",
       )
     }
   }
@@ -590,7 +590,7 @@ class NewTabApp {
 
     if (detailBackButton) {
       detailBackButton.addEventListener("click", () =>
-        this.closeCalendarEventDetail()
+        this.closeCalendarEventDetail(),
       )
     }
 
@@ -665,7 +665,7 @@ class NewTabApp {
       year: "numeric",
     })
     label.textContent = `${monthFormatter.format(
-      startDate
+      startDate,
     )} - ${monthFormatter.format(endDate)}`
 
     grid.innerHTML = ""
@@ -702,7 +702,7 @@ class NewTabApp {
       const eventDateKey = this.buildDateKey(
         currentDate.getFullYear(),
         currentDate.getMonth(),
-        currentDate.getDate()
+        currentDate.getDate(),
       )
 
       if (this.calendarEventIndex.has(eventDateKey)) {
@@ -721,7 +721,7 @@ class NewTabApp {
         })
         cell.setAttribute(
           "aria-label",
-          `${dateFormatter.format(currentDate)}. ${describe}`
+          `${dateFormatter.format(currentDate)}. ${describe}`,
         )
 
         const activate = () => {
@@ -795,7 +795,7 @@ class NewTabApp {
     if (!this.calendarEventsContainer) return
     this.calendarEventsContainer.setAttribute(
       "aria-busy",
-      isBusy ? "true" : "false"
+      isBusy ? "true" : "false",
     )
   }
 
@@ -823,7 +823,7 @@ class NewTabApp {
           `[Calendar] Cached events expired (age ${(
             age /
             (60 * 60 * 1000)
-          ).toFixed(1)}h)`
+          ).toFixed(1)}h)`,
         )
         return null
       }
@@ -854,7 +854,7 @@ class NewTabApp {
     try {
       localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(record))
       console.log(
-        `[Calendar] Cached ${record.events.length} events in local storage`
+        `[Calendar] Cached ${record.events.length} events in local storage`,
       )
     } catch (error) {
       console.warn("[Calendar] Failed to cache calendar events", error)
@@ -884,26 +884,26 @@ class NewTabApp {
     this.calendarEventsMeta = {
       fetchedAt: normalizedFetchedAt,
       fromCache: Boolean(
-        options.fromCache !== undefined ? options.fromCache : payload.fromCache
+        options.fromCache !== undefined ? options.fromCache : payload.fromCache,
       ),
       stale: Boolean(payload.stale),
     }
 
     this.calendarEventIndex = this.groupEventsByDate(payload.events)
     console.log(
-      `[Calendar] Grouped events into ${this.calendarEventIndex.size} date buckets`
+      `[Calendar] Grouped events into ${this.calendarEventIndex.size} date buckets`,
     )
 
     // Log which dates have events
     console.log(
       "[Calendar] Dates with events:",
-      Array.from(this.calendarEventIndex.keys()).sort().join(", ")
+      Array.from(this.calendarEventIndex.keys()).sort().join(", "),
     )
 
     if (this.calendarLegendElement) {
       this.calendarLegendElement.classList.toggle(
         "hidden",
-        payload.events.length === 0
+        payload.events.length === 0,
       )
     }
 
@@ -927,7 +927,7 @@ class NewTabApp {
       if (cached) {
         const fetchedLabel = new Date(cached.fetchedAt).toLocaleString()
         console.log(
-          `[Calendar] Using cached events from local storage (fetched ${fetchedLabel})`
+          `[Calendar] Using cached events from local storage (fetched ${fetchedLabel})`,
         )
         try {
           this.applyCalendarPayload(cached, { fromCache: true })
@@ -936,7 +936,7 @@ class NewTabApp {
         } catch (error) {
           console.warn(
             "[Calendar] Cached calendar data invalid, proceeding to refetch",
-            error
+            error,
           )
           this.clearCachedCalendarEvents()
         }
@@ -945,7 +945,7 @@ class NewTabApp {
 
     if (this.calendarEventsContainer) {
       console.log(
-        `[Calendar] Loading calendar events (forceRefresh=${forceRefresh})`
+        `[Calendar] Loading calendar events (forceRefresh=${forceRefresh})`,
       )
       this.calendarEventsContainer.innerHTML = this.buildCalendarPlaceholder()
       this.setCalendarBusyState(true)
@@ -964,7 +964,7 @@ class NewTabApp {
               stale: payload?.stale,
               fetchedAt: payload?.fetchedAt,
             }
-          : "null response"
+          : "null response",
       )
       if (!payload || !Array.isArray(payload.events)) {
         throw new Error("Calendar payload missing events")
@@ -991,7 +991,7 @@ class NewTabApp {
   async requestLegistarEvents(forceRefresh) {
     if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
       console.warn(
-        "[Calendar] chrome.runtime missing; using mock calendar events"
+        "[Calendar] chrome.runtime missing; using mock calendar events",
       )
       return { events: this.buildMockCalendarEvents(), fetchedAt: Date.now() }
     }
@@ -999,11 +999,11 @@ class NewTabApp {
     return new Promise((resolve, reject) => {
       try {
         console.log(
-          "[Calendar] Requesting Legistar events from background worker"
+          "[Calendar] Requesting Legistar events from background worker",
         )
         const timeoutId = setTimeout(() => {
           console.error(
-            "[Calendar] Timed out waiting for background response (10s)"
+            "[Calendar] Timed out waiting for background response (10s)",
           )
           reject(new Error("Calendar service not responding"))
         }, 10000)
@@ -1014,7 +1014,7 @@ class NewTabApp {
             if (chrome.runtime.lastError) {
               console.error(
                 "[Calendar] chrome.runtime.lastError while loading events",
-                chrome.runtime.lastError
+                chrome.runtime.lastError,
               )
               reject(new Error(chrome.runtime.lastError.message))
               return
@@ -1028,16 +1028,16 @@ class NewTabApp {
               console.log(
                 `[Calendar] Background worker returned ${
                   response.data?.events?.length ?? "no"
-                } events`
+                } events`,
               )
               resolve(response.data)
             } else {
               console.error(
-                `[Calendar] Background worker reported error: ${response.error}`
+                `[Calendar] Background worker reported error: ${response.error}`,
               )
               reject(new Error(response.error || "Unknown Legistar error"))
             }
-          }
+          },
         )
       } catch (error) {
         console.error("[Calendar] Unexpected error requesting events", error)
@@ -1082,7 +1082,7 @@ class NewTabApp {
       const key = this.buildDateKey(
         date.getFullYear(),
         date.getMonth(),
-        date.getDate()
+        date.getDate(),
       )
       if (!map.has(key)) {
         map.set(key, [])
@@ -1092,7 +1092,7 @@ class NewTabApp {
 
     map.forEach((value, key) => {
       value.sort(
-        (a, b) => new Date(a.startDateTime) - new Date(b.startDateTime)
+        (a, b) => new Date(a.startDateTime) - new Date(b.startDateTime),
       )
       map.set(key, value)
     })
@@ -1194,7 +1194,7 @@ class NewTabApp {
     mainButton.className = "calendar-event-main"
     mainButton.setAttribute(
       "aria-label",
-      `View details for ${event.title || "meeting"}`
+      `View details for ${event.title || "meeting"}`,
     )
 
     const title = document.createElement("span")
@@ -1215,26 +1215,38 @@ class NewTabApp {
     const dateLabel = this.formatCalendarDate(event.startDateTime)
     const timeLabel = this.formatEventTime(event.startDateTime)
 
+    const isNow = this.isEventHappeningNow(event)
+
     const timeEl = document.createElement("span")
     timeEl.className = "calendar-event-time"
-    timeEl.textContent = timeLabel
+    if (isNow) {
+      timeEl.classList.add("is-now")
+      const nowBadge = document.createElement("span")
+      nowBadge.className = "now-badge"
+      nowBadge.textContent = "NOW"
+      timeEl.appendChild(nowBadge)
+      timeEl.appendChild(document.createTextNode(" " + timeLabel))
+    } else {
+      timeEl.textContent = timeLabel
+    }
 
     const dateEl = document.createElement("span")
     dateEl.className = "calendar-event-date"
     dateEl.textContent = dateLabel
 
+    const dayBadgeLabel = this.getRelativeDayLabel(event.startDateTime)
+    if (dayBadgeLabel) {
+      const dayBadge = document.createElement("span")
+      dayBadge.className = "day-badge"
+      dayBadge.textContent = dayBadgeLabel
+      dateEl.appendChild(document.createTextNode(" "))
+      dateEl.appendChild(dayBadge)
+    }
+
     meta.appendChild(sourceDot)
     meta.appendChild(timeEl)
     meta.appendChild(document.createTextNode("•"))
     meta.appendChild(dateEl)
-
-    // Only show body name if it's different from the title
-    if (event.bodyName && event.bodyName !== event.title) {
-      const bodyEl = document.createElement("span")
-      bodyEl.textContent = event.bodyName
-      meta.appendChild(document.createTextNode("•"))
-      meta.appendChild(bodyEl)
-    }
 
     const location = document.createElement("span")
     location.className = "calendar-event-location"
@@ -1484,8 +1496,8 @@ class NewTabApp {
   }
 
   formatSelectedDate(dateKey) {
-    const date = new Date(`${dateKey}T00:00:00`)
-    if (Number.isNaN(date.getTime())) return dateKey
+    const date = this.parseLocalDate(dateKey)
+    if (!date || Number.isNaN(date.getTime())) return dateKey
     return date.toLocaleDateString(undefined, {
       weekday: "long",
       month: "long",
@@ -1512,13 +1524,46 @@ class NewTabApp {
     })
   }
 
+  getRelativeDayLabel(value) {
+    if (!value) return null
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return null
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const eventDay = new Date(date)
+    eventDay.setHours(0, 0, 0, 0)
+    if (eventDay.getTime() === today.getTime()) return "Today"
+    if (eventDay.getTime() === tomorrow.getTime()) return "Tomorrow"
+    return null
+  }
+
+  isEventHappeningNow(event) {
+    if (!event.startDateTime) return false
+    const now = new Date()
+    const start = new Date(event.startDateTime)
+    if (Number.isNaN(start.getTime())) return false
+    if (now < start) return false
+    let end
+    if (event.endDateTime) {
+      end = new Date(event.endDateTime)
+    }
+    if (!end || Number.isNaN(end.getTime())) {
+      // Default to 1 hour duration when no end time is provided
+      end = new Date(start.getTime() + 60 * 60 * 1000)
+    }
+    if (now > end) return false
+    return true
+  }
+
   selectCalendarDate(dateKey) {
     this.selectedCalendarDate = dateKey
     this.renderCalendar()
     this.closeCalendarEventDetail({ silent: true })
     this.renderCalendarEventsList()
     this.announceToScreenReader(
-      `Showing meetings for ${this.formatSelectedDate(dateKey)}`
+      `Showing meetings for ${this.formatSelectedDate(dateKey)}`,
     )
   }
 
@@ -1543,7 +1588,7 @@ class NewTabApp {
         const key = this.buildDateKey(
           eventDate.getFullYear(),
           eventDate.getMonth(),
-          eventDate.getDate()
+          eventDate.getDate(),
         )
         return key === this.selectedCalendarDate
       })
@@ -1582,13 +1627,13 @@ class NewTabApp {
     this.calendarViewDate = new Date(
       eventDate.getFullYear(),
       eventDate.getMonth(),
-      1
+      1,
     )
 
     this.selectedCalendarDate = this.buildDateKey(
       eventDate.getFullYear(),
       eventDate.getMonth(),
-      eventDate.getDate()
+      eventDate.getDate(),
     )
 
     this.renderCalendar()
@@ -1609,7 +1654,7 @@ class NewTabApp {
   getEventSourcesForDate(dateKey) {
     const events = this.calendarEventIndex.get(dateKey) || []
     const uniqueSources = new Set(
-      events.map((event) => event.source).filter(Boolean)
+      events.map((event) => event.source).filter(Boolean),
     )
     return Array.from(uniqueSources)
   }
@@ -1749,7 +1794,7 @@ class NewTabApp {
     if (expanded && options.focusFirst && !options.skipFocus) {
       setTimeout(() => {
         const firstInteractive = wrapper.querySelector(
-          ".official button, .official a, .official [tabindex]"
+          ".official button, .official a, .official [tabindex]",
         )
         if (firstInteractive && typeof firstInteractive.focus === "function") {
           firstInteractive.focus({ preventScroll: true })
@@ -1835,18 +1880,7 @@ class NewTabApp {
       console.error("Theme toggle button not found")
     }
 
-    // Settings modal
-    const settingsBtn = document.getElementById("settings-btn")
-    if (settingsBtn) {
-      settingsBtn.addEventListener("click", () => {
-        console.log("Settings button clicked")
-        this.showSettingsModal()
-      })
-      console.log("Settings button event bound")
-    } else {
-      console.error("Settings button not found")
-    }
-
+    // Settings modal (close handler still needed for modal)
     const closeSettings = document.getElementById("close-settings")
     if (closeSettings) {
       closeSettings.addEventListener("click", () => {
@@ -1949,20 +1983,24 @@ class NewTabApp {
       }
     })
 
-    // Compact address display buttons
-    document
-      .getElementById("edit-address-btn")
-      .addEventListener("click", () => {
-        // Toggle purely on internal state for reliability
-        if (this.editingAddress) {
-          // Leaving edit mode
-          this.showCompactAddressDisplay()
+    // Sidebar settings button - toggles settings pane view
+    const sidebarSettingsBtn = document.getElementById("sidebar-settings-btn")
+    if (sidebarSettingsBtn) {
+      sidebarSettingsBtn.addEventListener("click", () => {
+        const isActive =
+          sidebarSettingsBtn.getAttribute("aria-pressed") === "true"
+        if (isActive) {
+          // Return to calendar view
+          this.switchContentView("events")
+          this.setCalendarVisibility(true)
         } else {
-          // Entering edit mode
-          this.showAddressInput()
+          // Show settings pane
+          this.switchContentView("settings-pane")
+          this.setCalendarVisibility(false)
+          this.populateSettingsPane()
         }
-        this.updateEditButtonState(this.editingAddress)
       })
+    }
 
     // Removed separate refresh control from unified bar
 
@@ -1988,6 +2026,9 @@ class NewTabApp {
 
     // Simplified UI Event Handlers (Issue #11)
     this.setupSimplifiedUIEvents()
+
+    // Settings pane events
+    this.setupSettingsPaneEvents()
 
     // Officials local search (sidebar)
     this.setupOfficialsSearch()
@@ -2072,7 +2113,7 @@ class NewTabApp {
       const meetingHits = this.searchCalendarMeetings(query)
       this.renderOfficialsSearchResults(
         { officials: mergedOfficials, meetings: meetingHits },
-        query
+        query,
       )
     }
 
@@ -2169,7 +2210,7 @@ class NewTabApp {
       focusToggle = false,
       silent = false,
       skipSave = false,
-    } = {}
+    } = {},
   ) {
     const toggleBtn = document.getElementById("toggle-official-search")
     const searchBlock = document.querySelector(".official-search")
@@ -2206,7 +2247,7 @@ class NewTabApp {
 
     if (!silent) {
       this.announceToScreenReader(
-        isVisible ? "Officials search shown" : "Officials search hidden"
+        isVisible ? "Officials search shown" : "Officials search hidden",
       )
     }
 
@@ -2222,46 +2263,70 @@ class NewTabApp {
   setupSimplifiedUIEvents() {
     console.log("Setting up simplified UI events...")
 
-    // Toggle search row visibility
+    // Three toggle state buttons: calendar, officials, search
+    const toggleCalendarBtn = document.getElementById("toggle-calendar-view")
+    const toggleOfficialsBtn = document.getElementById("toggle-officials-view")
     const toggleSearchBtn = document.getElementById("toggle-search")
     const searchRow = document.getElementById("search-row")
-    if (toggleSearchBtn && searchRow) {
-      toggleSearchBtn.addEventListener("click", () => {
-        const isVisible = !searchRow.classList.contains("hidden")
-        searchRow.classList.toggle("hidden", isVisible)
-        toggleSearchBtn.setAttribute("aria-pressed", (!isVisible).toString())
 
-        // Add/remove searching class to sidebar for calendar hiding
-        const sidebar = document.getElementById("civic-sidebar")
-        if (sidebar) {
-          sidebar.classList.toggle("searching", !isVisible)
-        }
+    const toggleButtons = [
+      toggleCalendarBtn,
+      toggleOfficialsBtn,
+      toggleSearchBtn,
+    ]
 
-        if (!isVisible) {
-          // Focus search input when showing
-          const searchInput = document.getElementById("official-search-input")
-          if (searchInput) {
-            setTimeout(() => searchInput.focus(), 100)
-          }
-        } else {
-          // Clear search input when hiding
-          const searchInput = document.getElementById("official-search-input")
-          if (searchInput && searchInput.value) {
-            searchInput.value = ""
-            searchInput.dispatchEvent(new Event("input"))
-          }
-        }
+    // Helper to set one toggle active and deactivate others
+    const activateToggle = (activeBtn) => {
+      toggleButtons.forEach((btn) => {
+        if (btn)
+          btn.setAttribute("aria-pressed", (btn === activeBtn).toString())
       })
     }
 
-    // Officials view toggle
-    const toggleOfficialsBtn = document.getElementById("toggle-officials-view")
+    if (toggleCalendarBtn) {
+      toggleCalendarBtn.addEventListener("click", () => {
+        activateToggle(toggleCalendarBtn)
+        // Hide search row
+        if (searchRow) searchRow.classList.add("hidden")
+        // Clear search
+        const searchInput = document.getElementById("official-search-input")
+        if (searchInput && searchInput.value) {
+          searchInput.value = ""
+          searchInput.dispatchEvent(new Event("input"))
+        }
+        this.switchContentView("events")
+        this.setCalendarVisibility(true)
+      })
+    }
+
     if (toggleOfficialsBtn) {
       toggleOfficialsBtn.addEventListener("click", () => {
-        const isPressed =
-          toggleOfficialsBtn.getAttribute("aria-pressed") === "true"
-        toggleOfficialsBtn.setAttribute("aria-pressed", (!isPressed).toString())
-        this.switchContentView(isPressed ? "events" : "officials")
+        activateToggle(toggleOfficialsBtn)
+        // Hide search row
+        if (searchRow) searchRow.classList.add("hidden")
+        // Clear search
+        const searchInput = document.getElementById("official-search-input")
+        if (searchInput && searchInput.value) {
+          searchInput.value = ""
+          searchInput.dispatchEvent(new Event("input"))
+        }
+        this.switchContentView("officials")
+      })
+    }
+
+    if (toggleSearchBtn) {
+      toggleSearchBtn.addEventListener("click", () => {
+        activateToggle(toggleSearchBtn)
+        // Show search row
+        if (searchRow) searchRow.classList.remove("hidden")
+        // Show search results view (or events if no query yet)
+        this.switchContentView("search-results")
+        this.setCalendarVisibility(false)
+        // Focus search input
+        const searchInput = document.getElementById("official-search-input")
+        if (searchInput) {
+          setTimeout(() => searchInput.focus(), 100)
+        }
       })
     }
 
@@ -2336,22 +2401,63 @@ class NewTabApp {
     // Hide/show calendar weeks based on view type
     const calendarWeeks = document.getElementById("simplified-calendar")
     if (calendarWeeks) {
-      if (viewType === "officials") {
-        calendarWeeks.classList.add("hidden")
-      } else {
+      if (viewType === "events") {
         calendarWeeks.classList.remove("hidden")
+      } else {
+        calendarWeeks.classList.add("hidden")
       }
     }
 
-    // Update navigation buttons
-    document.querySelectorAll(".nav-btn-icon").forEach((btn) => {
-      btn.setAttribute("aria-pressed", "false")
+    // Update navigation toggle button states (only the 3 main toggles)
+    const viewToButtonId = {
+      events: "toggle-calendar-view",
+      officials: "toggle-officials-view",
+      "search-results": "toggle-search",
+    }
+
+    const toggleButtons = [
+      "toggle-calendar-view",
+      "toggle-officials-view",
+      "toggle-search",
+    ]
+    toggleButtons.forEach((btnId) => {
+      const btn = document.getElementById(btnId)
+      if (btn) {
+        btn.setAttribute(
+          "aria-pressed",
+          (btnId === viewToButtonId[viewType]).toString(),
+        )
+      }
     })
 
-    if (viewType === "officials") {
-      const officialsBtn = document.getElementById("toggle-officials-view")
-      if (officialsBtn) {
-        officialsBtn.setAttribute("aria-pressed", "true")
+    // Update settings button state
+    const settingsBtn = document.getElementById("sidebar-settings-btn")
+    if (settingsBtn) {
+      const isSettings = viewType === "settings-pane"
+      settingsBtn.setAttribute("aria-pressed", isSettings.toString())
+      settingsBtn.textContent = isSettings ? "✖" : "⚙️"
+      settingsBtn.title = isSettings ? "Close settings" : "Settings"
+      settingsBtn.setAttribute(
+        "aria-label",
+        isSettings ? "Close settings" : "Settings",
+      )
+    }
+
+    // Show/hide search row based on view type
+    const searchRow = document.getElementById("search-row")
+    if (searchRow) {
+      if (viewType === "search-results") {
+        searchRow.classList.remove("hidden")
+      } else {
+        searchRow.classList.add("hidden")
+      }
+    }
+
+    // Hide address section when not in settings
+    if (viewType !== "settings-pane") {
+      const addressSection = document.getElementById("address-section")
+      if (addressSection) {
+        addressSection.classList.add("hidden")
       }
     }
   }
@@ -2380,7 +2486,7 @@ class NewTabApp {
 
       const message = document.createElement("p")
       message.textContent = `No events scheduled for ${this.formatDisplayDate(
-        dateStr
+        dateStr,
       )}`
       noEventsDiv.appendChild(message)
 
@@ -2417,13 +2523,22 @@ class NewTabApp {
   }
 
   formatDisplayDate(dateStr) {
-    const date = new Date(dateStr)
+    const date = this.parseLocalDate(dateStr)
+    if (!date || Number.isNaN(date.getTime())) return dateStr
     return date.toLocaleDateString("en-US", {
       weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric",
     })
+  }
+
+  // Helper function to parse YYYY-MM-DD string in local timezone to avoid UTC conversion issues
+  parseLocalDate(dateStr) {
+    const parts = dateStr.split("-")
+    if (parts.length !== 3) return null
+    const [year, month, day] = parts.map(Number)
+    return new Date(year, month - 1, day)
   }
 
   // Helper function to get consistent date string in local timezone (YYYY-MM-DD)
@@ -2448,7 +2563,7 @@ class NewTabApp {
           versionElement.textContent = `v${manifest.version}`
           versionElement.setAttribute(
             "aria-label",
-            `Application version ${manifest.version}`
+            `Application version ${manifest.version}`,
           )
           console.log(`Version updated to ${manifest.version}`)
         }
@@ -2471,6 +2586,7 @@ class NewTabApp {
       heading.textContent = data.name || "Meeting Details"
       if (subtitle) subtitle.textContent = data.body || ""
       content.innerHTML = this.renderEventDetail(data)
+      this.fetchEventDetailVideoUrl(data, content)
     } else if (type === "official") {
       heading.textContent = data.name || "Official Details"
       if (subtitle) subtitle.textContent = data.office || data.title || ""
@@ -2485,6 +2601,59 @@ class NewTabApp {
     if (overlay) {
       overlay.classList.add("hidden")
     }
+  }
+
+  fetchEventDetailVideoUrl(event, contentElement) {
+    // Only fetch if we're missing video/minutes and have enough info to query
+    if (event.videoUrl && event.minutesUrl) return
+    if (!event.rawEventId || !event.source) return
+
+    const client = event.source // "milwaukee" or "milwaukeecounty"
+    if (client !== "milwaukee" && client !== "milwaukeecounty") return
+
+    chrome.runtime.sendMessage(
+      { type: "legistar:getEventDetail", client, eventId: event.rawEventId },
+      (response) => {
+        if (chrome.runtime.lastError || !response || response.status !== "ok") {
+          return
+        }
+        const { videoUrl, minutesUrl } = response.data
+        const newLinks = []
+        if (videoUrl && !event.videoUrl) {
+          event.videoUrl = videoUrl
+          newLinks.push(
+            `<a href="${videoUrl}" target="_blank" rel="noopener noreferrer" class="event-link">🎬 Watch Video</a>`,
+          )
+        }
+        if (minutesUrl && !event.minutesUrl) {
+          event.minutesUrl = minutesUrl
+          newLinks.push(
+            `<a href="${minutesUrl}" target="_blank" rel="noopener noreferrer" class="event-link">📋 View Minutes</a>`,
+          )
+        }
+        if (!newLinks.length) return
+
+        // Try to append to existing resources section
+        const extraSlot = contentElement.querySelector(
+          "#detail-extra-resources",
+        )
+        if (extraSlot) {
+          extraSlot.innerHTML = newLinks.join("")
+          return
+        }
+
+        // If no resources section existed, fill the placeholder
+        const placeholder = contentElement.querySelector(
+          "#detail-resources-placeholder",
+        )
+        if (placeholder) {
+          placeholder.innerHTML = `
+            <h5>Resources</h5>
+            <p class="event-links">${newLinks.join("")}</p>
+          `
+        }
+      },
+    )
   }
 
   renderEventDetail(event) {
@@ -2520,6 +2689,8 @@ class NewTabApp {
       event.sourceLabel ||
       "Local Government"
 
+    const isNow = this.isEventHappeningNow(event)
+
     return `
       <div class="event-detail">
         <div class="event-header">
@@ -2536,10 +2707,12 @@ class NewTabApp {
           <div class="info-section">
             <h5>When</h5>
             <p class="event-date">${formatDate(startDate)}</p>
-            <p class="event-time">
-              ${formatTime(startDate)}${
-      endDate && endDate !== startDate ? ` - ${formatTime(endDate)}` : ""
-    }
+            <p class="event-time${isNow ? " is-now" : ""}">
+              ${isNow ? '<span class="now-badge">NOW</span> ' : ""}${formatTime(startDate)}${
+                endDate && endDate !== startDate
+                  ? ` - ${formatTime(endDate)}`
+                  : ""
+              }
             </p>
           </div>
 
@@ -2577,18 +2750,19 @@ class NewTabApp {
           }
 
           ${
-            event.agendaUrl
+            event.agendaUrl || event.minutesUrl || event.videoUrl
               ? `
             <div class="info-section">
               <h5>Resources</h5>
               <p class="event-links">
-                <a href="${event.agendaUrl}" target="_blank" rel="noopener noreferrer" class="event-link">
-                  📄 View Agenda
-                </a>
+                ${event.agendaUrl ? `<a href="${event.agendaUrl}" target="_blank" rel="noopener noreferrer" class="event-link">📄 View Agenda</a>` : ""}
+                ${event.minutesUrl ? `<a href="${event.minutesUrl}" target="_blank" rel="noopener noreferrer" class="event-link">📋 View Minutes</a>` : ""}
+                ${event.videoUrl ? `<a href="${event.videoUrl}" target="_blank" rel="noopener noreferrer" class="event-link">🎬 Watch Video</a>` : ""}
               </p>
+              <p class="event-links" id="detail-extra-resources"></p>
             </div>
           `
-              : ""
+              : `<div class="info-section" id="detail-resources-placeholder"></div>`
           }
 
           ${
@@ -2742,7 +2916,7 @@ class NewTabApp {
       // Phone numbers
       if (official.phones && official.phones.length > 0) {
         detailHTML += `<p><strong>📞 Phone:</strong> ${official.phones.join(
-          ", "
+          ", ",
         )}</p>`
       } else if (official.phone) {
         detailHTML += `<p><strong>📞 Phone:</strong> ${official.phone}</p>`
@@ -2806,7 +2980,7 @@ class NewTabApp {
             year: "numeric",
             month: "long",
             day: "numeric",
-          }
+          },
         )
         detailHTML += `<p><strong>Term Started:</strong> ${startDate}</p>`
       }
@@ -2960,10 +3134,10 @@ class NewTabApp {
 
     // Determine event sources
     const hasCityEvents = eventsOnDate.some(
-      (event) => event.source === "milwaukee"
+      (event) => event.source === "milwaukee",
     )
     const hasCountyEvents = eventsOnDate.some(
-      (event) => event.source === "milwaukeecounty"
+      (event) => event.source === "milwaukeecounty",
     )
 
     dayElement.classList.add("has-events")
@@ -2988,7 +3162,7 @@ class NewTabApp {
     // Clear search results containers
     const searchEventsContainer = document.getElementById("search-events-list")
     const searchOfficialsContainer = document.getElementById(
-      "search-officials-list"
+      "search-officials-list",
     )
 
     if (searchEventsContainer) {
@@ -2998,7 +3172,7 @@ class NewTabApp {
       searchOfficialsContainer.innerHTML = ""
     }
 
-    // Switch back to events view and show calendar
+    // Switch back to events/calendar view and show calendar
     this.switchContentView("events")
     this.setCalendarVisibility(true)
     this.closeOfficialDetail({ silent: true })
@@ -3011,7 +3185,7 @@ class NewTabApp {
     // Get search results containers
     const searchEventsContainer = document.getElementById("search-events-list")
     const searchOfficialsContainer = document.getElementById(
-      "search-officials-list"
+      "search-officials-list",
     )
 
     if (!searchEventsContainer || !searchOfficialsContainer) return
@@ -3057,7 +3231,7 @@ class NewTabApp {
           const element = this.createCompactOfficialElement(
             official,
             "comprehensive",
-            colorMap[official.level] || "var(--accent-color)"
+            colorMap[official.level] || "var(--accent-color)",
           )
           element.classList.add("search-official-item")
 
@@ -3091,16 +3265,16 @@ class NewTabApp {
     ]
     if (meetings.length) {
       announceParts.push(
-        `${meetings.length} meeting${meetings.length === 1 ? "" : "s"}`
+        `${meetings.length} meeting${meetings.length === 1 ? "" : "s"}`,
       )
     }
     if (officials.length) {
       announceParts.push(
-        `${officials.length} official${officials.length === 1 ? "" : "s"}`
+        `${officials.length} official${officials.length === 1 ? "" : "s"}`,
       )
     }
     this.announceToScreenReader(
-      `${announceParts.join(", ")} found for ${query}`
+      `${announceParts.join(", ")} found for ${query}`,
     )
   }
 
@@ -3232,7 +3406,7 @@ class NewTabApp {
       let targetIndex = -1
       if (targetItem) {
         targetIndex = this.favorites.findIndex(
-          (f) => f.id === targetItem.dataset.favoriteId
+          (f) => f.id === targetItem.dataset.favoriteId,
         )
       } else {
         // Dropped in empty area => move to end
@@ -3259,7 +3433,7 @@ class NewTabApp {
 
       // Screen reader announcement
       this.announceToScreenReader(
-        `${moved.name} moved to position ${insertionIndex + 1}`
+        `${moved.name} moved to position ${insertionIndex + 1}`,
       )
     })
 
@@ -3352,7 +3526,7 @@ class NewTabApp {
     if (modal.dataset.editingId) {
       // Edit existing favorite
       const index = this.favorites.findIndex(
-        (f) => f.id === modal.dataset.editingId
+        (f) => f.id === modal.dataset.editingId,
       )
       if (index !== -1) {
         this.favorites[index] = {
@@ -3435,7 +3609,7 @@ class NewTabApp {
   // Accessibility Methods
   setupModalKeyboardTrap(modal) {
     const focusableElements = modal.querySelectorAll(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
     )
     this.modalFocusableElements = Array.from(focusableElements)
     this.firstFocusableElement = this.modalFocusableElements[0]
@@ -3535,6 +3709,330 @@ class NewTabApp {
     this.announceToScreenReader("Application settings dialog opened")
   }
 
+  // Settings Pane Management
+  populateSettingsPane() {
+    // Sync address
+    const paneAddressInput = document.getElementById("pane-address-input")
+    if (paneAddressInput) {
+      paneAddressInput.value = this.currentAddress || this.lastAddress || ""
+    }
+
+    // Show current address if set
+    const currentAddressEl = document.getElementById("pane-current-address")
+    const addr = this.currentAddress || this.lastAddress || ""
+    if (currentAddressEl) {
+      if (addr) {
+        currentAddressEl.textContent = `Current: ${addr}`
+        currentAddressEl.classList.add("visible")
+      } else {
+        currentAddressEl.classList.remove("visible")
+      }
+    }
+
+    // Sync checkboxes
+    const showSidebar = document.getElementById("pane-show-sidebar")
+    if (showSidebar) showSidebar.checked = this.settings.showSidebar
+
+    const autoLocation = document.getElementById("pane-auto-location")
+    if (autoLocation) autoLocation.checked = this.settings.autoLocation
+
+    // Sync theme button
+    this.updatePaneThemeButton()
+
+    // Version info
+    const versionEl = document.getElementById("pane-version-info")
+    const versionIndicator = document.querySelector(".version-indicator")
+    if (versionEl && versionIndicator) {
+      versionEl.textContent = versionIndicator.textContent
+    }
+  }
+
+  updatePaneThemeButton() {
+    const themeBtn = document.getElementById("pane-theme-toggle")
+    if (themeBtn) {
+      themeBtn.textContent =
+        this.settings.theme === "dark" ? "☀️ Light" : "🌙 Dark"
+    }
+  }
+
+  setupSettingsPaneEvents() {
+    // Address update
+    const paneUpdateBtn = document.getElementById("pane-update-address")
+    if (paneUpdateBtn) {
+      paneUpdateBtn.addEventListener("click", async () => {
+        const input = document.getElementById("pane-address-input")
+        if (!input) return
+        const addr = input.value.trim()
+        if (!addr) {
+          this.showPaneStatus(
+            "pane-address-status",
+            "error",
+            "Please enter an address.",
+          )
+          return
+        }
+
+        // Sync to main input
+        const mainInput = document.getElementById("address-input")
+        if (mainInput) mainInput.value = addr
+
+        // Disable buttons during load
+        this.setPaneButtonsDisabled(true)
+        this.showPaneStatus(
+          "pane-address-status",
+          "loading",
+          "Loading representatives...",
+        )
+
+        try {
+          this.currentAddress = addr
+          await this.loadCivicData(addr)
+
+          // Update pane display
+          const currentAddressEl = document.getElementById(
+            "pane-current-address",
+          )
+          if (currentAddressEl) {
+            currentAddressEl.textContent = `Current: ${addr}`
+            currentAddressEl.classList.add("visible")
+          }
+
+          this.showPaneStatus(
+            "pane-address-status",
+            "success",
+            "Representatives loaded successfully.",
+          )
+          this.autoClearPaneStatus("pane-address-status", 4000)
+        } catch (error) {
+          console.error("Settings pane address update failed:", error)
+          this.showPaneStatus(
+            "pane-address-status",
+            "error",
+            `Failed to load: ${error.message || "Unknown error"}`,
+          )
+        } finally {
+          this.setPaneButtonsDisabled(false)
+        }
+      })
+    }
+
+    // Address enter key
+    const paneAddressInput = document.getElementById("pane-address-input")
+    if (paneAddressInput) {
+      paneAddressInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault()
+          const paneUpdateBtn = document.getElementById("pane-update-address")
+          if (paneUpdateBtn) paneUpdateBtn.click()
+        }
+      })
+    }
+
+    // Locate button
+    const paneLocateBtn = document.getElementById("pane-locate-btn")
+    if (paneLocateBtn) {
+      paneLocateBtn.addEventListener("click", async () => {
+        this.setPaneButtonsDisabled(true)
+        this.showPaneStatus(
+          "pane-address-status",
+          "loading",
+          "Detecting your location...",
+        )
+
+        try {
+          await this.getPaneUserLocation()
+        } catch (error) {
+          this.showPaneStatus(
+            "pane-address-status",
+            "error",
+            error.message || "Could not detect location.",
+          )
+          this.setPaneButtonsDisabled(false)
+        }
+      })
+    }
+
+    // Refresh button
+    const paneRefreshBtn = document.getElementById("pane-refresh-btn")
+    if (paneRefreshBtn) {
+      paneRefreshBtn.addEventListener("click", async () => {
+        this.setPaneButtonsDisabled(true)
+        this.showPaneStatus(
+          "pane-address-status",
+          "loading",
+          "Refreshing calendar and representatives...",
+        )
+
+        try {
+          await this.loadCalendarEvents({ forceRefresh: true })
+          if (this.currentAddress) {
+            await this.loadCivicData(this.currentAddress, true)
+          }
+          this.showPaneStatus(
+            "pane-address-status",
+            "success",
+            "Data refreshed successfully.",
+          )
+          this.autoClearPaneStatus("pane-address-status", 4000)
+        } catch (error) {
+          console.error("Settings pane refresh failed:", error)
+          this.showPaneStatus(
+            "pane-address-status",
+            "error",
+            `Refresh failed: ${error.message || "Unknown error"}`,
+          )
+        } finally {
+          this.setPaneButtonsDisabled(false)
+        }
+      })
+    }
+
+    // Show sidebar checkbox
+    const paneShowSidebar = document.getElementById("pane-show-sidebar")
+    if (paneShowSidebar) {
+      paneShowSidebar.addEventListener("change", (e) => {
+        this.settings.showSidebar = e.target.checked
+        // Sync with main settings checkbox
+        const mainCheckbox = document.getElementById("show-sidebar")
+        if (mainCheckbox) mainCheckbox.checked = e.target.checked
+        this.updateSidebarVisibility()
+        this.saveSettings()
+      })
+    }
+
+    // Auto location checkbox
+    const paneAutoLocation = document.getElementById("pane-auto-location")
+    if (paneAutoLocation) {
+      paneAutoLocation.addEventListener("change", (e) => {
+        this.settings.autoLocation = e.target.checked
+        // Sync with main settings checkbox
+        const mainCheckbox = document.getElementById("auto-location")
+        if (mainCheckbox) mainCheckbox.checked = e.target.checked
+        this.saveSettings()
+      })
+    }
+
+    // Theme toggle
+    const paneThemeToggle = document.getElementById("pane-theme-toggle")
+    if (paneThemeToggle) {
+      paneThemeToggle.addEventListener("click", (e) => {
+        e.preventDefault()
+        const newTheme = this.settings.theme === "light" ? "dark" : "light"
+        this.settings.theme = newTheme
+        this.applyTheme()
+        this.saveSettings()
+        this.updatePaneThemeButton()
+      })
+    }
+  }
+
+  // --- Settings Pane Status Helpers ---
+
+  showPaneStatus(elementId, type, message) {
+    const el = document.getElementById(elementId)
+    if (!el) return
+    const icon = el.querySelector(".status-icon")
+    const text = el.querySelector(".status-text")
+
+    el.classList.remove("hidden", "loading", "success", "error")
+    el.classList.add(type)
+
+    const icons = { loading: "⏳", success: "✅", error: "❌" }
+    if (icon) icon.textContent = icons[type] || ""
+    if (text) text.textContent = message
+
+    this.announceToScreenReader(message)
+  }
+
+  hidePaneStatus(elementId) {
+    const el = document.getElementById(elementId)
+    if (!el) return
+    el.classList.remove("loading", "success", "error")
+    el.classList.add("hidden")
+  }
+
+  autoClearPaneStatus(elementId, delay = 4000) {
+    if (this._paneStatusTimer) clearTimeout(this._paneStatusTimer)
+    this._paneStatusTimer = setTimeout(() => {
+      this.hidePaneStatus(elementId)
+    }, delay)
+  }
+
+  setPaneButtonsDisabled(disabled) {
+    const ids = ["pane-update-address", "pane-refresh-btn", "pane-locate-btn"]
+    ids.forEach((id) => {
+      const btn = document.getElementById(id)
+      if (btn) btn.disabled = disabled
+    })
+    const input = document.getElementById("pane-address-input")
+    if (input) input.disabled = disabled
+  }
+
+  getPaneUserLocation() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("Geolocation is not supported by this browser."))
+        return
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords
+          try {
+            const response = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
+            )
+            const data = await response.json()
+            const address = `${data.locality}, ${data.principalSubdivision}, ${data.countryCode}`
+
+            // Fill both inputs
+            const paneInput = document.getElementById("pane-address-input")
+            const mainInput = document.getElementById("address-input")
+            if (paneInput) paneInput.value = address
+            if (mainInput) mainInput.value = address
+
+            this.currentAddress = address
+            this.showPaneStatus(
+              "pane-address-status",
+              "loading",
+              `Located: ${address}. Loading representatives...`,
+            )
+
+            await this.loadCivicData(address)
+
+            const currentAddressEl = document.getElementById(
+              "pane-current-address",
+            )
+            if (currentAddressEl) {
+              currentAddressEl.textContent = `Current: ${address}`
+              currentAddressEl.classList.add("visible")
+            }
+
+            this.showPaneStatus(
+              "pane-address-status",
+              "success",
+              `Location set to ${address}. Representatives loaded.`,
+            )
+            this.autoClearPaneStatus("pane-address-status", 4000)
+            this.setPaneButtonsDisabled(false)
+            resolve()
+          } catch (error) {
+            this.setPaneButtonsDisabled(false)
+            reject(new Error("Could not determine address from location."))
+          }
+        },
+        (error) => {
+          this.setPaneButtonsDisabled(false)
+          reject(
+            new Error(
+              "Could not access your location. Please check permissions.",
+            ),
+          )
+        },
+      )
+    })
+  }
+
   // Address and Location Management
   async updateAddress() {
     const addressInput = document.getElementById("address-input")
@@ -3560,7 +4058,7 @@ class NewTabApp {
         const { latitude, longitude } = position.coords
         try {
           const response = await fetch(
-            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
           )
           const data = await response.json()
 
@@ -3576,7 +4074,7 @@ class NewTabApp {
       (error) => {
         console.error("Error getting location:", error)
         alert("Could not access your location")
-      }
+      },
     )
   }
 
@@ -3602,11 +4100,11 @@ class NewTabApp {
 
         if (response.status === 400) {
           throw new Error(
-            "Invalid address format. Please try a more specific address."
+            "Invalid address format. Please try a more specific address.",
           )
         } else if (response.status === 403) {
           throw new Error(
-            "Invalid API key. Please check your Google Cloud Console."
+            "Invalid API key. Please check your Google Cloud Console.",
           )
         } else {
           throw new Error(`Address validation failed: ${response.status}`)
@@ -3718,7 +4216,7 @@ class NewTabApp {
       for (const member of allMembers) {
         const score = this.jaroWinkler(
           official.name,
-          `${member.first_name} ${member.last_name}`
+          `${member.first_name} ${member.last_name}`,
         )
         if (score > bestScore) {
           bestScore = score
@@ -3732,7 +4230,7 @@ class NewTabApp {
         official.details.sponsored_legislation =
           await this.propublicaApi.getSponsoredLegislation(bestMatch.id)
         official.details.recent_votes = await this.propublicaApi.getRecentVotes(
-          bestMatch.id
+          bestMatch.id,
         )
       }
     }
@@ -3741,7 +4239,7 @@ class NewTabApp {
   async loadMilwaukeeData(address) {
     if (!address || !this.milwaukeeApi.isAddressLikelyInMilwaukee(address)) {
       console.log(
-        "Address not likely in the Milwaukee area, skipping Milwaukee API"
+        "Address not likely in the Milwaukee area, skipping Milwaukee API",
       )
       return
     }
@@ -3860,9 +4358,9 @@ class NewTabApp {
               !(
                 official.title.includes("U.S. Senator") &&
                 official.responsibilities.some((resp) =>
-                  resp.includes("Wisconsin")
+                  resp.includes("Wisconsin"),
                 )
-              )
+              ),
           ),
       },
     }
@@ -3871,7 +4369,7 @@ class NewTabApp {
     if (this.milwaukeeData && this.milwaukeeData.representatives.length) {
       console.log(
         "Milwaukee representatives found:",
-        this.milwaukeeData.representatives
+        this.milwaukeeData.representatives,
       )
       this.milwaukeeData.representatives.forEach((rep) => {
         console.log(`Processing rep: ${rep.name} in division: ${rep.division}`)
@@ -3902,7 +4400,7 @@ class NewTabApp {
       .filter(
         (official) =>
           official.title.includes("U.S. Senator") &&
-          official.responsibilities.some((resp) => resp.includes("Wisconsin"))
+          official.responsibilities.some((resp) => resp.includes("Wisconsin")),
       )
 
     wisconsinSenators.forEach((senator) => {
@@ -3922,11 +4420,11 @@ class NewTabApp {
     // Debug: Show what's in each division
     Object.entries(divisionStructure).forEach(([division, data]) => {
       console.log(
-        `${division}: ${data.localReps.length} local reps, ${data.allOfficials.length} all officials`
+        `${division}: ${data.localReps.length} local reps, ${data.allOfficials.length} all officials`,
       )
       if (data.localReps.length > 0) {
         console.log(
-          `  Local reps: ${data.localReps.map((rep) => rep.name).join(", ")}`
+          `  Local reps: ${data.localReps.map((rep) => rep.name).join(", ")}`,
         )
       }
     })
@@ -3956,7 +4454,7 @@ class NewTabApp {
           const officialElement = this.createCompactOfficialElement(
             rep,
             "local",
-            data.color
+            data.color,
           )
           divisionSection.appendChild(officialElement)
         })
@@ -3973,7 +4471,7 @@ class NewTabApp {
           const officialElement = this.createCompactOfficialElement(
             official,
             "comprehensive",
-            data.color
+            data.color,
           )
           divisionSection.appendChild(officialElement)
         })
@@ -3989,11 +4487,11 @@ class NewTabApp {
       ? this.milwaukeeData.representatives.length
       : 0
     const totalAllOfficials = Object.values(
-      this.governmentOfficials.getAllOfficials()
+      this.governmentOfficials.getAllOfficials(),
     ).reduce((sum, officials) => sum + officials.length, 0)
 
     this.announceToScreenReader(
-      `Loaded ${totalLocalReps} local representatives and ${totalAllOfficials} government officials`
+      `Loaded ${totalLocalReps} local representatives and ${totalAllOfficials} government officials`,
     )
 
     // Hide address input and show compact display
@@ -4036,7 +4534,7 @@ class NewTabApp {
           ? `District ${districtValue}`
           : districtValue
         const alreadyIncludesDistrict = parts.some((part) =>
-          part.toLowerCase().includes(String(districtValue).toLowerCase())
+          part.toLowerCase().includes(String(districtValue).toLowerCase()),
         )
         if (!alreadyIncludesDistrict) {
           addPart(districtLabel)
@@ -4060,7 +4558,7 @@ class NewTabApp {
         ? `District ${districtValue}`
         : districtValue
       const alreadyIncludesDistrict = parts.some((part) =>
-        part.toLowerCase().includes(String(districtValue).toLowerCase())
+        part.toLowerCase().includes(String(districtValue).toLowerCase()),
       )
       if (!alreadyIncludesDistrict) {
         addPart(districtLabel)
@@ -4109,7 +4607,7 @@ class NewTabApp {
       }
       if (normalizedName) {
         return collection.find(
-          (member) => normalizeName(member.name) === normalizedName
+          (member) => normalizeName(member.name) === normalizedName,
         )
       }
       return null
@@ -4184,7 +4682,7 @@ class NewTabApp {
     container,
     responsibilities,
     themeColor,
-    options = {}
+    options = {},
   ) {
     if (!Array.isArray(responsibilities) || responsibilities.length === 0)
       return
@@ -4264,7 +4762,7 @@ class NewTabApp {
       "aria-label",
       `View details for ${
         detailModel.name || detailModel.title || "representative"
-      }`
+      }`,
     )
 
     const nameContainer = document.createElement("div")
@@ -4443,7 +4941,7 @@ class NewTabApp {
     }
 
     this.announceToScreenReader(
-      `Showing details for ${detailModel.name || detailModel.title}`
+      `Showing details for ${detailModel.name || detailModel.title}`,
     )
   }
 
@@ -4522,7 +5020,7 @@ class NewTabApp {
         parent.classList.toggle("collapsed", !newState ? true : false)
       }
       this.announceToScreenReader(
-        `${header.textContent} section ${newState ? "expanded" : "collapsed"}`
+        `${header.textContent} section ${newState ? "expanded" : "collapsed"}`,
       )
     }
 
@@ -4544,7 +5042,7 @@ class NewTabApp {
       panel,
       "Office Location",
       rep.officeLocation,
-      "office-location"
+      "office-location",
     )
 
     if (rep.population) {
@@ -4575,8 +5073,8 @@ class NewTabApp {
       rep.type === "alderperson"
         ? "District Website"
         : rep.type === "supervisor"
-        ? "County Website"
-        : "Website"
+          ? "County Website"
+          : "Website"
 
     const websiteLink = createContactLink(rep.website, websiteLabel)
     if (websiteLink) {
@@ -4585,7 +5083,7 @@ class NewTabApp {
 
     const emailLink = createContactLink(
       rep.email ? `mailto:${rep.email}` : null,
-      "Email"
+      "Email",
     )
     if (emailLink) {
       contactContainer.appendChild(emailLink)
@@ -4593,7 +5091,7 @@ class NewTabApp {
 
     const phoneLink = createContactLink(
       rep.phone ? `tel:${rep.phone}` : null,
-      "Phone"
+      "Phone",
     )
     if (phoneLink) {
       contactContainer.appendChild(phoneLink)
@@ -4607,15 +5105,15 @@ class NewTabApp {
       rep.type === "alderperson"
         ? "Common Council Committees"
         : rep.type === "supervisor"
-        ? "County Committee Service"
-        : "Key Responsibilities"
+          ? "County Committee Service"
+          : "Key Responsibilities"
 
     const expandedLabel =
       rep.type === "alderperson"
         ? "Hide Committees"
         : rep.type === "supervisor"
-        ? "Hide Committee Service"
-        : "Hide Responsibilities"
+          ? "Hide Committee Service"
+          : "Hide Responsibilities"
 
     this.appendResponsibilitiesSection(
       panel,
@@ -4625,7 +5123,7 @@ class NewTabApp {
         label: responsibilitiesLabel,
         collapsed: false,
         expandedLabel,
-      }
+      },
     )
   }
 
@@ -4637,7 +5135,7 @@ class NewTabApp {
       panel,
       "Department",
       official.department,
-      "department"
+      "department",
     )
     this.appendDetailItem(panel, "District", official.district, "district")
 
@@ -4646,8 +5144,8 @@ class NewTabApp {
         official.term_start && official.term_end
           ? `${official.term_start} - ${official.term_end}`
           : official.term_start
-          ? `Since ${official.term_start}`
-          : official.term_end
+            ? `Since ${official.term_start}`
+            : official.term_end
       this.appendDetailItem(panel, "Term", termLabel, "term")
     }
 
@@ -4658,7 +5156,7 @@ class NewTabApp {
       {
         limit: 3,
         expandedLabel: "Hide Responsibilities",
-      }
+      },
     )
 
     // Contact links
@@ -4690,7 +5188,7 @@ class NewTabApp {
 
       const emailLink = createContactLink(
         official.contact.email ? `mailto:${official.contact.email}` : null,
-        "Email"
+        "Email",
       )
       if (emailLink) {
         contactContainer.appendChild(emailLink)
@@ -4698,7 +5196,7 @@ class NewTabApp {
 
       const phoneLink = createContactLink(
         official.contact.phone ? `tel:${official.contact.phone}` : null,
-        "Phone"
+        "Phone",
       )
       if (phoneLink) {
         contactContainer.appendChild(phoneLink)
@@ -4713,7 +5211,7 @@ class NewTabApp {
           panel,
           "Office",
           official.contact.office,
-          "office-address"
+          "office-address",
         )
       }
     }
@@ -4730,8 +5228,8 @@ class NewTabApp {
       typeof this.currentAddress === "string" && this.currentAddress.trim()
         ? this.currentAddress
         : typeof this.lastAddress === "string"
-        ? this.lastAddress
-        : ""
+          ? this.lastAddress
+          : ""
 
     if (currentAddressText && addressValue) {
       currentAddressText.textContent = addressValue
@@ -4760,7 +5258,6 @@ class NewTabApp {
 
     // No longer editing
     this.editingAddress = false
-    this.updateEditButtonState(false)
   }
 
   showAddressInput() {
@@ -4781,7 +5278,6 @@ class NewTabApp {
 
     // Entering edit mode
     this.editingAddress = true
-    this.updateEditButtonState(true)
 
     // Show location pin button when no address is set or when editing
     if (locateBtn) {
@@ -4799,16 +5295,6 @@ class NewTabApp {
         addressInput.select()
       }, 300) // Wait for animation to complete
     }
-  }
-
-  updateEditButtonState(isEditing) {
-    const btn = document.getElementById("edit-address-btn")
-    if (!btn) return
-    btn.setAttribute("aria-pressed", isEditing.toString())
-    const label = isEditing ? "Hide address input" : "Set location"
-    btn.textContent = isEditing ? "✖" : "📍"
-    btn.setAttribute("title", label)
-    btn.setAttribute("aria-label", label)
   }
 
   // Method to show locate button when no address is set
@@ -5010,11 +5496,11 @@ class NewTabApp {
     element.setAttribute("role", "listitem")
     element.setAttribute(
       "aria-labelledby",
-      `official-name-${rep.name.replace(/\s+/g, "-").toLowerCase()}`
+      `official-name-${rep.name.replace(/\s+/g, "-").toLowerCase()}`,
     )
     element.setAttribute(
       "aria-describedby",
-      `official-office-${rep.name.replace(/\s+/g, "-").toLowerCase()}`
+      `official-office-${rep.name.replace(/\s+/g, "-").toLowerCase()}`,
     )
 
     const info = document.createElement("div")
@@ -5067,7 +5553,7 @@ class NewTabApp {
       websiteLink.style.marginRight = "0.5rem"
       websiteLink.setAttribute(
         "aria-label",
-        `Visit ${rep.name}'s official website`
+        `Visit ${rep.name}'s official website`,
       )
       links.appendChild(websiteLink)
     }
@@ -5235,14 +5721,57 @@ class NewTabApp {
 
   async testMilwaukeeApi() {
     console.log("Testing Milwaukee Area API and Government Officials...")
+
+    // Show modal immediately with spinner
+    const modal = document.getElementById("test-modal")
+    const container = document.getElementById("test-results-container")
+    container.innerHTML = `
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Running tests…</div>
+      </div>
+    `
+    modal.classList.remove("hidden")
+
+    // Close button handler
+    const closeBtn = document.getElementById("close-test-modal")
+    closeBtn.onclick = () => modal.classList.add("hidden")
+
+    const results = []
+
+    const renderResults = (loading = false) => {
+      const html = results
+        .map(
+          (r) => `
+          <div class="test-result-item">
+            <span class="test-result-icon">${r.icon}</span>
+            <div class="test-result-body">
+              <div class="test-result-title">${r.title}</div>
+              <div class="test-result-detail">${r.detail}</div>
+            </div>
+          </div>`,
+        )
+        .join("")
+
+      const spinner = loading
+        ? `<div class="test-result-item pending">
+            <div class="loading-spinner"></div>
+            <div class="test-result-body">
+              <div class="test-result-title">Running next test…</div>
+            </div>
+          </div>`
+        : ""
+
+      container.innerHTML = html + spinner
+    }
+
+    // Test 1: Government Officials data
     try {
-      // Test Government Officials data first
       const allOfficials = this.governmentOfficials.getAllOfficials()
       const totalOfficials = Object.values(allOfficials).reduce(
         (sum, officials) => sum + officials.length,
-        0
+        0,
       )
-
       console.log("✅ Government Officials loaded!", {
         city: allOfficials.city.length,
         county: allOfficials.county.length,
@@ -5250,39 +5779,162 @@ class NewTabApp {
         federal: allOfficials.federal.length,
         total: totalOfficials,
       })
+      results.push({
+        icon: "✅",
+        title: `Government Officials: ${totalOfficials} total`,
+        detail: `Federal: ${allOfficials.federal.length} · State: ${allOfficials.state.length} · County: ${allOfficials.county.length} · City: ${allOfficials.city.length}`,
+      })
+    } catch (error) {
+      console.error("Government Officials test failed:", error)
+      results.push({
+        icon: "❌",
+        title: "Government Officials",
+        detail: error.message,
+      })
+    }
+    renderResults(true)
 
-      // Test Milwaukee API
-      const testAddress = "Milwaukee, WI"
+    // Small delay so the UI can paint
+    await new Promise((r) => setTimeout(r, 50))
+
+    // Test 2: Milwaukee API
+    const testAddress = "Milwaukee, WI"
+    try {
       console.log("Testing Milwaukee API with address:", testAddress)
-
-      const milwaukeeData = await this.milwaukeeApi.getRepresentatives(
-        testAddress
-      )
+      const milwaukeeData =
+        await this.milwaukeeApi.getRepresentatives(testAddress)
 
       if (milwaukeeData && milwaukeeData.isInMilwaukeeCounty) {
         console.log("✅ Milwaukee API works! Data:", milwaukeeData)
-        alert(
-          `🎉 Extension v2.1.0 Working!\n\n✅ Government Officials: ${totalOfficials} total\n• Federal: ${
-            allOfficials.federal.length
-          }\n• State: ${allOfficials.state.length}\n• County: ${
-            allOfficials.county.length
-          }\n• City: ${allOfficials.city.length}\n\n✅ Milwaukee API: ${
-            milwaukeeData.representatives.length
-          } local reps\n${milwaukeeData.representatives
-            .map((rep) => `• ${rep.name} (${rep.type})`)
-            .join(
-              "\n"
-            )}\n\nExtension v2.1.0 ready with comprehensive government officials!`
-        )
+        const repList = milwaukeeData.representatives
+          .map((rep) => `${rep.name} (${rep.type})`)
+          .join(", ")
+        results.push({
+          icon: "✅",
+          title: `Milwaukee API: ${milwaukeeData.representatives.length} local reps`,
+          detail: repList,
+        })
       } else {
-        alert(
-          `✅ Government Officials Working!\n\nLoaded ${totalOfficials} comprehensive government officials:\n• Federal: ${allOfficials.federal.length}\n• State: ${allOfficials.state.length}\n• County: ${allOfficials.county.length}\n• City: ${allOfficials.city.length}\n\n❌ Milwaukee API: No local data\n\nExtension v2.1.0 ready!`
-        )
+        results.push({
+          icon: "⚠️",
+          title: "Milwaukee API",
+          detail: "No local data returned",
+        })
       }
     } catch (error) {
-      console.error("Test failed:", error)
-      alert(`❌ Test Failed\n${error.message}\n\nExtension v2.1.0`)
+      console.error("Milwaukee API test failed:", error)
+      results.push({
+        icon: "❌",
+        title: "Milwaukee API",
+        detail: error.message,
+      })
     }
+    renderResults(true)
+
+    // Small delay so the UI can paint
+    await new Promise((r) => setTimeout(r, 50))
+
+    // Test 3: City of Milwaukee Legistar Events API
+    try {
+      const cityUrl = this.buildLegistarTestUrl("milwaukee")
+      console.log("Testing City Legistar API:", cityUrl)
+      const cityResp = await fetch(cityUrl)
+      if (!cityResp.ok) {
+        throw new Error(`HTTP ${cityResp.status} ${cityResp.statusText}`)
+      }
+      const cityData = await cityResp.json()
+      const cityCount = Array.isArray(cityData) ? cityData.length : 0
+      console.log("✅ City Legistar API works!", { events: cityCount })
+      results.push({
+        icon: "✅",
+        title: `City Events API: ${cityCount} events`,
+        detail:
+          cityCount > 0
+            ? cityData
+                .slice(0, 3)
+                .map((e) => e.EventBodyName || e.EventName || "Meeting")
+                .join(", ") + (cityCount > 3 ? ` … +${cityCount - 3} more` : "")
+            : "No upcoming events found",
+      })
+    } catch (error) {
+      console.error("City Legistar API test failed:", error)
+      results.push({
+        icon: "❌",
+        title: "City Events API",
+        detail: error.message,
+      })
+    }
+    renderResults(true)
+
+    // Small delay so the UI can paint
+    await new Promise((r) => setTimeout(r, 50))
+
+    // Test 4: Milwaukee County Legistar Events API
+    try {
+      const countyUrl = this.buildLegistarTestUrl("milwaukeecounty")
+      console.log("Testing County Legistar API:", countyUrl)
+      const countyResp = await fetch(countyUrl)
+      if (!countyResp.ok) {
+        throw new Error(`HTTP ${countyResp.status} ${countyResp.statusText}`)
+      }
+      const countyData = await countyResp.json()
+      const countyCount = Array.isArray(countyData) ? countyData.length : 0
+      console.log("✅ County Legistar API works!", { events: countyCount })
+      results.push({
+        icon: "✅",
+        title: `County Events API: ${countyCount} events`,
+        detail:
+          countyCount > 0
+            ? countyData
+                .slice(0, 3)
+                .map((e) => e.EventBodyName || e.EventName || "Meeting")
+                .join(", ") +
+              (countyCount > 3 ? ` … +${countyCount - 3} more` : "")
+            : "No upcoming events found",
+      })
+    } catch (error) {
+      console.error("County Legistar API test failed:", error)
+      results.push({
+        icon: "❌",
+        title: "County Events API",
+        detail: error.message,
+      })
+    }
+    renderResults(false)
+
+    // Final summary
+    const manifestVersion =
+      typeof chrome !== "undefined" && chrome.runtime?.getManifest
+        ? chrome.runtime.getManifest().version
+        : "unknown"
+    const passCount = results.filter((r) => r.icon === "✅").length
+    results.push({
+      icon: "🧪",
+      title: `Done — ${passCount}/${results.length} passed`,
+      detail: `Extension v${manifestVersion}`,
+    })
+    renderResults(false)
+  }
+
+  /**
+   * Build a Legistar events URL for testing a specific client.
+   * Mirrors the logic in background.js LegistarApiClient.
+   */
+  buildLegistarTestUrl(client) {
+    const today = new Date()
+    const currentDay = today.getDay()
+    const daysToLastMonday = currentDay === 0 ? 6 : currentDay - 1
+    const daysToSubtract = daysToLastMonday + 7
+    const lookback = new Date(today)
+    lookback.setDate(today.getDate() - daysToSubtract)
+    lookback.setHours(0, 0, 0, 0)
+    const pad = (v) => String(v).padStart(2, "0")
+    const formatted = `${lookback.getFullYear()}-${pad(lookback.getMonth() + 1)}-${pad(lookback.getDate())}`
+    const params = new URLSearchParams()
+    params.set("$filter", `EventDate ge datetime'${formatted}'`)
+    params.set("$orderby", "EventDate asc")
+    params.set("$top", "200")
+    return `https://webapi.legistar.com/v1/${client}/Events?${params.toString()}`
   }
 
   async testApiConnection() {
@@ -5299,7 +5951,7 @@ class NewTabApp {
         const electionsError = await electionsResponse.text()
         console.log("Elections API error:", electionsError)
         alert(
-          `❌ Elections API Error: ${electionsResponse.status}\nCheck console for details.`
+          `❌ Elections API Error: ${electionsResponse.status}\nCheck console for details.`,
         )
         return
       }
@@ -5326,7 +5978,7 @@ class NewTabApp {
         const divError = await divResponse.text()
         console.log("Address validation error:", divError)
         alert(
-          `❌ Address Validation API Error: ${divResponse.status}\nCheck console for details.`
+          `❌ Address Validation API Error: ${divResponse.status}\nCheck console for details.`,
         )
         return
       }
@@ -5358,13 +6010,13 @@ class NewTabApp {
         const repData = await repResponse.json()
         console.log("✅ Representatives API works! Data:", repData)
         alert(
-          "🎉 All APIs Working!\n✅ Elections API\n✅ Address Validation API\n✅ Representatives API\n\nCheck console for detailed logs."
+          "🎉 All APIs Working!\n✅ Elections API\n✅ Address Validation API\n✅ Representatives API\n\nCheck console for detailed logs.",
         )
       } else {
         const repError = await repResponse.text()
         console.log("Representatives API error:", repError)
         alert(
-          `❌ Representatives API Error: ${repResponse.status}\nElections and Address validation work, but Representatives API failed.\nCheck console for details.`
+          `❌ Representatives API Error: ${repResponse.status}\nElections and Address validation work, but Representatives API failed.\nCheck console for details.`,
         )
       }
     } catch (error) {
@@ -5374,7 +6026,7 @@ class NewTabApp {
   }
 
   renderCivicDataError(
-    message = "Unable to load government information. Please try again later."
+    message = "Unable to load government information. Please try again later.",
   ) {
     const container = document.getElementById("officials-list")
     container.innerHTML = `

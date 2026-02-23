@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Milwaukee Government Representatives & Officials",
-    "version": "2.4.0",
+    "version": "2.5.0",
     "description": "Basic New tab page with Milwaukee area government reps. Enter your address to find your specific elected officials.",
     "chrome_url_overrides": {
         "newtab": "index.html"
