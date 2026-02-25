@@ -4,20 +4,27 @@ A Chrome extension that replaces your new tab page with a comprehensive interfac
 
 Perfect for Milwaukee area residents who want to stay engaged with local democracy and easily contact their elected officials, plus get comprehensive information about all government representatives.
 
-## 🌟 What's New in v2.1.0
+## 🌟 What's New in v2.5.0
 
-- **🏛️ Comprehensive Government Officials**: Complete roster of all Milwaukee area government officials
-  - **Federal Government**: President, Vice President, Cabinet members, U.S. Senators
-  - **Wisconsin State Government**: Governor, Lt. Governor, Attorney General, State officials
-  - **Milwaukee County Government**: County Executive, Sheriff, District Attorney, Clerk, and more
-  - **City of Milwaukee Government**: Mayor, Common Council President, Police Chief, Fire Chief, and more
-- **📋 Detailed Official Information**: Each official includes:
-  - Full contact information (email, phone, office address)
-  - Key responsibilities and duties
-  - Term dates and party affiliation where applicable
-  - Direct links to official websites
-- **🎨 Enhanced UI**: Beautiful, organized display with collapsible sections
-- **📱 Responsive Design**: Works perfectly on all screen sizes
+- **🗓️ Calendar Date Timezone Fix**: Clicking a calendar day now shows the correct date and events regardless of your timezone
+  - Dates are parsed in local timezone, so users in Central Time (UTC-6) and other negative-offset zones no longer see events shifted to the previous day
+  - "No events" messages and selected-date labels both display the accurate weekday and date
+
+## ✨ What's New in v2.4.0
+
+- **📅 Government Meeting Calendar**: Live calendar showing upcoming meetings for City of Milwaukee and Milwaukee County
+  - Powered by the Legistar legislative management API
+  - Weekly calendar rows display the current week and upcoming weeks at a glance
+  - Click any day to filter events to that date
+  - Color-coded legend distinguishes City (blue) vs. County (amber) events
+  - Event detail view shows location, agenda links, minutes, and video recordings
+  - 30-minute refresh cache with 24-hour fallback for offline resilience
+- **🧭 Simplified Sidebar Navigation**: Redesigned sidebar with tab navigation
+  - **Calendar view** (default): scrollable list of upcoming government meetings
+  - **Officials view**: browse all officials at federal, state, county, and city levels
+  - **Search view**: collapsible search bar filters both meetings and officials in one place
+  - Full-page detail view for events and officials with a back button to return to the list
+- **🔍 Chrome Search API**: Web search now uses your browser's default search provider instead of always opening Google
 
 ## Features
 
@@ -26,7 +33,11 @@ Perfect for Milwaukee area residents who want to stay engaged with local democra
   - Milwaukee County Supervisor
   - Wisconsin State Assembly Representative & State Senator
   - U.S. Congressional Representative
-- **� Complete Government Roster**: Browse all officials at every level:
+- **📅 Government Meeting Calendar**: Upcoming City and County meetings via Legistar
+  - Weekly calendar view with day filtering
+  - Event details including agenda, minutes, video, and location
+  - Color-coded City (blue) and County (amber) events
+- **🗂️ Complete Government Roster**: Browse all officials at every level:
   - All federal cabinet members and key officials
   - All Wisconsin state constitutional officers and department heads
   - All Milwaukee County elected officials and department heads
@@ -35,7 +46,7 @@ Perfect for Milwaukee area residents who want to stay engaged with local democra
 - **🌐 Quick Access**: Direct links to official websites and contact information
 - **🔗 Favorite Sites**: Customizable grid of your favorite websites
 - **🌙 Dark Mode**: Toggle between light and dark themes
-- **🔍 Web Search**: Built-in search with multiple engine options (Google, Bing, DuckDuckGo, Startpage)
+- **🔍 Web Search**: Built-in search using your browser's default search provider
 - **♿ Accessibility**: Full screen reader support and keyboard navigation
 
 ## Installation
@@ -156,7 +167,11 @@ For issues or questions:
 
 ## Version History
 
-- **v2.1.0** (Latest): 🌟 **Comprehensive Government Officials** - Added complete roster of all government officials at federal, state, county, and city levels with detailed contact information, responsibilities, and enhanced UI
+- **v2.5.0** (Latest): 🗓️ **Calendar Timezone Fix** - Calendar dates now display correctly in all timezones; timezone-safe `parseLocalDate()` helper prevents off-by-one day errors in Central Time and other negative-offset locales
+- **v2.4.0**: 📅 **Government Meeting Calendar & Simplified UI** - Legistar-powered City and County meeting calendar with weekly view; redesigned sidebar with Calendar/Officials/Search tab navigation and full-page detail views
+- **v2.3.0**: 🔍 **Chrome Search API** - Web search now respects the user's default browser search provider instead of hard-coding Google
+- **v2.2.0**: 🔒 **Address Privacy** - Address display minimized to reduce over-the-shoulder PII exposure once location is set
+- **v2.1.0**: 🌟 **Comprehensive Government Officials** - Added complete roster of all government officials at federal, state, county, and city levels with detailed contact information, responsibilities, and enhanced UI
 - **v2.0.1**: Enhanced alderperson contact details, reversed representative display order (local to federal)
 - **v2.0.0**: Milwaukee focus, modern UI, dark mode, comprehensive representative coverage
 - **v1.0.0**: Initial release with Google Civic API integration
