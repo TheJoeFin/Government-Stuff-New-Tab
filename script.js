@@ -1936,6 +1936,20 @@ class NewTabApp {
       })
     }
 
+    // On narrow screens the sidebar becomes a bottom sheet with a
+    // backdrop; tapping the backdrop (not its content) closes it.
+    const civicSidebar = document.getElementById("civic-sidebar")
+    if (civicSidebar) {
+      civicSidebar.addEventListener("click", (e) => {
+        if (e.target === civicSidebar && window.innerWidth <= 1024) {
+          this.settings.showSidebar = false
+          this.updateSidebarVisibility()
+          this.updateSettingsUI()
+          this.saveSettings()
+        }
+      })
+    }
+
     // Add favorite
     const addFavorite = document.getElementById("add-favorite")
     if (addFavorite) {
