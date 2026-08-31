@@ -21,6 +21,7 @@
 </head>
 
 <body>
+    <div class="page-bg" aria-hidden="true"></div>
     <div class="container">
         <!-- Main content area for favorite sites -->
         <main class="main-content">
@@ -58,6 +59,8 @@
                         site</a>
                 </section>
             </div>
+
+            <p id="photo-credit" class="photo-credit"></p>
         </main>
 
         <!-- Show sidebar button (hidden when sidebar is visible) -->
@@ -261,6 +264,33 @@
                                     <button id="pane-theme-toggle" class="btn-secondary settings-pane-theme-btn"
                                         aria-label="Toggle theme">🌙 Dark</button>
                                 </label>
+                            </div>
+                        </section>
+
+                        <!-- Background -->
+                        <section class="settings-pane-section">
+                            <h4 class="settings-pane-section-title">🖼️ Background</h4>
+                            <div class="settings-pane-field">
+                                <label for="pane-background-mode">Background type</label>
+                                <select id="pane-background-mode" class="settings-pane-select">
+                                    <option value="photo">Rotating photo</option>
+                                    <option value="solid">Solid color</option>
+                                    <option value="flag">Milwaukee flag</option>
+                                </select>
+                            </div>
+                            <div class="settings-pane-field" id="pane-background-color-field">
+                                <label for="pane-background-color">Background color</label>
+                                <input type="color" id="pane-background-color" class="settings-pane-color-input"
+                                    value="#0077be">
+                            </div>
+                            <div class="settings-pane-field" id="pane-background-cycle-field">
+                                <label for="pane-background-cycle">Change photo</label>
+                                <select id="pane-background-cycle" class="settings-pane-select">
+                                    <option value="every">Every new tab</option>
+                                    <option value="hourly">Hourly</option>
+                                    <option value="daily" selected>Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                </select>
                             </div>
                         </section>
 

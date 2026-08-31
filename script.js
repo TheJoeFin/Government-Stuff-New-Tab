@@ -14,6 +14,65 @@ const CALENDAR_SOURCE_COLORS = {
 const CALENDAR_STORAGE_KEY = "govtab_calendar_events_v2"
 const CALENDAR_STORAGE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
 
+// Background image shown when the "Milwaukee flag" background mode is active
+const FLAG_BACKGROUND_IMAGE = "Peoples-Flag-of-Milwaukee.svg"
+const DEFAULT_BACKGROUND_COLOR = "#0077be"
+
+// How long a rotating photo stays before the next one is picked, keyed by
+// the settings.backgroundCycle value. "every" (0) means a fresh random pick
+// on every new tab instead of a time-based rotation.
+const BACKGROUND_CYCLE_INTERVALS_MS = {
+  every: 0,
+  hourly: 60 * 60 * 1000,
+  daily: 24 * 60 * 60 * 1000,
+  weekly: 7 * 24 * 60 * 60 * 1000,
+}
+
+// Background photos sourced from images/photo-cred.csv (Unsplash attribution
+// links open in a new tab so they don't navigate away from the new tab page)
+const BACKGROUND_PHOTOS = [
+  {
+    file: "wei-zeng-6KffRaLsClk-unsplash.jpg",
+    credit:
+      'Photo by <a href="https://unsplash.com/@fotowei?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Wei Zeng</a> on <a href="https://unsplash.com/photos/cityscape-during-nighttime-6KffRaLsClk?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Unsplash</a>',
+  },
+  {
+    file: "federico-ramirez-ij1r1T28DX4-unsplash.jpg",
+    credit:
+      'Photo by <a href="https://unsplash.com/@peryco?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Federico Ramirez</a> on <a href="https://unsplash.com/photos/a-view-of-a-city-from-across-the-water-ij1r1T28DX4?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Unsplash</a>',
+  },
+  {
+    file: "casey-lovegrove-kIQbHBWtQA4-unsplash.jpg",
+    credit:
+      'Photo by <a href="https://unsplash.com/@clovegrove7?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Casey Lovegrove</a> on <a href="https://unsplash.com/photos/a-large-orange-sculpture-in-a-city-kIQbHBWtQA4?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Unsplash</a>',
+  },
+  {
+    file: "runde-imaging-YS1MJEF1z0s-unsplash.jpg",
+    credit:
+      'Photo by <a href="https://unsplash.com/@rundeimaging?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Runde Imaging</a> on <a href="https://unsplash.com/photos/white-concrete-building-YS1MJEF1z0s?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Unsplash</a>',
+  },
+  {
+    file: "mark-rohan-vN7Cpe2MSf8-unsplash.jpg",
+    credit:
+      'Photo by <a href="https://unsplash.com/@wackomac007?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Mark Rohan</a> on <a href="https://unsplash.com/photos/red-and-black-unk-neon-signage-vN7Cpe2MSf8?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Unsplash</a>',
+  },
+  {
+    file: "tom-barrett-hoA7e2HRr70-unsplash.jpg",
+    credit:
+      'Photo by <a href="https://unsplash.com/@wistomsin?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Tom Barrett</a> on <a href="https://unsplash.com/photos/water-mirror-reflection-of-concrete-high-rise-buildings-hoA7e2HRr70?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Unsplash</a>',
+  },
+  {
+    file: "kellie-klumb-GV5touJMTaw-unsplash.jpg",
+    credit:
+      'Photo by <a href="https://unsplash.com/@kklumb?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Kellie Klumb</a> on <a href="https://unsplash.com/photos/landscape-photography-of-cityscape-GV5touJMTaw?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Unsplash</a>',
+  },
+  {
+    file: "wes-lewis-uBsM4cHFSH0-unsplash.jpg",
+    credit:
+      'Photo by <a href="https://unsplash.com/@westhmus?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">wes lewis</a> on <a href="https://unsplash.com/photos/city-skyline-during-night-time-uBsM4cHFSH0?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Unsplash</a>',
+  },
+]
+
 class NewTabApp {
   constructor() {
     this.favorites = []
@@ -28,6 +87,17 @@ class NewTabApp {
       theme: "light", // Default theme
       apiKey: "",
       propublicaApiKey: "",
+      // Background: "photo" (rotating Unsplash photos), "solid" (a flat
+      // color), or "flag" (the Milwaukee flag SVG)
+      backgroundMode: "photo",
+      backgroundColor: DEFAULT_BACKGROUND_COLOR,
+      // How often the rotating photo changes: "every", "hourly", "daily",
+      // or "weekly" - see BACKGROUND_CYCLE_INTERVALS_MS
+      backgroundCycle: "daily",
+      // Tracks which rotating photo is showing and when it was last
+      // changed, so the same photo persists across new tabs until its
+      // cycle interval elapses
+      backgroundPhotoState: null,
     }
 
     this.sidebarDetailView = {
@@ -110,6 +180,92 @@ class NewTabApp {
     return previousMonday
   }
 
+  // Picks which rotating background photo should show right now, based on
+  // settings.backgroundCycle. "every" always re-rolls; the timed intervals
+  // keep the same photo (persisted in settings.backgroundPhotoState) until
+  // their interval elapses, then advance to the next one.
+  getBackgroundPhotoIndex() {
+    const total = BACKGROUND_PHOTOS.length
+    const cycle = this.settings.backgroundCycle || "daily"
+    const intervalMs =
+      BACKGROUND_CYCLE_INTERVALS_MS[cycle] ??
+      BACKGROUND_CYCLE_INTERVALS_MS.daily
+
+    if (intervalMs <= 0) {
+      return Math.floor(Math.random() * total)
+    }
+
+    const state = this.settings.backgroundPhotoState
+    const now = Date.now()
+
+    if (
+      state &&
+      typeof state.index === "number" &&
+      state.index >= 0 &&
+      state.index < total &&
+      typeof state.changedAt === "number" &&
+      now - state.changedAt < intervalMs
+    ) {
+      return state.index
+    }
+
+    const previousIndex = state && typeof state.index === "number" ? state.index : -1
+    const nextIndex =
+      total > 1 ? (previousIndex + 1 + total) % total : 0
+
+    this.settings.backgroundPhotoState = { index: nextIndex, changedAt: now }
+    this.saveSettings()
+
+    return nextIndex
+  }
+
+  // Applies the current background settings (rotating photo, solid color,
+  // or the Milwaukee flag), fading it in once ready (avoids a jarring
+  // pop-in) and rendering the Unsplash credit only in photo mode.
+  applyBackground() {
+    const bgEl = document.querySelector(".page-bg")
+    const creditEl = document.getElementById("photo-credit")
+    if (!bgEl || !creditEl) return
+
+    bgEl.classList.remove("loaded")
+    creditEl.innerHTML = ""
+
+    const mode = this.settings.backgroundMode || "photo"
+
+    if (mode === "solid") {
+      bgEl.style.backgroundImage = "none"
+      bgEl.style.backgroundColor =
+        this.settings.backgroundColor || DEFAULT_BACKGROUND_COLOR
+      requestAnimationFrame(() => bgEl.classList.add("loaded"))
+      return
+    }
+
+    bgEl.style.backgroundColor = ""
+
+    if (mode === "flag") {
+      const preload = new Image()
+      preload.onload = () => {
+        bgEl.style.backgroundImage = `linear-gradient(to bottom, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.35)), url("${FLAG_BACKGROUND_IMAGE}")`
+        requestAnimationFrame(() => bgEl.classList.add("loaded"))
+      }
+      preload.src = FLAG_BACKGROUND_IMAGE
+      return
+    }
+
+    // Default: rotating photo mode
+    const photo = BACKGROUND_PHOTOS[this.getBackgroundPhotoIndex()]
+    const imageUrl = `images/${photo.file}`
+
+    const preload = new Image()
+    preload.onload = () => {
+      bgEl.style.backgroundImage = `linear-gradient(to bottom, rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.45)), url("${imageUrl}")`
+      requestAnimationFrame(() => bgEl.classList.add("loaded"))
+    }
+    preload.src = imageUrl
+
+    creditEl.innerHTML = photo.credit
+  }
+
   // Initialize theme before DOM is fully loaded
   initializeTheme() {
     // Check for system preference
@@ -146,6 +302,7 @@ class NewTabApp {
       await this.loadLastAddress()
       console.log("Last address loaded:", this.lastAddress)
       this.initializeUI()
+      this.applyBackground()
       console.log("UI initialized")
       await this.updateVersionDisplay()
       this.bindEvents()
@@ -3753,6 +3910,22 @@ class NewTabApp {
     // Sync theme button
     this.updatePaneThemeButton()
 
+    // Sync background controls
+    const backgroundMode = document.getElementById("pane-background-mode")
+    if (backgroundMode)
+      backgroundMode.value = this.settings.backgroundMode || "photo"
+
+    const backgroundColor = document.getElementById("pane-background-color")
+    if (backgroundColor)
+      backgroundColor.value =
+        this.settings.backgroundColor || DEFAULT_BACKGROUND_COLOR
+
+    const backgroundCycle = document.getElementById("pane-background-cycle")
+    if (backgroundCycle)
+      backgroundCycle.value = this.settings.backgroundCycle || "daily"
+
+    this.updateBackgroundFieldsVisibility()
+
     // Version info
     const versionEl = document.getElementById("pane-version-info")
     const versionIndicator = document.querySelector(".version-indicator")
@@ -3767,6 +3940,16 @@ class NewTabApp {
       themeBtn.textContent =
         this.settings.theme === "dark" ? "☀️ Light" : "🌙 Dark"
     }
+  }
+
+  // Shows/hides the color-picker and cycle-frequency fields depending on
+  // which background mode is currently selected (only one is ever relevant)
+  updateBackgroundFieldsVisibility() {
+    const mode = this.settings.backgroundMode || "photo"
+    const colorField = document.getElementById("pane-background-color-field")
+    const cycleField = document.getElementById("pane-background-cycle-field")
+    if (colorField) colorField.classList.toggle("hidden", mode !== "solid")
+    if (cycleField) cycleField.classList.toggle("hidden", mode !== "photo")
   }
 
   setupSettingsPaneEvents() {
@@ -3936,6 +4119,40 @@ class NewTabApp {
         this.applyTheme()
         this.saveSettings()
         this.updatePaneThemeButton()
+      })
+    }
+
+    // Background mode (photo / solid color / Milwaukee flag)
+    const backgroundMode = document.getElementById("pane-background-mode")
+    if (backgroundMode) {
+      backgroundMode.addEventListener("change", (e) => {
+        this.settings.backgroundMode = e.target.value
+        this.updateBackgroundFieldsVisibility()
+        this.saveSettings()
+        this.applyBackground()
+      })
+    }
+
+    // Solid background color
+    const backgroundColor = document.getElementById("pane-background-color")
+    if (backgroundColor) {
+      backgroundColor.addEventListener("input", (e) => {
+        this.settings.backgroundColor = e.target.value
+        this.saveSettings()
+        this.applyBackground()
+      })
+    }
+
+    // Photo cycle frequency
+    const backgroundCycle = document.getElementById("pane-background-cycle")
+    if (backgroundCycle) {
+      backgroundCycle.addEventListener("change", (e) => {
+        this.settings.backgroundCycle = e.target.value
+        // Force a fresh pick under the new interval instead of waiting out
+        // whatever interval the previous setting had left
+        this.settings.backgroundPhotoState = null
+        this.saveSettings()
+        this.applyBackground()
       })
     }
   }

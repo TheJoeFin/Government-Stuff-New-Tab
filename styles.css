@@ -25,6 +25,9 @@
   --text-muted: #737373;
   --border-color: #404040;
   --border-subtle: #262626;
+  /* Shared frosted-glass tint for the header and sidebar toolbars, kept
+     identical so the two panels read as one continuous surface */
+  --frost-bg: rgba(15, 15, 15, 0.5);
 
   /* Accents and feedback colors */
   --accent-color: var(--milwaukee-blue-light);
@@ -107,6 +110,7 @@
   --text-muted: #adb5bd;
   --border-color: #dee2e6;
   --border-subtle: #f1f3f4;
+  --frost-bg: rgba(255, 255, 255, 0.6);
   --accent-color: var(--milwaukee-blue);
   --accent-hover: var(--milwaukee-blue-dark);
   --accent-light: rgba(0, 119, 190, 0.1);
@@ -194,17 +198,50 @@ body {
   top: 6px;
 }
 
+/* Full-page background photo, fixed behind everything (including the
+   sidebar) so it's visible through any translucent panel and through any
+   gap between them. Fades in once the photo has actually loaded (see
+   applyBackground in script.js) to avoid a jarring pop-in. */
+.page-bg {
+  position: fixed;
+  inset: 0;
+  /* Not a negative z-index: Chromium paints html/body's propagated
+     background as the page canvas, which sits beneath *any* z-index
+     (even negative), so a negative value here would hide this behind
+     that flat fallback color. Instead this relies on DOM order (it's
+     .container's preceding sibling) plus .container being explicitly
+     positioned below, so .container's stacking context - and everything
+     in it - paints above this layer. */
+  z-index: 0;
+  background-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.25),
+    rgba(0, 0, 0, 0.45)
+  );
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+.page-bg.loaded {
+  opacity: 1;
+}
+
 /* Layout */
 .container {
   display: grid;
   grid-template-columns: 1fr 380px;
   min-height: 100vh;
   gap: 0;
-  background: linear-gradient(
-    135deg,
-    var(--bg-primary) 0%,
-    var(--milwaukee-gray) 100%
-  );
+  /* Positioned (with the default z-index:auto) purely so it paints above
+     .page-bg, its preceding sibling, per normal stacking order - not for
+     layout purposes */
+  position: relative;
+  /* Transparent so .page-bg shows through (including the sidebar's own
+     frosted-glass background, and any rounding gap between panels) */
+  background: transparent;
   transition:
     grid-template-columns 0.35s ease,
     background var(--transition-theme-duration) ease,
@@ -218,7 +255,7 @@ body {
 }
 
 .main-content {
-  padding: 0 var(--space-2) var(--space-2) var(--space-2);
+  padding: 0;
   overflow-y: auto;
   position: relative;
   display: flex;
@@ -226,8 +263,6 @@ body {
   align-items: center;
   justify-content: center;
   width: 100%;
-  max-width: 1000px;
-  margin: 0 auto;
   min-height: calc(100vh - 50px);
   transition:
     background-color var(--transition-theme-duration) ease,
@@ -235,13 +270,49 @@ body {
     border-color var(--transition-theme-duration) ease;
 }
 
-/* Main content wrapper for centering */
+/* Unsplash photo attribution, bottom-left of the background photo */
+.photo-credit {
+  position: absolute;
+  left: var(--space-3);
+  bottom: var(--space-3);
+  z-index: 2;
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(2px);
+}
+
+.photo-credit:empty {
+  display: none;
+}
+
+.photo-credit a {
+  color: rgba(255, 255, 255, 0.95);
+  text-decoration: underline;
+}
+
+.photo-credit a:hover,
+.photo-credit a:focus {
+  color: #ffffff;
+}
+
+/* Main content wrapper for centering (positioned above the darkening
+   overlay; the header sits above it too via its own higher z-index) */
 .main-content-wrapper {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 var(--space-2) var(--space-2) var(--space-2);
   flex: 1;
   gap: var(--space-3);
 }
@@ -256,10 +327,11 @@ body {
   width: 100%;
   position: sticky;
   top: 0;
-  background: var(--bg-primary);
+  background: var(--frost-bg);
   z-index: 100;
   box-shadow: var(--shadow-xs);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
   transition:
     background-color var(--transition-theme-duration) ease,
     color var(--transition-theme-duration) ease,
@@ -272,14 +344,7 @@ body {
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.025em;
-  background: linear-gradient(
-    135deg,
-    var(--milwaukee-blue),
-    var(--milwaukee-navy)
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   margin: 0;
 }
 
@@ -354,7 +419,30 @@ body {
 .header-controls {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  /* Matches .nav-controls/.nav-toggle-group in the sidebar's top row */
+  gap: 6px;
+}
+
+/* Match the sidebar's nav-btn-icon style so the header and sidebar top
+   rows read as one continuous toolbar */
+.header-controls .btn-icon {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.header-controls .btn-icon:hover {
+  background: var(--bg-card);
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+  box-shadow: none;
+  transform: none;
+}
+
+.header-controls .btn-icon:active {
+  transform: none;
+  box-shadow: none;
 }
 
 .version-indicator {
@@ -666,7 +754,16 @@ body {
 
 /* Sidebar */
 .sidebar {
-  background: var(--bg-secondary);
+  /* Muted text (day-of-week labels, "Last updated", legend labels, etc.)
+     often sits directly on the frosted photo background here instead of
+     an opaque card, so it needs more contrast than the dim tone used
+     elsewhere in the app */
+  --text-muted: var(--text-secondary);
+  /* Frosted glass: translucent tint + blur so the page photo shows
+     through, matching the header treatment */
+  background: var(--frost-bg);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
   border-left: 2px solid var(--border-color);
   padding: var(--space-2);
   overflow: hidden;
@@ -680,7 +777,9 @@ body {
     border-color var(--transition-theme-duration) ease,
     box-shadow var(--transition-theme-duration) ease;
   will-change: width, transform, opacity;
-  width: 350px;
+  /* Fill the grid column exactly (previously a fixed 350px inside a
+     380px column, which left a stray unstyled gap at the page edge) */
+  width: 100%;
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -1200,6 +1299,7 @@ body {
   font-size: var(--text-xs);
   color: var(--text-muted);
   flex-shrink: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .calendar-status.warning {
@@ -1952,7 +2052,9 @@ body {
     grid-template-columns: 1fr 340px;
   }
 
-  .main-content {
+  /* .main-content itself stays flush (padding: 0) so the header/photo
+     stay edge-to-edge; the padding lives on the inner content wrapper */
+  .main-content-wrapper {
     padding: var(--space-6);
   }
 }
@@ -1961,18 +2063,15 @@ body {
   .container {
     grid-template-columns: 1fr;
     grid-template-rows: 1fr;
-    background: var(--bg-primary);
   }
 
-  /* The calendar pane is now an on-demand overlay (see below), so the
-     favorites view no longer needs to reserve space below itself -
-     top-align instead of vertically centering to avoid a dead gap. */
   .main-content {
     min-height: auto;
   }
 
   .main-content-wrapper {
-    justify-content: flex-start;
+    justify-content: center;
+    padding: var(--space-6);
     padding-top: var(--space-4);
   }
 
@@ -2053,10 +2152,6 @@ body {
     transform: translateX(-50%) translateY(20px);
   }
 
-  .main-content {
-    padding: var(--space-6);
-  }
-
   .header h1 {
     font-size: var(--text-3xl);
   }
@@ -2074,12 +2169,12 @@ body {
   }
 
   .main-content {
-    padding: var(--space-4);
     min-height: auto;
   }
 
   .main-content-wrapper {
-    justify-content: flex-start;
+    justify-content: center;
+    padding: var(--space-4);
     padding-top: var(--space-2);
   }
 
@@ -2149,7 +2244,7 @@ body {
 }
 
 @media (max-width: 480px) {
-  .main-content {
+  .main-content-wrapper {
     padding: var(--space-3);
   }
 
@@ -2887,7 +2982,9 @@ body {
 .nav-row {
   display: flex;
   align-items: center;
-  padding: 6px;
+  /* No top padding: the sidebar's own padding already provides it, and
+     matches the header's padding so both toolbars line up exactly */
+  padding: 0 6px var(--space-2) 6px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -3083,6 +3180,8 @@ body {
   font-weight: 600;
   color: var(--text-primary);
   line-height: normal;
+  /* Sits directly on the frosted photo background, not an opaque card */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .day-name {
@@ -3091,6 +3190,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   line-height: normal;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .week-day.selected .day-name {
@@ -3131,6 +3231,7 @@ body {
   font-size: 12px;
   color: var(--text-muted);
   line-height: normal;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .key-livestream {
@@ -3529,6 +3630,32 @@ body {
   width: 1.1rem;
   height: 1.1rem;
   accent-color: var(--accent-color);
+  cursor: pointer;
+}
+
+.settings-pane-select {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.settings-pane-select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+.settings-pane-color-input {
+  width: 100%;
+  height: 2.25rem;
+  padding: 2px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--bg-tertiary);
   cursor: pointer;
 }
 
