@@ -87,6 +87,10 @@ class NewTabApp {
       // this.narrowSidebarOpen instead (see isSidebarOpen()), which
       // always starts closed and is never saved.
       showSidebar: true,
+      // User-dragged sidebar width in px, or null to use the CSS default.
+      // Only meaningful on wide/desktop layouts - the mobile bottom sheet
+      // always spans the full viewport width regardless of this value.
+      sidebarWidth: null,
       autoLocation: false,
       theme: "light", // Default theme
       apiKey: "",
@@ -602,8 +606,111 @@ class NewTabApp {
     this.loadCalendarEvents()
     this.renderFavorites()
     this.updateSidebarVisibility()
+    this.applySidebarWidth()
     this.updateSettingsUI()
     this.populateLastAddress()
+  }
+
+  // Sidebar min/max drag-resize bounds, in px.
+  SIDEBAR_MIN_WIDTH = 280
+  SIDEBAR_MAX_WIDTH = 640
+
+  clampSidebarWidth(width) {
+    const viewportMax = Math.round(window.innerWidth * 0.7)
+    const max = Math.min(this.SIDEBAR_MAX_WIDTH, viewportMax)
+    return Math.min(Math.max(width, this.SIDEBAR_MIN_WIDTH), max)
+  }
+
+  // Applies the persisted custom sidebar width (if any) to the layout.
+  // Safe to call on every resize/orientation change since it re-clamps
+  // against the current viewport width.
+  applySidebarWidth() {
+    const container = document.querySelector(".container")
+    if (!container) return
+
+    if (this.settings.sidebarWidth) {
+      const width = this.clampSidebarWidth(this.settings.sidebarWidth)
+      container.style.setProperty("--sidebar-width", `${width}px`)
+    } else {
+      container.style.removeProperty("--sidebar-width")
+    }
+  }
+
+  // Lets the user drag the handle on the sidebar's left edge to resize it.
+  // Desktop-only: on narrow/mobile layouts the sidebar becomes a full-width
+  // bottom sheet, so horizontal resizing doesn't apply there.
+  setupSidebarResize() {
+    const handle = document.getElementById("sidebar-resize-handle")
+    const container = document.querySelector(".container")
+    if (!handle || !container) return
+
+    let dragging = false
+
+    const onPointerMove = (e) => {
+      if (!dragging) return
+      // Sidebar sits on the right edge of the viewport, so its width is
+      // the distance from the pointer to the right edge.
+      const width = this.clampSidebarWidth(window.innerWidth - e.clientX)
+      container.style.setProperty("--sidebar-width", `${width}px`)
+    }
+
+    const onPointerUp = (e) => {
+      if (!dragging) return
+      dragging = false
+      handle.classList.remove("dragging")
+      document.body.classList.remove("sidebar-resizing")
+      try {
+        handle.releasePointerCapture(e.pointerId)
+      } catch (err) {
+        // no-op: pointer capture may already be released
+      }
+
+      const width = this.clampSidebarWidth(window.innerWidth - e.clientX)
+      this.settings.sidebarWidth = width
+      this.saveSettings()
+
+      document.removeEventListener("pointermove", onPointerMove)
+      document.removeEventListener("pointerup", onPointerUp)
+    }
+
+    handle.addEventListener("pointerdown", (e) => {
+      if (this.isNarrowViewport()) return
+      dragging = true
+      handle.classList.add("dragging")
+      document.body.classList.add("sidebar-resizing")
+      try {
+        handle.setPointerCapture(e.pointerId)
+      } catch (err) {
+        // no-op: some browsers restrict capture on non-primary pointers
+      }
+      document.addEventListener("pointermove", onPointerMove)
+      document.addEventListener("pointerup", onPointerUp)
+      e.preventDefault()
+    })
+
+    // Keyboard resizing for accessibility: arrow keys nudge the width.
+    handle.addEventListener("keydown", (e) => {
+      if (this.isNarrowViewport()) return
+      const step = 24
+      let delta = 0
+      if (e.key === "ArrowLeft") delta = step
+      else if (e.key === "ArrowRight") delta = -step
+      else return
+
+      e.preventDefault()
+      const current =
+        this.settings.sidebarWidth ||
+        document.getElementById("civic-sidebar")?.offsetWidth ||
+        380
+      const width = this.clampSidebarWidth(current + delta)
+      container.style.setProperty("--sidebar-width", `${width}px`)
+      this.settings.sidebarWidth = width
+      this.saveSettings()
+    })
+
+    window.addEventListener("resize", () => {
+      this.applySidebarWidth()
+    })
   }
 
   applyTheme() {
@@ -2069,6 +2176,7 @@ class NewTabApp {
     console.log("Binding events...")
 
     this.setupResponsiveSidebarBehavior()
+    this.setupSidebarResize()
 
     // Search form
     const searchForm = document.getElementById("search-form")
