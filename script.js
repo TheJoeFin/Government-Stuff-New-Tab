@@ -2837,7 +2837,8 @@ class NewTabApp {
       heading.textContent = data.name || "Meeting Details"
       if (subtitle) subtitle.textContent = data.body || ""
       content.innerHTML = this.renderEventDetail(data)
-      this.fetchEventDetailVideoUrl(data, content)
+      this.populateLinkifiedFields(data, content)
+      this.fetchEventDetailExtras(data, content)
     } else if (type === "official") {
       heading.textContent = data.name || "Official Details"
       if (subtitle) subtitle.textContent = data.office || data.title || ""
@@ -2854,21 +2855,28 @@ class NewTabApp {
     }
   }
 
-  fetchEventDetailVideoUrl(event, contentElement) {
-    // Only fetch if we're missing video/minutes and have enough info to query
-    if (event.videoUrl && event.minutesUrl) return
+  fetchEventDetailExtras(event, contentElement) {
     if (!event.rawEventId || !event.source) return
 
     const client = event.source // "milwaukee" or "milwaukeecounty"
     if (client !== "milwaukee" && client !== "milwaukeecounty") return
 
+    // Only fetch if we're missing video/minutes/items and have enough info to query
+    const needsLinks = !event.videoUrl || !event.minutesUrl
+    const needsItems = !event.items
+    if (!needsLinks && !needsItems) return
+
     chrome.runtime.sendMessage(
       { type: "legistar:getEventDetail", client, eventId: event.rawEventId },
       (response) => {
         if (chrome.runtime.lastError || !response || response.status !== "ok") {
+          this.renderEventItemsList([], contentElement, {
+            error: true,
+            client,
+          })
           return
         }
-        const { videoUrl, minutesUrl } = response.data
+        const { videoUrl, minutesUrl, items } = response.data
         const newLinks = []
         if (videoUrl && !event.videoUrl) {
           event.videoUrl = videoUrl
@@ -2882,29 +2890,280 @@ class NewTabApp {
             `<a href="${minutesUrl}" target="_blank" rel="noopener noreferrer" class="event-link">📋 View Minutes</a>`,
           )
         }
-        if (!newLinks.length) return
+        if (newLinks.length) {
+          // Try to append to existing resources section
+          const extraSlot = contentElement.querySelector(
+            "#detail-extra-resources",
+          )
+          if (extraSlot) {
+            extraSlot.innerHTML = newLinks.join("")
+          } else {
+            // If no resources section existed, fill the placeholder
+            const placeholder = contentElement.querySelector(
+              "#detail-resources-placeholder",
+            )
+            if (placeholder) {
+              placeholder.innerHTML = `
+                <h5>Resources</h5>
+                <p class="event-links">${newLinks.join("")}</p>
+              `
+            }
+          }
+        }
 
-        // Try to append to existing resources section
-        const extraSlot = contentElement.querySelector(
-          "#detail-extra-resources",
-        )
-        if (extraSlot) {
-          extraSlot.innerHTML = newLinks.join("")
+        event.items = Array.isArray(items) ? items : []
+        this.renderEventItemsList(event.items, contentElement, { client })
+      },
+    )
+  }
+
+  renderEventItemsList(items, contentElement, { error = false, client } = {}) {
+    const container = contentElement.querySelector("#detail-agenda-items")
+    if (!container) return
+
+    container.innerHTML = ""
+
+    if (error) {
+      const message = document.createElement("p")
+      message.className = "event-items-empty"
+      message.textContent = "Unable to load agenda items right now."
+      container.appendChild(message)
+      return
+    }
+
+    if (!items.length) {
+      const message = document.createElement("p")
+      message.className = "event-items-empty"
+      message.textContent = "No agenda items published yet."
+      container.appendChild(message)
+      return
+    }
+
+    const list = document.createElement("ul")
+    list.className = "event-items-list"
+
+    items.forEach((item) => {
+      const li = document.createElement("li")
+      li.className = "event-item"
+
+      const header = document.createElement("div")
+      header.className = "event-item-header"
+
+      if (item.agendaNumber) {
+        const number = document.createElement("span")
+        number.className = "event-item-number"
+        number.textContent = item.agendaNumber
+        header.appendChild(number)
+      }
+
+      const title = document.createElement("span")
+      title.className = "event-item-title"
+      title.appendChild(this.linkifyToFragment(item.title))
+      header.appendChild(title)
+
+      li.appendChild(header)
+
+      if (item.action || item.passed) {
+        const status = document.createElement("div")
+        status.className = "event-item-status"
+
+        if (item.action) {
+          const action = document.createElement("span")
+          action.className = "event-item-action"
+          action.textContent = item.action
+          status.appendChild(action)
+        }
+
+        if (item.passed) {
+          const passed = document.createElement("span")
+          const passedLower = item.passed.toLowerCase()
+          passed.className = `event-item-passed ${
+            passedLower === "passed" || passedLower === "approved"
+              ? "is-passed"
+              : passedLower === "failed"
+                ? "is-failed"
+                : ""
+          }`.trim()
+          passed.textContent = item.passed
+          status.appendChild(passed)
+        }
+
+        li.appendChild(status)
+      }
+
+      if (item.matterFile) {
+        const file = document.createElement("div")
+        file.className = "event-item-file"
+        file.textContent = `File #${item.matterFile}`
+        li.appendChild(file)
+      }
+
+      if (item.note || item.matterId) {
+        li.appendChild(this.buildEventItemDetailToggle(item, client))
+      }
+
+      list.appendChild(li)
+    })
+
+    container.appendChild(list)
+  }
+
+  buildEventItemDetailToggle(item, client) {
+    const wrapper = document.createDocumentFragment()
+
+    const toggle = document.createElement("button")
+    toggle.type = "button"
+    toggle.className = "event-item-toggle"
+    toggle.textContent = "Details"
+    toggle.setAttribute("aria-expanded", "false")
+
+    const panel = document.createElement("div")
+    panel.className = "event-item-detail-panel"
+    panel.hidden = true
+
+    if (item.note) {
+      const note = document.createElement("p")
+      note.className = "event-item-note"
+      note.appendChild(this.linkifyToFragment(item.note))
+      panel.appendChild(note)
+    }
+
+    let attachmentsContainer = null
+    if (item.matterId) {
+      attachmentsContainer = document.createElement("div")
+      attachmentsContainer.className = "event-item-attachments"
+      panel.appendChild(attachmentsContainer)
+    }
+
+    let attachmentsRequested = false
+    toggle.addEventListener("click", () => {
+      const isExpanded = toggle.getAttribute("aria-expanded") === "true"
+      const nextExpanded = !isExpanded
+      toggle.setAttribute("aria-expanded", String(nextExpanded))
+      toggle.textContent = nextExpanded ? "Hide Details" : "Details"
+      panel.hidden = !nextExpanded
+
+      if (
+        nextExpanded &&
+        !attachmentsRequested &&
+        attachmentsContainer &&
+        client
+      ) {
+        attachmentsRequested = true
+        this.fetchMatterAttachments(client, item.matterId, attachmentsContainer)
+      }
+    })
+
+    wrapper.appendChild(toggle)
+    wrapper.appendChild(panel)
+    return wrapper
+  }
+
+  fetchMatterAttachments(client, matterId, container) {
+    container.innerHTML = ""
+    const loading = document.createElement("p")
+    loading.className = "event-item-attachments-loading"
+    loading.textContent = "Loading attachments…"
+    container.appendChild(loading)
+
+    chrome.runtime.sendMessage(
+      { type: "legistar:getMatterAttachments", client, matterId },
+      (response) => {
+        container.innerHTML = ""
+
+        if (chrome.runtime.lastError || !response || response.status !== "ok") {
+          const message = document.createElement("p")
+          message.className = "event-item-attachments-empty"
+          message.textContent = "Unable to load attachments right now."
+          container.appendChild(message)
           return
         }
 
-        // If no resources section existed, fill the placeholder
-        const placeholder = contentElement.querySelector(
-          "#detail-resources-placeholder",
-        )
-        if (placeholder) {
-          placeholder.innerHTML = `
-            <h5>Resources</h5>
-            <p class="event-links">${newLinks.join("")}</p>
-          `
+        const attachments = response.data?.attachments || []
+        if (!attachments.length) {
+          const message = document.createElement("p")
+          message.className = "event-item-attachments-empty"
+          message.textContent = "No attachments available."
+          container.appendChild(message)
+          return
         }
+
+        const list = document.createElement("ul")
+        list.className = "event-item-attachments-list"
+        attachments.forEach((attachment) => {
+          const li = document.createElement("li")
+          const link = document.createElement("a")
+          link.href = attachment.url
+          link.target = "_blank"
+          link.rel = "noopener noreferrer"
+          link.className = "event-item-attachment-link"
+          link.textContent = `📎 ${attachment.name}`
+          li.appendChild(link)
+          list.appendChild(li)
+        })
+        container.appendChild(list)
       },
     )
+  }
+
+  populateLinkifiedFields(event, contentElement) {
+    const locationEl = contentElement.querySelector("#detail-event-location")
+    if (locationEl && event.location) {
+      locationEl.appendChild(this.linkifyToFragment(event.location))
+    }
+
+    const descriptionEl = contentElement.querySelector(
+      "#detail-event-description",
+    )
+    if (descriptionEl && event.description) {
+      descriptionEl.appendChild(this.linkifyToFragment(event.description))
+    }
+  }
+
+  linkifyToFragment(text) {
+    const fragment = document.createDocumentFragment()
+    if (!text) return fragment
+
+    const urlPattern = /https?:\/\/[^\s<>"')\]]+/gi
+    const trailingPunctuation = /[.,;:!?]+$/
+    let lastIndex = 0
+    let match
+
+    while ((match = urlPattern.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        fragment.appendChild(
+          document.createTextNode(text.slice(lastIndex, match.index)),
+        )
+      }
+
+      let url = match[0]
+      let trailing = ""
+      const trimMatch = trailingPunctuation.exec(url)
+      if (trimMatch) {
+        trailing = trimMatch[0]
+        url = url.slice(0, -trailing.length)
+      }
+
+      const link = document.createElement("a")
+      link.href = url
+      link.textContent = url
+      link.target = "_blank"
+      link.rel = "noopener noreferrer"
+      link.className = "event-inline-link"
+      fragment.appendChild(link)
+
+      if (trailing) {
+        fragment.appendChild(document.createTextNode(trailing))
+      }
+
+      lastIndex = match.index + match[0].length
+    }
+
+    if (lastIndex < text.length) {
+      fragment.appendChild(document.createTextNode(text.slice(lastIndex)))
+    }
+
+    return fragment
   }
 
   renderEventDetail(event) {
@@ -2972,7 +3231,7 @@ class NewTabApp {
               ? `
             <div class="info-section">
               <h5>Where</h5>
-              <p class="event-location">${event.location}</p>
+              <p class="event-location" id="detail-event-location"></p>
             </div>
           `
               : ""
@@ -2994,9 +3253,19 @@ class NewTabApp {
               ? `
             <div class="info-section">
               <h5>Description</h5>
-              <div class="event-description">${event.description}</div>
+              <div class="event-description" id="detail-event-description"></div>
             </div>
           `
+              : ""
+          }
+
+          ${
+            event.rawEventId &&
+            (event.source === "milwaukee" || event.source === "milwaukeecounty")
+              ? `<div class="info-section" id="detail-agenda-items-section">
+                  <h5>Agenda Items</h5>
+                  <div id="detail-agenda-items"><p class="event-items-loading">Loading agenda items…</p></div>
+                </div>`
               : ""
           }
 

@@ -66,6 +66,23 @@ class LegistarApiClient {
     return await this.fetchWithRetry(url)
   }
 
+  async fetchEventItems(client, eventId) {
+    const searchParams = new URLSearchParams()
+    searchParams.set("AgendaNote", "1")
+    searchParams.set("MinutesNote", "1")
+    const url = `${this.baseUrl}${client}/Events/${eventId}/EventItems?${searchParams.toString()}`
+    console.log(`[Legistar] Fetching event items: ${url}`)
+    const payload = await this.fetchWithRetry(url)
+    return Array.isArray(payload) ? payload : []
+  }
+
+  async fetchMatterAttachments(client, matterId) {
+    const url = `${this.baseUrl}${client}/Matters/${matterId}/Attachments`
+    console.log(`[Legistar] Fetching matter attachments: ${url}`)
+    const payload = await this.fetchWithRetry(url)
+    return Array.isArray(payload) ? payload : []
+  }
+
   async fetchWithRetry(url, attempt = 0) {
     try {
       const response = await fetch(url)
@@ -312,6 +329,70 @@ class EventNormalizer {
   }
 }
 
+function normalizeEventItems(rawItems) {
+  if (!Array.isArray(rawItems)) return []
+
+  return rawItems
+    .map((item) => {
+      if (!item) return null
+      const passedFlag = item.EventItemPassedFlag
+      const passed =
+        item.EventItemPassedFlagName ||
+        (passedFlag === 1 ? "Passed" : passedFlag === 0 ? "Failed" : null)
+
+      return {
+        id: item.EventItemId,
+        agendaNumber: item.EventItemAgendaNumber || "",
+        agendaSequence: item.EventItemAgendaSequence ?? null,
+        matterId: item.EventItemMatterId ?? null,
+        matterFile: item.EventItemMatterFile || "",
+        matterType: item.EventItemMatterType || "",
+        title:
+          item.EventItemTitle ||
+          item.EventItemMatterName ||
+          item.EventItemMatterFile ||
+          "Agenda Item",
+        action: item.EventItemActionName || "",
+        passed,
+        rollCall: item.EventItemRollCallFlagName || "",
+        note: item.EventItemAgendaNote || item.EventItemMinutesNote || "",
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      const seqA = a.agendaSequence ?? Number.MAX_SAFE_INTEGER
+      const seqB = b.agendaSequence ?? Number.MAX_SAFE_INTEGER
+      return seqA - seqB
+    })
+}
+
+function normalizeMatterAttachments(rawAttachments) {
+  if (!Array.isArray(rawAttachments)) return []
+
+  return rawAttachments
+    .map((attachment) => {
+      if (!attachment) return null
+      const url = attachment.MatterAttachmentHyperlink
+      if (!url) return null
+
+      return {
+        id: attachment.MatterAttachmentId,
+        name:
+          attachment.MatterAttachmentName ||
+          attachment.MatterAttachmentFileName ||
+          "Attachment",
+        url,
+        sort: attachment.MatterAttachmentSort ?? null,
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      const sortA = a.sort ?? Number.MAX_SAFE_INTEGER
+      const sortB = b.sort ?? Number.MAX_SAFE_INTEGER
+      return sortA - sortB
+    })
+}
+
 class EventConsolidator {
   deduplicate(events) {
     const map = new Map()
@@ -550,12 +631,43 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ status: "error", error: "Missing client or eventId" })
       return false
     }
-    aggregator.apiClient
-      .fetchSingleEvent(client, eventId)
-      .then((raw) => {
+    Promise.all([
+      aggregator.apiClient.fetchSingleEvent(client, eventId),
+      aggregator.apiClient
+        .fetchEventItems(client, eventId)
+        .catch((error) => {
+          console.warn(`[Legistar] Failed to fetch event items for ${eventId}:`, error)
+          return []
+        }),
+    ])
+      .then(([raw, rawItems]) => {
         const videoUrl = raw.EventVideoPath || raw.EventVideoHtml5Path || null
         const minutesUrl = raw.EventMinutesFile || null
-        sendResponse({ status: "ok", data: { videoUrl, minutesUrl } })
+        const items = normalizeEventItems(rawItems)
+        sendResponse({ status: "ok", data: { videoUrl, minutesUrl, items } })
+      })
+      .catch((error) => {
+        sendResponse({
+          status: "error",
+          error: error?.message ?? "Unknown Legistar error",
+        })
+      })
+    return true
+  }
+
+  if (message.type === "legistar:getMatterAttachments") {
+    const { client, matterId } = message
+    if (!client || !matterId) {
+      sendResponse({ status: "error", error: "Missing client or matterId" })
+      return false
+    }
+    aggregator.apiClient
+      .fetchMatterAttachments(client, matterId)
+      .then((rawAttachments) => {
+        sendResponse({
+          status: "ok",
+          data: { attachments: normalizeMatterAttachments(rawAttachments) },
+        })
       })
       .catch((error) => {
         sendResponse({
