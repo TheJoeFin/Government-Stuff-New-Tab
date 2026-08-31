@@ -82,6 +82,10 @@ class NewTabApp {
     this.milwaukeeCache = new Map() // Smart cache for Milwaukee data
     this.cacheExpiry = 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
     this.settings = {
+      // This is the sticky, persisted preference used on wide/desktop
+      // layouts. Narrow/mobile layouts never read it directly - they use
+      // this.narrowSidebarOpen instead (see isSidebarOpen()), which
+      // always starts closed and is never saved.
       showSidebar: true,
       autoLocation: false,
       theme: "light", // Default theme
@@ -99,6 +103,11 @@ class NewTabApp {
       // cycle interval elapses
       backgroundPhotoState: null,
     }
+
+    // Ephemeral, session-only "is the bottom sheet open" state for
+    // narrow/mobile layouts - intentionally not part of this.settings so
+    // it's never persisted. Always starts closed.
+    this.narrowSidebarOpen = false
 
     this.sidebarDetailView = {
       listSection: null,
@@ -672,22 +681,86 @@ class NewTabApp {
     this.closeOfficialDetail({ silent: true })
   }
 
+  // Narrow/mobile layouts switch the sidebar to an on-demand bottom
+  // sheet (see the max-width: 768px rules in styles.css)
+  isNarrowViewport() {
+    return Boolean(
+      window.matchMedia && window.matchMedia("(max-width: 768px)").matches,
+    )
+  }
+
+  // Whether the sidebar/bottom-sheet should currently be visible. Wide
+  // layouts follow the persisted, sticky settings.showSidebar preference;
+  // narrow layouts always use the ephemeral, never-persisted
+  // narrowSidebarOpen state instead, so opening the bottom sheet on
+  // mobile never overwrites (or is overwritten by) the desktop setting.
+  isSidebarOpen() {
+    return this.isNarrowViewport()
+      ? this.narrowSidebarOpen
+      : this.settings.showSidebar
+  }
+
+  // Opens/closes the sidebar, writing to whichever state backs the
+  // current layout (see isSidebarOpen). Use this from click handlers
+  // instead of setting settings.showSidebar directly.
+  setSidebarOpen(open) {
+    if (this.isNarrowViewport()) {
+      this.narrowSidebarOpen = open
+      this.updateSidebarVisibility()
+    } else {
+      this.settings.showSidebar = open
+      this.updateSidebarVisibility()
+      this.updateSettingsUI()
+      this.saveSettings()
+    }
+  }
+
   updateSidebarVisibility() {
     const container = document.querySelector(".container")
     const sidebar = document.getElementById("civic-sidebar")
     const showSidebarBtn = document.getElementById("show-sidebar-btn")
+    const showSidebarHeaderBtn = document.getElementById(
+      "show-sidebar-header-btn",
+    )
     const toggleSidebarBtn = document.getElementById("toggle-sidebar")
 
-    if (this.settings.showSidebar) {
+    if (this.isSidebarOpen()) {
       container.classList.remove("sidebar-collapsed")
       sidebar.classList.remove("collapsed")
       showSidebarBtn.classList.add("hidden")
+      if (showSidebarHeaderBtn) showSidebarHeaderBtn.classList.add("hidden")
       if (toggleSidebarBtn) toggleSidebarBtn.classList.remove("rotated")
     } else {
       container.classList.add("sidebar-collapsed")
       sidebar.classList.add("collapsed")
       showSidebarBtn.classList.remove("hidden")
+      if (showSidebarHeaderBtn)
+        showSidebarHeaderBtn.classList.remove("hidden")
       if (toggleSidebarBtn) toggleSidebarBtn.classList.add("rotated")
+    }
+  }
+
+  // Keeps the bottom sheet's open/closed state correct as the window
+  // crosses the narrow/wide breakpoint: shrinking into narrow always
+  // hides it (ignoring whatever was showing), and widening back out
+  // restores the persisted desktop preference.
+  setupResponsiveSidebarBehavior() {
+    const query = window.matchMedia && window.matchMedia("(max-width: 768px)")
+    if (!query) return
+
+    const handleChange = (event) => {
+      if (event.matches) {
+        // Just became narrow: always start hidden here
+        this.narrowSidebarOpen = false
+      }
+      this.updateSidebarVisibility()
+    }
+
+    if (query.addEventListener) {
+      query.addEventListener("change", handleChange)
+    } else if (query.addListener) {
+      // Safari <14 fallback
+      query.addListener(handleChange)
     }
   }
 
@@ -1995,6 +2068,8 @@ class NewTabApp {
   bindEvents() {
     console.log("Binding events...")
 
+    this.setupResponsiveSidebarBehavior()
+
     // Search form
     const searchForm = document.getElementById("search-form")
     const searchInput = document.getElementById("search-input")
@@ -2071,22 +2146,30 @@ class NewTabApp {
     if (toggleSidebar) {
       toggleSidebar.addEventListener("click", () => {
         console.log("Toggle sidebar clicked")
-        this.settings.showSidebar = !this.settings.showSidebar
-        this.updateSidebarVisibility()
-        this.updateSettingsUI()
-        this.saveSettings()
+        this.setSidebarOpen(!this.isSidebarOpen())
       })
     }
 
-    // Show sidebar button
+    // Show sidebar button (mobile bottom-sheet pill)
     const showSidebarBtn = document.getElementById("show-sidebar-btn")
     if (showSidebarBtn) {
       showSidebarBtn.addEventListener("click", () => {
         console.log("Show sidebar clicked")
-        this.settings.showSidebar = true
-        this.updateSidebarVisibility()
-        this.updateSettingsUI()
-        this.saveSettings()
+        this.setSidebarOpen(true)
+
+        // Announce to screen readers
+        this.announceToScreenReader("Representatives sidebar opened")
+      })
+    }
+
+    // Show sidebar button (desktop header)
+    const showSidebarHeaderBtn = document.getElementById(
+      "show-sidebar-header-btn",
+    )
+    if (showSidebarHeaderBtn) {
+      showSidebarHeaderBtn.addEventListener("click", () => {
+        console.log("Show sidebar (header) clicked")
+        this.setSidebarOpen(true)
 
         // Announce to screen readers
         this.announceToScreenReader("Representatives sidebar opened")
@@ -2098,11 +2181,8 @@ class NewTabApp {
     const civicSidebar = document.getElementById("civic-sidebar")
     if (civicSidebar) {
       civicSidebar.addEventListener("click", (e) => {
-        if (e.target === civicSidebar && window.innerWidth <= 1024) {
-          this.settings.showSidebar = false
-          this.updateSidebarVisibility()
-          this.updateSettingsUI()
-          this.saveSettings()
+        if (e.target === civicSidebar && this.isNarrowViewport()) {
+          this.setSidebarOpen(false)
         }
       })
     }

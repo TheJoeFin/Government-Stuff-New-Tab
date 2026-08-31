@@ -716,6 +716,10 @@ body {
 
 /* Show sidebar button */
 .show-sidebar-btn {
+  /* Desktop uses #show-sidebar-header-btn in the header instead (it
+     matches the app's button style); this floating circle is only
+     re-enabled for the mobile bottom-sheet trigger below */
+  display: none;
   position: fixed;
   right: var(--space-4);
   top: 80px; /* Align to top, below the sticky header */
@@ -725,7 +729,6 @@ body {
   border-radius: var(--radius-full);
   width: 40px;
   height: 40px;
-  display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
@@ -734,22 +737,27 @@ body {
   box-shadow: var(--shadow-lg);
   transition: var(--transition);
   z-index: 50;
+  /* Positioning transform (e.g. centering on mobile) lives in this
+     variable so :hover/:active can layer scale() on top of it instead
+     of overwriting it and knocking the button off its position */
+  --btn-shift: none;
+  transform: var(--btn-shift);
 }
 
 .show-sidebar-btn:hover {
   background: var(--accent-hover);
-  transform: scale(1.05);
+  transform: var(--btn-shift) scale(1.05);
   box-shadow: var(--shadow-xl);
 }
 
 .show-sidebar-btn:active {
-  transform: scale(0.98);
+  transform: var(--btn-shift) scale(0.98);
 }
 
 .show-sidebar-btn.hidden {
   opacity: 0;
   pointer-events: none;
-  transform: translateX(20px);
+  --btn-shift: translateX(20px);
 }
 
 /* Sidebar */
@@ -2059,7 +2067,7 @@ body {
   }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   .container {
     grid-template-columns: 1fr;
     grid-template-rows: 1fr;
@@ -2118,13 +2126,19 @@ body {
     opacity: 0;
   }
 
+  /* The header button is desktop-only; mobile keeps the bottom-sheet
+     pill trigger below instead */
+  #show-sidebar-header-btn {
+    display: none;
+  }
+
   /* Persistent, clearly-labeled way to bring the pane back up */
   .show-sidebar-btn {
     left: 50%;
     right: auto;
     bottom: var(--space-4);
     top: auto;
-    transform: translateX(-50%);
+    --btn-shift: translateX(-50%);
     width: auto;
     height: auto;
     padding: var(--space-3) var(--space-5);
@@ -2149,7 +2163,23 @@ body {
   }
 
   .show-sidebar-btn.hidden {
-    transform: translateX(-50%) translateY(20px);
+    --btn-shift: translateX(-50%) translateY(20px);
+  }
+
+  /* Clear the floating "Meetings" pill above it instead of sitting
+     underneath it */
+  .photo-credit {
+    bottom: 68px;
+  }
+
+  /* The pane is a bottom sheet here (dismisses downward), so its
+     dismiss chevron should point down rather than the desktop right */
+  #toggle-sidebar {
+    transform: rotate(90deg);
+  }
+
+  #toggle-sidebar.rotated {
+    transform: rotate(270deg);
   }
 
   .header h1 {
@@ -2178,21 +2208,25 @@ body {
     padding-top: var(--space-2);
   }
 
-  .header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-4);
-    margin-bottom: var(--space-6);
+  /* Search moves below the favorites grid on mobile, with both
+     centered as a group in the viewport */
+  .search-section {
+    order: 2;
   }
 
+  .favorites-section {
+    order: 1;
+  }
+
+  /* Keep the header a single row at narrow widths too - it just shrinks
+     (h1 truncates) rather than wrapping the controls onto a second row */
   .header h1 {
     font-size: var(--text-2xl);
     margin-bottom: 0;
-  }
-
-  .header-controls {
-    width: 100%;
-    justify-content: flex-end;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
   }
 
   .favorites-grid {
@@ -2254,11 +2288,6 @@ body {
 
   .show-sidebar-btn::after {
     content: "Meetings";
-  }
-
-  .header {
-    margin-bottom: var(--space-4);
-    padding-bottom: var(--space-4);
   }
 
   .header h1 {
