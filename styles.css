@@ -129,28 +129,6 @@
   --detail-accent: var(--accent-color);
 }
 
-/* DEBUG: Make dark mode obvious for testing */
-[data-theme="dark"] body,
-body[data-theme="dark"] {
-  background-color: #0f0f0f !important;
-  color: #ffffff !important;
-}
-
-[data-theme="dark"] .main-content,
-body[data-theme="dark"] .main-content {
-  background-color: #0f0f0f !important;
-}
-
-[data-theme="dark"] .header h1,
-body[data-theme="dark"] .header h1 {
-  color: #ffffff !important;
-}
-
-[data-theme="dark"] .container,
-body[data-theme="dark"] .container {
-  background: #0f0f0f !important;
-}
-
 html {
   background-color: var(--bg-primary);
   transition:
