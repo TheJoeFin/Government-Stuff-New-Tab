@@ -21,6 +21,7 @@
 </head>
 
 <body>
+    <div class="page-bg" aria-hidden="true"></div>
     <div class="container">
         <!-- Main content area for favorite sites -->
         <main class="main-content">
@@ -32,6 +33,13 @@
                         aria-label="Test JavaScript functionality">🧪</button>
                     <button id="theme-toggle" class="btn-icon" title="Toggle between light and dark themes"
                         aria-label="Toggle theme">🌙</button>
+                    <button id="show-sidebar-header-btn" class="btn-icon hidden"
+                        aria-label="Show representatives sidebar" title="Show representatives">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="15 6 9 12 15 18"></polyline>
+                        </svg>
+                    </button>
                 </div>
             </header>
 
@@ -58,14 +66,26 @@
                         site</a>
                 </section>
             </div>
+
+            <p id="photo-credit" class="photo-credit"></p>
         </main>
 
         <!-- Show sidebar button (hidden when sidebar is visible) -->
         <button id="show-sidebar-btn" class="show-sidebar-btn hidden" aria-label="Show representatives sidebar"
-            title="Show representatives">❮</button>
+            title="Show representatives">
+            <svg class="show-sidebar-icon" viewBox="0 0 24 24" width="18" height="18" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                aria-hidden="true">
+                <polyline points="15 6 9 12 15 18"></polyline>
+            </svg>
+        </button>
 
         <!-- Civic information sidebar -->
         <aside class="sidebar" id="civic-sidebar" role="complementary" aria-labelledby="sidebar-heading">
+            <!-- Drag handle to resize the sidebar (desktop only) -->
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle" role="separator" tabindex="0"
+                aria-label="Resize sidebar" aria-orientation="vertical"></div>
+
             <!-- Simplified top navigation row -->
             <div class="sidebar-header simplified-nav">
                 <h2 id="sidebar-heading" class="visually-hidden">Local Government</h2>
@@ -261,6 +281,33 @@
                                     <button id="pane-theme-toggle" class="btn-secondary settings-pane-theme-btn"
                                         aria-label="Toggle theme">🌙 Dark</button>
                                 </label>
+                            </div>
+                        </section>
+
+                        <!-- Background -->
+                        <section class="settings-pane-section">
+                            <h4 class="settings-pane-section-title">🖼️ Background</h4>
+                            <div class="settings-pane-field">
+                                <label for="pane-background-mode">Background type</label>
+                                <select id="pane-background-mode" class="settings-pane-select">
+                                    <option value="photo">Rotating photo</option>
+                                    <option value="solid">Solid color</option>
+                                    <option value="flag">Milwaukee flag</option>
+                                </select>
+                            </div>
+                            <div class="settings-pane-field" id="pane-background-color-field">
+                                <label for="pane-background-color">Background color</label>
+                                <input type="color" id="pane-background-color" class="settings-pane-color-input"
+                                    value="#0077be">
+                            </div>
+                            <div class="settings-pane-field" id="pane-background-cycle-field">
+                                <label for="pane-background-cycle">Change photo</label>
+                                <select id="pane-background-cycle" class="settings-pane-select">
+                                    <option value="every">Every new tab</option>
+                                    <option value="hourly">Hourly</option>
+                                    <option value="daily" selected>Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                </select>
                             </div>
                         </section>
 

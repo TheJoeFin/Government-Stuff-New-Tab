@@ -14,6 +14,65 @@ const CALENDAR_SOURCE_COLORS = {
 const CALENDAR_STORAGE_KEY = "govtab_calendar_events_v2"
 const CALENDAR_STORAGE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
 
+// Background image shown when the "Milwaukee flag" background mode is active
+const FLAG_BACKGROUND_IMAGE = "Peoples-Flag-of-Milwaukee.svg"
+const DEFAULT_BACKGROUND_COLOR = "#0077be"
+
+// How long a rotating photo stays before the next one is picked, keyed by
+// the settings.backgroundCycle value. "every" (0) means a fresh random pick
+// on every new tab instead of a time-based rotation.
+const BACKGROUND_CYCLE_INTERVALS_MS = {
+  every: 0,
+  hourly: 60 * 60 * 1000,
+  daily: 24 * 60 * 60 * 1000,
+  weekly: 7 * 24 * 60 * 60 * 1000,
+}
+
+// Background photos sourced from images/photo-cred.csv (Unsplash attribution
+// links open in a new tab so they don't navigate away from the new tab page)
+const BACKGROUND_PHOTOS = [
+  {
+    file: "wei-zeng-6KffRaLsClk-unsplash.jpg",
+    credit:
+      'Photo by <a href="https://unsplash.com/@fotowei?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Wei Zeng</a> on <a href="https://unsplash.com/photos/cityscape-during-nighttime-6KffRaLsClk?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Unsplash</a>',
+  },
+  {
+    file: "federico-ramirez-ij1r1T28DX4-unsplash.jpg",
+    credit:
+      'Photo by <a href="https://unsplash.com/@peryco?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Federico Ramirez</a> on <a href="https://unsplash.com/photos/a-view-of-a-city-from-across-the-water-ij1r1T28DX4?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Unsplash</a>',
+  },
+  {
+    file: "casey-lovegrove-kIQbHBWtQA4-unsplash.jpg",
+    credit:
+      'Photo by <a href="https://unsplash.com/@clovegrove7?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Casey Lovegrove</a> on <a href="https://unsplash.com/photos/a-large-orange-sculpture-in-a-city-kIQbHBWtQA4?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Unsplash</a>',
+  },
+  {
+    file: "runde-imaging-YS1MJEF1z0s-unsplash.jpg",
+    credit:
+      'Photo by <a href="https://unsplash.com/@rundeimaging?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Runde Imaging</a> on <a href="https://unsplash.com/photos/white-concrete-building-YS1MJEF1z0s?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Unsplash</a>',
+  },
+  {
+    file: "mark-rohan-vN7Cpe2MSf8-unsplash.jpg",
+    credit:
+      'Photo by <a href="https://unsplash.com/@wackomac007?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Mark Rohan</a> on <a href="https://unsplash.com/photos/red-and-black-unk-neon-signage-vN7Cpe2MSf8?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Unsplash</a>',
+  },
+  {
+    file: "tom-barrett-hoA7e2HRr70-unsplash.jpg",
+    credit:
+      'Photo by <a href="https://unsplash.com/@wistomsin?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Tom Barrett</a> on <a href="https://unsplash.com/photos/water-mirror-reflection-of-concrete-high-rise-buildings-hoA7e2HRr70?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Unsplash</a>',
+  },
+  {
+    file: "kellie-klumb-GV5touJMTaw-unsplash.jpg",
+    credit:
+      'Photo by <a href="https://unsplash.com/@kklumb?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Kellie Klumb</a> on <a href="https://unsplash.com/photos/landscape-photography-of-cityscape-GV5touJMTaw?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Unsplash</a>',
+  },
+  {
+    file: "wes-lewis-uBsM4cHFSH0-unsplash.jpg",
+    credit:
+      'Photo by <a href="https://unsplash.com/@westhmus?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">wes lewis</a> on <a href="https://unsplash.com/photos/city-skyline-during-night-time-uBsM4cHFSH0?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank" rel="noopener noreferrer">Unsplash</a>',
+  },
+]
+
 class NewTabApp {
   constructor() {
     this.favorites = []
@@ -23,12 +82,36 @@ class NewTabApp {
     this.milwaukeeCache = new Map() // Smart cache for Milwaukee data
     this.cacheExpiry = 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
     this.settings = {
+      // This is the sticky, persisted preference used on wide/desktop
+      // layouts. Narrow/mobile layouts never read it directly - they use
+      // this.narrowSidebarOpen instead (see isSidebarOpen()), which
+      // always starts closed and is never saved.
       showSidebar: true,
+      // User-dragged sidebar width in px, or null to use the CSS default.
+      // Only meaningful on wide/desktop layouts - the mobile bottom sheet
+      // always spans the full viewport width regardless of this value.
+      sidebarWidth: null,
       autoLocation: false,
       theme: "light", // Default theme
       apiKey: "",
       propublicaApiKey: "",
+      // Background: "photo" (rotating Unsplash photos), "solid" (a flat
+      // color), or "flag" (the Milwaukee flag SVG)
+      backgroundMode: "photo",
+      backgroundColor: DEFAULT_BACKGROUND_COLOR,
+      // How often the rotating photo changes: "every", "hourly", "daily",
+      // or "weekly" - see BACKGROUND_CYCLE_INTERVALS_MS
+      backgroundCycle: "daily",
+      // Tracks which rotating photo is showing and when it was last
+      // changed, so the same photo persists across new tabs until its
+      // cycle interval elapses
+      backgroundPhotoState: null,
     }
+
+    // Ephemeral, session-only "is the bottom sheet open" state for
+    // narrow/mobile layouts - intentionally not part of this.settings so
+    // it's never persisted. Always starts closed.
+    this.narrowSidebarOpen = false
 
     this.sidebarDetailView = {
       listSection: null,
@@ -110,6 +193,92 @@ class NewTabApp {
     return previousMonday
   }
 
+  // Picks which rotating background photo should show right now, based on
+  // settings.backgroundCycle. "every" always re-rolls; the timed intervals
+  // keep the same photo (persisted in settings.backgroundPhotoState) until
+  // their interval elapses, then advance to the next one.
+  getBackgroundPhotoIndex() {
+    const total = BACKGROUND_PHOTOS.length
+    const cycle = this.settings.backgroundCycle || "daily"
+    const intervalMs =
+      BACKGROUND_CYCLE_INTERVALS_MS[cycle] ??
+      BACKGROUND_CYCLE_INTERVALS_MS.daily
+
+    if (intervalMs <= 0) {
+      return Math.floor(Math.random() * total)
+    }
+
+    const state = this.settings.backgroundPhotoState
+    const now = Date.now()
+
+    if (
+      state &&
+      typeof state.index === "number" &&
+      state.index >= 0 &&
+      state.index < total &&
+      typeof state.changedAt === "number" &&
+      now - state.changedAt < intervalMs
+    ) {
+      return state.index
+    }
+
+    const previousIndex = state && typeof state.index === "number" ? state.index : -1
+    const nextIndex =
+      total > 1 ? (previousIndex + 1 + total) % total : 0
+
+    this.settings.backgroundPhotoState = { index: nextIndex, changedAt: now }
+    this.saveSettings()
+
+    return nextIndex
+  }
+
+  // Applies the current background settings (rotating photo, solid color,
+  // or the Milwaukee flag), fading it in once ready (avoids a jarring
+  // pop-in) and rendering the Unsplash credit only in photo mode.
+  applyBackground() {
+    const bgEl = document.querySelector(".page-bg")
+    const creditEl = document.getElementById("photo-credit")
+    if (!bgEl || !creditEl) return
+
+    bgEl.classList.remove("loaded")
+    creditEl.innerHTML = ""
+
+    const mode = this.settings.backgroundMode || "photo"
+
+    if (mode === "solid") {
+      bgEl.style.backgroundImage = "none"
+      bgEl.style.backgroundColor =
+        this.settings.backgroundColor || DEFAULT_BACKGROUND_COLOR
+      requestAnimationFrame(() => bgEl.classList.add("loaded"))
+      return
+    }
+
+    bgEl.style.backgroundColor = ""
+
+    if (mode === "flag") {
+      const preload = new Image()
+      preload.onload = () => {
+        bgEl.style.backgroundImage = `linear-gradient(to bottom, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.35)), url("${FLAG_BACKGROUND_IMAGE}")`
+        requestAnimationFrame(() => bgEl.classList.add("loaded"))
+      }
+      preload.src = FLAG_BACKGROUND_IMAGE
+      return
+    }
+
+    // Default: rotating photo mode
+    const photo = BACKGROUND_PHOTOS[this.getBackgroundPhotoIndex()]
+    const imageUrl = `images/${photo.file}`
+
+    const preload = new Image()
+    preload.onload = () => {
+      bgEl.style.backgroundImage = `linear-gradient(to bottom, rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.45)), url("${imageUrl}")`
+      requestAnimationFrame(() => bgEl.classList.add("loaded"))
+    }
+    preload.src = imageUrl
+
+    creditEl.innerHTML = photo.credit
+  }
+
   // Initialize theme before DOM is fully loaded
   initializeTheme() {
     // Check for system preference
@@ -146,6 +315,7 @@ class NewTabApp {
       await this.loadLastAddress()
       console.log("Last address loaded:", this.lastAddress)
       this.initializeUI()
+      this.applyBackground()
       console.log("UI initialized")
       await this.updateVersionDisplay()
       this.bindEvents()
@@ -436,8 +606,111 @@ class NewTabApp {
     this.loadCalendarEvents()
     this.renderFavorites()
     this.updateSidebarVisibility()
+    this.applySidebarWidth()
     this.updateSettingsUI()
     this.populateLastAddress()
+  }
+
+  // Sidebar min/max drag-resize bounds, in px.
+  SIDEBAR_MIN_WIDTH = 280
+  SIDEBAR_MAX_WIDTH = 640
+
+  clampSidebarWidth(width) {
+    const viewportMax = Math.round(window.innerWidth * 0.7)
+    const max = Math.min(this.SIDEBAR_MAX_WIDTH, viewportMax)
+    return Math.min(Math.max(width, this.SIDEBAR_MIN_WIDTH), max)
+  }
+
+  // Applies the persisted custom sidebar width (if any) to the layout.
+  // Safe to call on every resize/orientation change since it re-clamps
+  // against the current viewport width.
+  applySidebarWidth() {
+    const container = document.querySelector(".container")
+    if (!container) return
+
+    if (this.settings.sidebarWidth) {
+      const width = this.clampSidebarWidth(this.settings.sidebarWidth)
+      container.style.setProperty("--sidebar-width", `${width}px`)
+    } else {
+      container.style.removeProperty("--sidebar-width")
+    }
+  }
+
+  // Lets the user drag the handle on the sidebar's left edge to resize it.
+  // Desktop-only: on narrow/mobile layouts the sidebar becomes a full-width
+  // bottom sheet, so horizontal resizing doesn't apply there.
+  setupSidebarResize() {
+    const handle = document.getElementById("sidebar-resize-handle")
+    const container = document.querySelector(".container")
+    if (!handle || !container) return
+
+    let dragging = false
+
+    const onPointerMove = (e) => {
+      if (!dragging) return
+      // Sidebar sits on the right edge of the viewport, so its width is
+      // the distance from the pointer to the right edge.
+      const width = this.clampSidebarWidth(window.innerWidth - e.clientX)
+      container.style.setProperty("--sidebar-width", `${width}px`)
+    }
+
+    const onPointerUp = (e) => {
+      if (!dragging) return
+      dragging = false
+      handle.classList.remove("dragging")
+      document.body.classList.remove("sidebar-resizing")
+      try {
+        handle.releasePointerCapture(e.pointerId)
+      } catch (err) {
+        // no-op: pointer capture may already be released
+      }
+
+      const width = this.clampSidebarWidth(window.innerWidth - e.clientX)
+      this.settings.sidebarWidth = width
+      this.saveSettings()
+
+      document.removeEventListener("pointermove", onPointerMove)
+      document.removeEventListener("pointerup", onPointerUp)
+    }
+
+    handle.addEventListener("pointerdown", (e) => {
+      if (this.isNarrowViewport()) return
+      dragging = true
+      handle.classList.add("dragging")
+      document.body.classList.add("sidebar-resizing")
+      try {
+        handle.setPointerCapture(e.pointerId)
+      } catch (err) {
+        // no-op: some browsers restrict capture on non-primary pointers
+      }
+      document.addEventListener("pointermove", onPointerMove)
+      document.addEventListener("pointerup", onPointerUp)
+      e.preventDefault()
+    })
+
+    // Keyboard resizing for accessibility: arrow keys nudge the width.
+    handle.addEventListener("keydown", (e) => {
+      if (this.isNarrowViewport()) return
+      const step = 24
+      let delta = 0
+      if (e.key === "ArrowLeft") delta = step
+      else if (e.key === "ArrowRight") delta = -step
+      else return
+
+      e.preventDefault()
+      const current =
+        this.settings.sidebarWidth ||
+        document.getElementById("civic-sidebar")?.offsetWidth ||
+        380
+      const width = this.clampSidebarWidth(current + delta)
+      container.style.setProperty("--sidebar-width", `${width}px`)
+      this.settings.sidebarWidth = width
+      this.saveSettings()
+    })
+
+    window.addEventListener("resize", () => {
+      this.applySidebarWidth()
+    })
   }
 
   applyTheme() {
@@ -515,27 +788,91 @@ class NewTabApp {
     this.closeOfficialDetail({ silent: true })
   }
 
+  // Narrow/mobile layouts switch the sidebar to an on-demand bottom
+  // sheet (see the max-width: 768px rules in styles.css)
+  isNarrowViewport() {
+    return Boolean(
+      window.matchMedia && window.matchMedia("(max-width: 768px)").matches,
+    )
+  }
+
+  // Whether the sidebar/bottom-sheet should currently be visible. Wide
+  // layouts follow the persisted, sticky settings.showSidebar preference;
+  // narrow layouts always use the ephemeral, never-persisted
+  // narrowSidebarOpen state instead, so opening the bottom sheet on
+  // mobile never overwrites (or is overwritten by) the desktop setting.
+  isSidebarOpen() {
+    return this.isNarrowViewport()
+      ? this.narrowSidebarOpen
+      : this.settings.showSidebar
+  }
+
+  // Opens/closes the sidebar, writing to whichever state backs the
+  // current layout (see isSidebarOpen). Use this from click handlers
+  // instead of setting settings.showSidebar directly.
+  setSidebarOpen(open) {
+    if (this.isNarrowViewport()) {
+      this.narrowSidebarOpen = open
+      this.updateSidebarVisibility()
+    } else {
+      this.settings.showSidebar = open
+      this.updateSidebarVisibility()
+      this.updateSettingsUI()
+      this.saveSettings()
+    }
+  }
+
   updateSidebarVisibility() {
     const container = document.querySelector(".container")
     const sidebar = document.getElementById("civic-sidebar")
     const showSidebarBtn = document.getElementById("show-sidebar-btn")
+    const showSidebarHeaderBtn = document.getElementById(
+      "show-sidebar-header-btn",
+    )
     const toggleSidebarBtn = document.getElementById("toggle-sidebar")
 
-    if (this.settings.showSidebar) {
+    if (this.isSidebarOpen()) {
       container.classList.remove("sidebar-collapsed")
       sidebar.classList.remove("collapsed")
       showSidebarBtn.classList.add("hidden")
+      if (showSidebarHeaderBtn) showSidebarHeaderBtn.classList.add("hidden")
       if (toggleSidebarBtn) toggleSidebarBtn.classList.remove("rotated")
     } else {
       container.classList.add("sidebar-collapsed")
       sidebar.classList.add("collapsed")
       showSidebarBtn.classList.remove("hidden")
+      if (showSidebarHeaderBtn)
+        showSidebarHeaderBtn.classList.remove("hidden")
       if (toggleSidebarBtn) toggleSidebarBtn.classList.add("rotated")
     }
   }
 
+  // Keeps the bottom sheet's open/closed state correct as the window
+  // crosses the narrow/wide breakpoint: shrinking into narrow always
+  // hides it (ignoring whatever was showing), and widening back out
+  // restores the persisted desktop preference.
+  setupResponsiveSidebarBehavior() {
+    const query = window.matchMedia && window.matchMedia("(max-width: 768px)")
+    if (!query) return
+
+    const handleChange = (event) => {
+      if (event.matches) {
+        // Just became narrow: always start hidden here
+        this.narrowSidebarOpen = false
+      }
+      this.updateSidebarVisibility()
+    }
+
+    if (query.addEventListener) {
+      query.addEventListener("change", handleChange)
+    } else if (query.addListener) {
+      // Safari <14 fallback
+      query.addListener(handleChange)
+    }
+  }
+
   updateSettingsUI() {
-    document.getElementById("show-sidebar").checked = this.settings.showSidebar
+    document.getElementById("show-sidebar").checked = this.isSidebarOpen()
     document.getElementById("auto-location").checked =
       this.settings.autoLocation
 
@@ -1838,6 +2175,9 @@ class NewTabApp {
   bindEvents() {
     console.log("Binding events...")
 
+    this.setupResponsiveSidebarBehavior()
+    this.setupSidebarResize()
+
     // Search form
     const searchForm = document.getElementById("search-form")
     const searchInput = document.getElementById("search-input")
@@ -1894,9 +2234,7 @@ class NewTabApp {
     if (showSidebar) {
       showSidebar.addEventListener("change", (e) => {
         console.log("Show sidebar changed:", e.target.checked)
-        this.settings.showSidebar = e.target.checked
-        this.updateSidebarVisibility()
-        this.saveSettings()
+        this.setSidebarOpen(e.target.checked)
       })
     }
 
@@ -1914,25 +2252,44 @@ class NewTabApp {
     if (toggleSidebar) {
       toggleSidebar.addEventListener("click", () => {
         console.log("Toggle sidebar clicked")
-        this.settings.showSidebar = !this.settings.showSidebar
-        this.updateSidebarVisibility()
-        this.updateSettingsUI()
-        this.saveSettings()
+        this.setSidebarOpen(!this.isSidebarOpen())
       })
     }
 
-    // Show sidebar button
+    // Show sidebar button (mobile bottom-sheet pill)
     const showSidebarBtn = document.getElementById("show-sidebar-btn")
     if (showSidebarBtn) {
       showSidebarBtn.addEventListener("click", () => {
         console.log("Show sidebar clicked")
-        this.settings.showSidebar = true
-        this.updateSidebarVisibility()
-        this.updateSettingsUI()
-        this.saveSettings()
+        this.setSidebarOpen(true)
 
         // Announce to screen readers
         this.announceToScreenReader("Representatives sidebar opened")
+      })
+    }
+
+    // Show sidebar button (desktop header)
+    const showSidebarHeaderBtn = document.getElementById(
+      "show-sidebar-header-btn",
+    )
+    if (showSidebarHeaderBtn) {
+      showSidebarHeaderBtn.addEventListener("click", () => {
+        console.log("Show sidebar (header) clicked")
+        this.setSidebarOpen(true)
+
+        // Announce to screen readers
+        this.announceToScreenReader("Representatives sidebar opened")
+      })
+    }
+
+    // On narrow screens the sidebar becomes a bottom sheet with a
+    // backdrop; tapping the backdrop (not its content) closes it.
+    const civicSidebar = document.getElementById("civic-sidebar")
+    if (civicSidebar) {
+      civicSidebar.addEventListener("click", (e) => {
+        if (e.target === civicSidebar && this.isNarrowViewport()) {
+          this.setSidebarOpen(false)
+        }
       })
     }
 
@@ -2585,11 +2942,17 @@ class NewTabApp {
     if (type === "event") {
       heading.textContent = data.name || "Meeting Details"
       if (subtitle) subtitle.textContent = data.body || ""
+      this.agendaItemsRaw = Array.isArray(data.items) ? data.items : []
+      this.agendaItemsClient = null
+      this.detailRequestId = (this.detailRequestId || 0) + 1
       content.innerHTML = this.renderEventDetail(data)
-      this.fetchEventDetailVideoUrl(data, content)
+      this.populateLinkifiedFields(data, content)
+      this.setupAgendaItemsSearch(content)
+      this.fetchEventDetailExtras(data, content, this.detailRequestId)
     } else if (type === "official") {
       heading.textContent = data.name || "Official Details"
       if (subtitle) subtitle.textContent = data.office || data.title || ""
+      this.detailRequestId = (this.detailRequestId || 0) + 1
       content.innerHTML = this.renderOfficialDetail(data)
     }
 
@@ -2603,21 +2966,41 @@ class NewTabApp {
     }
   }
 
-  fetchEventDetailVideoUrl(event, contentElement) {
-    // Only fetch if we're missing video/minutes and have enough info to query
-    if (event.videoUrl && event.minutesUrl) return
+  fetchEventDetailExtras(event, contentElement, requestId) {
     if (!event.rawEventId || !event.source) return
 
     const client = event.source // "milwaukee" or "milwaukeecounty"
     if (client !== "milwaukee" && client !== "milwaukeecounty") return
 
+    // Only fetch if we're missing video/minutes/items and have enough info to query
+    const needsLinks = !event.videoUrl || !event.minutesUrl
+    const needsItems = !event.items
+    if (!needsLinks && !needsItems) return
+
     chrome.runtime.sendMessage(
-      { type: "legistar:getEventDetail", client, eventId: event.rawEventId },
+      {
+        type: "legistar:getEventDetail",
+        client,
+        eventId: event.rawEventId,
+        needsLinks,
+        needsItems,
+      },
       (response) => {
+        // The detail overlay may have moved on to a different meeting (or
+        // closed) while this request was in flight. Discard a stale
+        // response instead of overwriting the now-current overlay.
+        if (requestId !== this.detailRequestId) return
+
         if (chrome.runtime.lastError || !response || response.status !== "ok") {
+          if (needsItems) {
+            this.renderEventItemsList([], contentElement, {
+              error: true,
+              client,
+            })
+          }
           return
         }
-        const { videoUrl, minutesUrl } = response.data
+        const { videoUrl, minutesUrl, items } = response.data
         const newLinks = []
         if (videoUrl && !event.videoUrl) {
           event.videoUrl = videoUrl
@@ -2631,29 +3014,374 @@ class NewTabApp {
             `<a href="${minutesUrl}" target="_blank" rel="noopener noreferrer" class="event-link">📋 View Minutes</a>`,
           )
         }
-        if (!newLinks.length) return
-
-        // Try to append to existing resources section
-        const extraSlot = contentElement.querySelector(
-          "#detail-extra-resources",
-        )
-        if (extraSlot) {
-          extraSlot.innerHTML = newLinks.join("")
-          return
+        if (newLinks.length) {
+          // Try to append to existing resources section
+          const extraSlot = contentElement.querySelector(
+            "#detail-extra-resources",
+          )
+          if (extraSlot) {
+            extraSlot.innerHTML = newLinks.join("")
+          } else {
+            // If no resources section existed, fill the placeholder
+            const placeholder = contentElement.querySelector(
+              "#detail-resources-placeholder",
+            )
+            if (placeholder) {
+              placeholder.innerHTML = `
+                <h5>Resources</h5>
+                <p class="event-links">${newLinks.join("")}</p>
+              `
+            }
+          }
         }
 
-        // If no resources section existed, fill the placeholder
-        const placeholder = contentElement.querySelector(
-          "#detail-resources-placeholder",
-        )
-        if (placeholder) {
-          placeholder.innerHTML = `
-            <h5>Resources</h5>
-            <p class="event-links">${newLinks.join("")}</p>
-          `
+        if (needsItems) {
+          event.items = Array.isArray(items) ? items : []
+          this.renderEventItemsList(event.items, contentElement, { client })
         }
       },
     )
+  }
+
+  setupAgendaItemsSearch(contentElement) {
+    const toggleBtn = contentElement.querySelector("#agenda-items-search-toggle")
+    const searchRow = contentElement.querySelector("#agenda-items-search-row")
+    const searchInput = contentElement.querySelector(
+      "#agenda-items-search-input",
+    )
+    const container = contentElement.querySelector("#detail-agenda-items")
+    if (!toggleBtn || !searchRow || !searchInput || !container) return
+
+    toggleBtn.addEventListener("click", () => {
+      const nextVisible = searchRow.classList.contains("hidden")
+      searchRow.classList.toggle("hidden", !nextVisible)
+      toggleBtn.setAttribute("aria-pressed", String(nextVisible))
+      const label = nextVisible
+        ? "Hide agenda item search"
+        : "Search agenda items"
+      toggleBtn.title = label
+      toggleBtn.setAttribute("aria-label", label)
+
+      if (nextVisible) {
+        setTimeout(() => searchInput.focus(), 50)
+      } else if (searchInput.value) {
+        searchInput.value = ""
+        this.renderAgendaItems(container, {
+          query: "",
+          client: this.agendaItemsClient,
+        })
+      }
+    })
+
+    searchInput.addEventListener("input", () => {
+      this.renderAgendaItems(container, {
+        query: searchInput.value,
+        client: this.agendaItemsClient,
+      })
+    })
+  }
+
+  renderEventItemsList(items, contentElement, { error = false, client } = {}) {
+    const container = contentElement.querySelector("#detail-agenda-items")
+    if (!container) return
+
+    if (!error) {
+      this.agendaItemsRaw = Array.isArray(items) ? items : []
+      this.agendaItemsClient = client
+    }
+
+    const searchInput = contentElement.querySelector(
+      "#agenda-items-search-input",
+    )
+    const query = searchInput ? searchInput.value : ""
+
+    this.renderAgendaItems(container, { error, query, client })
+  }
+
+  agendaItemMatchesQuery(item, normalizedQuery) {
+    const haystack = [
+      item.agendaNumber,
+      item.title,
+      item.action,
+      item.passed,
+      item.matterFile,
+      item.note,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+    return haystack.includes(normalizedQuery)
+  }
+
+  renderAgendaItems(container, { error = false, query = "", client } = {}) {
+    container.innerHTML = ""
+
+    if (error) {
+      const message = document.createElement("p")
+      message.className = "event-items-empty"
+      message.textContent = "Unable to load agenda items right now."
+      container.appendChild(message)
+      return
+    }
+
+    const allItems = this.agendaItemsRaw || []
+
+    if (!allItems.length) {
+      const message = document.createElement("p")
+      message.className = "event-items-empty"
+      message.textContent = "No agenda items published yet."
+      container.appendChild(message)
+      return
+    }
+
+    const normalizedQuery = query.trim().toLowerCase()
+    const items = normalizedQuery
+      ? allItems.filter((item) =>
+          this.agendaItemMatchesQuery(item, normalizedQuery),
+        )
+      : allItems
+
+    if (!items.length) {
+      const message = document.createElement("p")
+      message.className = "event-items-empty"
+      message.textContent = `No agenda items match "${query.trim()}".`
+      container.appendChild(message)
+      return
+    }
+
+    const list = document.createElement("ul")
+    list.className = "event-items-list"
+
+    items.forEach((item) => {
+      const li = document.createElement("li")
+      li.className = "event-item"
+
+      const header = document.createElement("div")
+      header.className = "event-item-header"
+
+      if (item.agendaNumber) {
+        const number = document.createElement("span")
+        number.className = "event-item-number"
+        number.textContent = item.agendaNumber
+        header.appendChild(number)
+      }
+
+      const title = document.createElement("span")
+      title.className = "event-item-title"
+      title.appendChild(this.linkifyToFragment(item.title))
+      header.appendChild(title)
+
+      li.appendChild(header)
+
+      if (item.action || item.passed) {
+        const status = document.createElement("div")
+        status.className = "event-item-status"
+
+        if (item.action) {
+          const action = document.createElement("span")
+          action.className = "event-item-action"
+          action.textContent = item.action
+          status.appendChild(action)
+        }
+
+        if (item.passed) {
+          const passed = document.createElement("span")
+          const passedLower = item.passed.toLowerCase()
+          passed.className = `event-item-passed ${
+            passedLower === "passed" || passedLower === "approved"
+              ? "is-passed"
+              : passedLower === "failed"
+                ? "is-failed"
+                : ""
+          }`.trim()
+          passed.textContent = item.passed
+          status.appendChild(passed)
+        }
+
+        li.appendChild(status)
+      }
+
+      if (item.matterFile) {
+        const file = document.createElement("div")
+        file.className = "event-item-file"
+        file.textContent = `File #${item.matterFile}`
+        li.appendChild(file)
+      }
+
+      const updatedLabel = this.formatCalendarLastModified(item.lastModified)
+      if (updatedLabel) {
+        const updated = document.createElement("div")
+        updated.className = "event-item-updated"
+        updated.textContent = `Updated ${updatedLabel}`
+        li.appendChild(updated)
+      }
+
+      if (item.note || item.matterId) {
+        li.appendChild(this.buildEventItemDetailToggle(item, client))
+      }
+
+      list.appendChild(li)
+    })
+
+    container.appendChild(list)
+  }
+
+  buildEventItemDetailToggle(item, client) {
+    const wrapper = document.createDocumentFragment()
+
+    const toggle = document.createElement("button")
+    toggle.type = "button"
+    toggle.className = "event-item-toggle"
+    toggle.textContent = "Details"
+    toggle.setAttribute("aria-expanded", "false")
+
+    const panel = document.createElement("div")
+    panel.className = "event-item-detail-panel"
+    panel.hidden = true
+
+    if (item.note) {
+      const note = document.createElement("p")
+      note.className = "event-item-note"
+      note.appendChild(this.linkifyToFragment(item.note))
+      panel.appendChild(note)
+    }
+
+    let attachmentsContainer = null
+    if (item.matterId) {
+      attachmentsContainer = document.createElement("div")
+      attachmentsContainer.className = "event-item-attachments"
+      panel.appendChild(attachmentsContainer)
+    }
+
+    let attachmentsRequested = false
+    toggle.addEventListener("click", () => {
+      const isExpanded = toggle.getAttribute("aria-expanded") === "true"
+      const nextExpanded = !isExpanded
+      toggle.setAttribute("aria-expanded", String(nextExpanded))
+      toggle.textContent = nextExpanded ? "Hide Details" : "Details"
+      panel.hidden = !nextExpanded
+
+      if (
+        nextExpanded &&
+        !attachmentsRequested &&
+        attachmentsContainer &&
+        client
+      ) {
+        attachmentsRequested = true
+        this.fetchMatterAttachments(client, item.matterId, attachmentsContainer)
+      }
+    })
+
+    wrapper.appendChild(toggle)
+    wrapper.appendChild(panel)
+    return wrapper
+  }
+
+  fetchMatterAttachments(client, matterId, container) {
+    container.innerHTML = ""
+    const loading = document.createElement("p")
+    loading.className = "event-item-attachments-loading"
+    loading.textContent = "Loading attachments…"
+    container.appendChild(loading)
+
+    chrome.runtime.sendMessage(
+      { type: "legistar:getMatterAttachments", client, matterId },
+      (response) => {
+        container.innerHTML = ""
+
+        if (chrome.runtime.lastError || !response || response.status !== "ok") {
+          const message = document.createElement("p")
+          message.className = "event-item-attachments-empty"
+          message.textContent = "Unable to load attachments right now."
+          container.appendChild(message)
+          return
+        }
+
+        const attachments = response.data?.attachments || []
+        if (!attachments.length) {
+          const message = document.createElement("p")
+          message.className = "event-item-attachments-empty"
+          message.textContent = "No attachments available."
+          container.appendChild(message)
+          return
+        }
+
+        const list = document.createElement("ul")
+        list.className = "event-item-attachments-list"
+        attachments.forEach((attachment) => {
+          const li = document.createElement("li")
+          const link = document.createElement("a")
+          link.href = attachment.url
+          link.target = "_blank"
+          link.rel = "noopener noreferrer"
+          link.className = "event-item-attachment-link"
+          link.textContent = `📎 ${attachment.name}`
+          li.appendChild(link)
+          list.appendChild(li)
+        })
+        container.appendChild(list)
+      },
+    )
+  }
+
+  populateLinkifiedFields(event, contentElement) {
+    const locationEl = contentElement.querySelector("#detail-event-location")
+    if (locationEl && event.location) {
+      locationEl.appendChild(this.linkifyToFragment(event.location))
+    }
+
+    const descriptionEl = contentElement.querySelector(
+      "#detail-event-description",
+    )
+    if (descriptionEl && event.description) {
+      descriptionEl.appendChild(this.linkifyToFragment(event.description))
+    }
+  }
+
+  linkifyToFragment(text) {
+    const fragment = document.createDocumentFragment()
+    if (!text) return fragment
+
+    const urlPattern = /https?:\/\/[^\s<>"')\]]+/gi
+    const trailingPunctuation = /[.,;:!?]+$/
+    let lastIndex = 0
+    let match
+
+    while ((match = urlPattern.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        fragment.appendChild(
+          document.createTextNode(text.slice(lastIndex, match.index)),
+        )
+      }
+
+      let url = match[0]
+      let trailing = ""
+      const trimMatch = trailingPunctuation.exec(url)
+      if (trimMatch) {
+        trailing = trimMatch[0]
+        url = url.slice(0, -trailing.length)
+      }
+
+      const link = document.createElement("a")
+      link.href = url
+      link.textContent = url
+      link.target = "_blank"
+      link.rel = "noopener noreferrer"
+      link.className = "event-inline-link"
+      fragment.appendChild(link)
+
+      if (trailing) {
+        fragment.appendChild(document.createTextNode(trailing))
+      }
+
+      lastIndex = match.index + match[0].length
+    }
+
+    if (lastIndex < text.length) {
+      fragment.appendChild(document.createTextNode(text.slice(lastIndex)))
+    }
+
+    return fragment
   }
 
   renderEventDetail(event) {
@@ -2721,7 +3449,7 @@ class NewTabApp {
               ? `
             <div class="info-section">
               <h5>Where</h5>
-              <p class="event-location">${event.location}</p>
+              <p class="event-location" id="detail-event-location"></p>
             </div>
           `
               : ""
@@ -2743,9 +3471,25 @@ class NewTabApp {
               ? `
             <div class="info-section">
               <h5>Description</h5>
-              <div class="event-description">${event.description}</div>
+              <div class="event-description" id="detail-event-description"></div>
             </div>
           `
+              : ""
+          }
+
+          ${
+            event.rawEventId &&
+            (event.source === "milwaukee" || event.source === "milwaukeecounty")
+              ? `<div class="info-section" id="detail-agenda-items-section">
+                  <div class="agenda-items-heading-row">
+                    <h5>Agenda Items</h5>
+                    <button type="button" id="agenda-items-search-toggle" class="agenda-items-search-toggle" aria-pressed="false" title="Search agenda items" aria-label="Search agenda items">🔍</button>
+                  </div>
+                  <div class="agenda-items-search-row hidden" id="agenda-items-search-row">
+                    <input type="text" id="agenda-items-search-input" class="agenda-items-search-input" placeholder="Search agenda items…" autocomplete="off" />
+                  </div>
+                  <div id="detail-agenda-items"><p class="event-items-loading">Loading agenda items…</p></div>
+                </div>`
               : ""
           }
 
@@ -3731,13 +4475,29 @@ class NewTabApp {
 
     // Sync checkboxes
     const showSidebar = document.getElementById("pane-show-sidebar")
-    if (showSidebar) showSidebar.checked = this.settings.showSidebar
+    if (showSidebar) showSidebar.checked = this.isSidebarOpen()
 
     const autoLocation = document.getElementById("pane-auto-location")
     if (autoLocation) autoLocation.checked = this.settings.autoLocation
 
     // Sync theme button
     this.updatePaneThemeButton()
+
+    // Sync background controls
+    const backgroundMode = document.getElementById("pane-background-mode")
+    if (backgroundMode)
+      backgroundMode.value = this.settings.backgroundMode || "photo"
+
+    const backgroundColor = document.getElementById("pane-background-color")
+    if (backgroundColor)
+      backgroundColor.value =
+        this.settings.backgroundColor || DEFAULT_BACKGROUND_COLOR
+
+    const backgroundCycle = document.getElementById("pane-background-cycle")
+    if (backgroundCycle)
+      backgroundCycle.value = this.settings.backgroundCycle || "daily"
+
+    this.updateBackgroundFieldsVisibility()
 
     // Version info
     const versionEl = document.getElementById("pane-version-info")
@@ -3753,6 +4513,16 @@ class NewTabApp {
       themeBtn.textContent =
         this.settings.theme === "dark" ? "☀️ Light" : "🌙 Dark"
     }
+  }
+
+  // Shows/hides the color-picker and cycle-frequency fields depending on
+  // which background mode is currently selected (only one is ever relevant)
+  updateBackgroundFieldsVisibility() {
+    const mode = this.settings.backgroundMode || "photo"
+    const colorField = document.getElementById("pane-background-color-field")
+    const cycleField = document.getElementById("pane-background-cycle-field")
+    if (colorField) colorField.classList.toggle("hidden", mode !== "solid")
+    if (cycleField) cycleField.classList.toggle("hidden", mode !== "photo")
   }
 
   setupSettingsPaneEvents() {
@@ -3891,12 +4661,10 @@ class NewTabApp {
     const paneShowSidebar = document.getElementById("pane-show-sidebar")
     if (paneShowSidebar) {
       paneShowSidebar.addEventListener("change", (e) => {
-        this.settings.showSidebar = e.target.checked
+        this.setSidebarOpen(e.target.checked)
         // Sync with main settings checkbox
         const mainCheckbox = document.getElementById("show-sidebar")
         if (mainCheckbox) mainCheckbox.checked = e.target.checked
-        this.updateSidebarVisibility()
-        this.saveSettings()
       })
     }
 
@@ -3922,6 +4690,40 @@ class NewTabApp {
         this.applyTheme()
         this.saveSettings()
         this.updatePaneThemeButton()
+      })
+    }
+
+    // Background mode (photo / solid color / Milwaukee flag)
+    const backgroundMode = document.getElementById("pane-background-mode")
+    if (backgroundMode) {
+      backgroundMode.addEventListener("change", (e) => {
+        this.settings.backgroundMode = e.target.value
+        this.updateBackgroundFieldsVisibility()
+        this.saveSettings()
+        this.applyBackground()
+      })
+    }
+
+    // Solid background color
+    const backgroundColor = document.getElementById("pane-background-color")
+    if (backgroundColor) {
+      backgroundColor.addEventListener("input", (e) => {
+        this.settings.backgroundColor = e.target.value
+        this.saveSettings()
+        this.applyBackground()
+      })
+    }
+
+    // Photo cycle frequency
+    const backgroundCycle = document.getElementById("pane-background-cycle")
+    if (backgroundCycle) {
+      backgroundCycle.addEventListener("change", (e) => {
+        this.settings.backgroundCycle = e.target.value
+        // Force a fresh pick under the new interval instead of waiting out
+        // whatever interval the previous setting had left
+        this.settings.backgroundPhotoState = null
+        this.saveSettings()
+        this.applyBackground()
       })
     }
   }

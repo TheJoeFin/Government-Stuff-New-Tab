@@ -4,7 +4,14 @@ A Chrome extension that replaces your new tab page with a comprehensive interfac
 
 Perfect for Milwaukee area residents who want to stay engaged with local democracy and easily contact their elected officials, plus get comprehensive information about all government representatives.
 
-## 🌟 What's New in v2.5.0
+## 🌟 What's New in v2.6.0
+
+- **🖼️ Background Settings**: New Background section in the settings pane for customizing the new tab background
+  - Choose between a rotating Unsplash photo, a solid color, or the Milwaukee flag
+  - Pick any solid color with a live color picker
+  - Control how often the rotating photo changes: every new tab, hourly, daily (default), or weekly
+
+## ✨ What's New in v2.5.0
 
 - **🗓️ Calendar Date Timezone Fix**: Clicking a calendar day now shows the correct date and events regardless of your timezone
   - Dates are parsed in local timezone, so users in Central Time (UTC-6) and other negative-offset zones no longer see events shifted to the previous day
@@ -167,7 +174,8 @@ For issues or questions:
 
 ## Version History
 
-- **v2.5.0** (Latest): 🗓️ **Calendar Timezone Fix** - Calendar dates now display correctly in all timezones; timezone-safe `parseLocalDate()` helper prevents off-by-one day errors in Central Time and other negative-offset locales
+- **v2.6.0** (Latest): 🖼️ **Background Settings** - Choose a rotating photo, solid color, or the Milwaukee flag for the new tab background, with a color picker and configurable photo-rotation frequency
+- **v2.5.0**: 🗓️ **Calendar Timezone Fix** - Calendar dates now display correctly in all timezones; timezone-safe `parseLocalDate()` helper prevents off-by-one day errors in Central Time and other negative-offset locales
 - **v2.4.0**: 📅 **Government Meeting Calendar & Simplified UI** - Legistar-powered City and County meeting calendar with weekly view; redesigned sidebar with Calendar/Officials/Search tab navigation and full-page detail views
 - **v2.3.0**: 🔍 **Chrome Search API** - Web search now respects the user's default browser search provider instead of hard-coding Google
 - **v2.2.0**: 🔒 **Address Privacy** - Address display minimized to reduce over-the-shoulder PII exposure once location is set
