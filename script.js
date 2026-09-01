@@ -2944,8 +2944,11 @@ class NewTabApp {
     if (type === "event") {
       heading.textContent = data.name || "Meeting Details"
       if (subtitle) subtitle.textContent = data.body || ""
+      this.agendaItemsRaw = Array.isArray(data.items) ? data.items : []
+      this.agendaItemsClient = null
       content.innerHTML = this.renderEventDetail(data)
       this.populateLinkifiedFields(data, content)
+      this.setupAgendaItemsSearch(content)
       this.fetchEventDetailExtras(data, content)
     } else if (type === "official") {
       heading.textContent = data.name || "Official Details"
@@ -3025,10 +3028,77 @@ class NewTabApp {
     )
   }
 
+  setupAgendaItemsSearch(contentElement) {
+    const toggleBtn = contentElement.querySelector("#agenda-items-search-toggle")
+    const searchRow = contentElement.querySelector("#agenda-items-search-row")
+    const searchInput = contentElement.querySelector(
+      "#agenda-items-search-input",
+    )
+    const container = contentElement.querySelector("#detail-agenda-items")
+    if (!toggleBtn || !searchRow || !searchInput || !container) return
+
+    toggleBtn.addEventListener("click", () => {
+      const nextVisible = searchRow.classList.contains("hidden")
+      searchRow.classList.toggle("hidden", !nextVisible)
+      toggleBtn.setAttribute("aria-pressed", String(nextVisible))
+      const label = nextVisible
+        ? "Hide agenda item search"
+        : "Search agenda items"
+      toggleBtn.title = label
+      toggleBtn.setAttribute("aria-label", label)
+
+      if (nextVisible) {
+        setTimeout(() => searchInput.focus(), 50)
+      } else if (searchInput.value) {
+        searchInput.value = ""
+        this.renderAgendaItems(container, {
+          query: "",
+          client: this.agendaItemsClient,
+        })
+      }
+    })
+
+    searchInput.addEventListener("input", () => {
+      this.renderAgendaItems(container, {
+        query: searchInput.value,
+        client: this.agendaItemsClient,
+      })
+    })
+  }
+
   renderEventItemsList(items, contentElement, { error = false, client } = {}) {
     const container = contentElement.querySelector("#detail-agenda-items")
     if (!container) return
 
+    if (!error) {
+      this.agendaItemsRaw = Array.isArray(items) ? items : []
+      this.agendaItemsClient = client
+    }
+
+    const searchInput = contentElement.querySelector(
+      "#agenda-items-search-input",
+    )
+    const query = searchInput ? searchInput.value : ""
+
+    this.renderAgendaItems(container, { error, query, client })
+  }
+
+  agendaItemMatchesQuery(item, normalizedQuery) {
+    const haystack = [
+      item.agendaNumber,
+      item.title,
+      item.action,
+      item.passed,
+      item.matterFile,
+      item.note,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+    return haystack.includes(normalizedQuery)
+  }
+
+  renderAgendaItems(container, { error = false, query = "", client } = {}) {
     container.innerHTML = ""
 
     if (error) {
@@ -3039,10 +3109,27 @@ class NewTabApp {
       return
     }
 
-    if (!items.length) {
+    const allItems = this.agendaItemsRaw || []
+
+    if (!allItems.length) {
       const message = document.createElement("p")
       message.className = "event-items-empty"
       message.textContent = "No agenda items published yet."
+      container.appendChild(message)
+      return
+    }
+
+    const normalizedQuery = query.trim().toLowerCase()
+    const items = normalizedQuery
+      ? allItems.filter((item) =>
+          this.agendaItemMatchesQuery(item, normalizedQuery),
+        )
+      : allItems
+
+    if (!items.length) {
+      const message = document.createElement("p")
+      message.className = "event-items-empty"
+      message.textContent = `No agenda items match "${query.trim()}".`
       container.appendChild(message)
       return
     }
@@ -3104,6 +3191,14 @@ class NewTabApp {
         file.className = "event-item-file"
         file.textContent = `File #${item.matterFile}`
         li.appendChild(file)
+      }
+
+      const updatedLabel = this.formatCalendarLastModified(item.lastModified)
+      if (updatedLabel) {
+        const updated = document.createElement("div")
+        updated.className = "event-item-updated"
+        updated.textContent = `Updated ${updatedLabel}`
+        li.appendChild(updated)
       }
 
       if (item.note || item.matterId) {
@@ -3371,7 +3466,13 @@ class NewTabApp {
             event.rawEventId &&
             (event.source === "milwaukee" || event.source === "milwaukeecounty")
               ? `<div class="info-section" id="detail-agenda-items-section">
-                  <h5>Agenda Items</h5>
+                  <div class="agenda-items-heading-row">
+                    <h5>Agenda Items</h5>
+                    <button type="button" id="agenda-items-search-toggle" class="agenda-items-search-toggle" aria-pressed="false" title="Search agenda items" aria-label="Search agenda items">🔍</button>
+                  </div>
+                  <div class="agenda-items-search-row hidden" id="agenda-items-search-row">
+                    <input type="text" id="agenda-items-search-input" class="agenda-items-search-input" placeholder="Search agenda items…" autocomplete="off" />
+                  </div>
                   <div id="detail-agenda-items"><p class="event-items-loading">Loading agenda items…</p></div>
                 </div>`
               : ""

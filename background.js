@@ -3,6 +3,8 @@
 
 const LEGISTAR_CLIENTS = ["milwaukee", "milwaukeecounty"]
 const CACHE_KEY = "legistar_calendar_cache"
+const EVENT_DETAIL_CACHE_KEY = "legistar_event_detail_cache"
+const MATTER_ATTACHMENTS_CACHE_KEY = "legistar_matter_attachments_cache"
 const CACHE_TTL_MS = 30 * 60 * 1000 // 30 minutes
 const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000 // 24 hours fallback window
 const SOURCE_LABELS = {
@@ -39,6 +41,31 @@ class StorageLayer {
     }
     await this.local.set({ [key]: value })
   }
+}
+
+// Small per-entry cache (event details, matter attachments) sharing the same
+// TTL/max-age semantics as the main calendar cache, stored as one map per
+// cacheKey so a single chrome.storage read/write covers every entry.
+async function getCacheMapEntry(storage, cacheKey, entryKey) {
+  const map = (await storage.get(cacheKey)) || {}
+  const entry = map[entryKey]
+  if (!entry) return null
+  if (Date.now() - (entry.fetchedAt ?? 0) >= CACHE_TTL_MS) return null
+  return entry.data
+}
+
+async function setCacheMapEntry(storage, cacheKey, entryKey, data) {
+  const map = (await storage.get(cacheKey)) || {}
+  const now = Date.now()
+
+  for (const key of Object.keys(map)) {
+    if (now - (map[key].fetchedAt ?? 0) > CACHE_MAX_AGE_MS) {
+      delete map[key]
+    }
+  }
+
+  map[entryKey] = { data, fetchedAt: now }
+  await storage.set(cacheKey, map)
 }
 
 class LegistarApiClient {
@@ -212,7 +239,7 @@ class EventNormalizer {
       minutesUrl,
       videoUrl,
       meetingUrl: event.EventInSiteURL || null,
-      lastModified: this.normalizeDateValue(
+      lastModified: normalizeLegistarUtcValue(
         event.EventLastModifiedUtc || event.EventLastModified,
       ),
       richText: event.EventAgendaNote || "",
@@ -280,53 +307,75 @@ class EventNormalizer {
   }
 
   parseLegistarDate(value) {
-    if (!value) return null
-
-    if (value instanceof Date) {
-      return new Date(value.getTime())
-    }
-
-    if (typeof value === "number") {
-      const date = new Date(value)
-      return Number.isNaN(date.getTime()) ? null : date
-    }
-
-    if (typeof value === "string") {
-      const trimmed = value.trim()
-      if (!trimmed) return null
-
-      const msMatch = /Date\(([-+]?\d+)(?:[-+]\d+)?\)/i.exec(trimmed)
-      if (msMatch) {
-        const timestamp = parseInt(msMatch[1], 10)
-        if (!Number.isNaN(timestamp)) {
-          const date = new Date(timestamp)
-          return Number.isNaN(date.getTime()) ? null : date
-        }
-      }
-
-      const numeric = Number(trimmed)
-      if (!Number.isNaN(numeric)) {
-        const fromNumber = new Date(
-          trimmed.length <= 10 ? numeric * 1000 : numeric,
-        )
-        if (!Number.isNaN(fromNumber.getTime())) {
-          return fromNumber
-        }
-      }
-
-      const fromString = new Date(trimmed)
-      if (!Number.isNaN(fromString.getTime())) {
-        return fromString
-      }
-    }
-
-    return null
+    return parseLegistarDate(value)
   }
 
   normalizeDateValue(value) {
-    const parsed = this.parseLegistarDate(value)
-    return parsed ? parsed.toISOString() : null
+    return normalizeLegistarDateValue(value)
   }
+}
+
+function parseLegistarDate(value) {
+  if (!value) return null
+
+  if (value instanceof Date) {
+    return new Date(value.getTime())
+  }
+
+  if (typeof value === "number") {
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    if (!trimmed) return null
+
+    const msMatch = /Date\(([-+]?\d+)(?:[-+]\d+)?\)/i.exec(trimmed)
+    if (msMatch) {
+      const timestamp = parseInt(msMatch[1], 10)
+      if (!Number.isNaN(timestamp)) {
+        const date = new Date(timestamp)
+        return Number.isNaN(date.getTime()) ? null : date
+      }
+    }
+
+    const numeric = Number(trimmed)
+    if (!Number.isNaN(numeric)) {
+      const fromNumber = new Date(
+        trimmed.length <= 10 ? numeric * 1000 : numeric,
+      )
+      if (!Number.isNaN(fromNumber.getTime())) {
+        return fromNumber
+      }
+    }
+
+    const fromString = new Date(trimmed)
+    if (!Number.isNaN(fromString.getTime())) {
+      return fromString
+    }
+  }
+
+  return null
+}
+
+function normalizeLegistarDateValue(value) {
+  const parsed = parseLegistarDate(value)
+  return parsed ? parsed.toISOString() : null
+}
+
+// Legistar's "*LastModifiedUtc" fields are genuine UTC instants but come back
+// as bare "YYYY-MM-DDTHH:mm:ss[.fff]" strings with no "Z"/offset, which the
+// JS Date parser otherwise treats as local time. Force UTC interpretation so
+// these convert to the correct local time when displayed.
+function normalizeLegistarUtcValue(value) {
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?$/.test(trimmed)) {
+      return normalizeLegistarDateValue(`${trimmed}Z`)
+    }
+  }
+  return normalizeLegistarDateValue(value)
 }
 
 function normalizeEventItems(rawItems) {
@@ -356,6 +405,7 @@ function normalizeEventItems(rawItems) {
         passed,
         rollCall: item.EventItemRollCallFlagName || "",
         note: item.EventItemAgendaNote || item.EventItemMinutesNote || "",
+        lastModified: normalizeLegistarUtcValue(item.EventItemLastModifiedUtc),
       }
     })
     .filter(Boolean)
@@ -631,27 +681,53 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ status: "error", error: "Missing client or eventId" })
       return false
     }
-    Promise.all([
-      aggregator.apiClient.fetchSingleEvent(client, eventId),
-      aggregator.apiClient
-        .fetchEventItems(client, eventId)
-        .catch((error) => {
-          console.warn(`[Legistar] Failed to fetch event items for ${eventId}:`, error)
-          return []
-        }),
-    ])
-      .then(([raw, rawItems]) => {
+
+    const entryKey = `${client}-${eventId}`
+    ;(async () => {
+      try {
+        if (!message.forceRefresh) {
+          const cached = await getCacheMapEntry(
+            storageLayer,
+            EVENT_DETAIL_CACHE_KEY,
+            entryKey,
+          )
+          if (cached) {
+            sendResponse({ status: "ok", data: cached, fromCache: true })
+            return
+          }
+        }
+
+        const [raw, rawItems] = await Promise.all([
+          aggregator.apiClient.fetchSingleEvent(client, eventId),
+          aggregator.apiClient
+            .fetchEventItems(client, eventId)
+            .catch((error) => {
+              console.warn(
+                `[Legistar] Failed to fetch event items for ${eventId}:`,
+                error,
+              )
+              return []
+            }),
+        ])
         const videoUrl = raw.EventVideoPath || raw.EventVideoHtml5Path || null
         const minutesUrl = raw.EventMinutesFile || null
         const items = normalizeEventItems(rawItems)
-        sendResponse({ status: "ok", data: { videoUrl, minutesUrl, items } })
-      })
-      .catch((error) => {
+        const data = { videoUrl, minutesUrl, items }
+
+        await setCacheMapEntry(
+          storageLayer,
+          EVENT_DETAIL_CACHE_KEY,
+          entryKey,
+          data,
+        )
+        sendResponse({ status: "ok", data })
+      } catch (error) {
         sendResponse({
           status: "error",
           error: error?.message ?? "Unknown Legistar error",
         })
-      })
+      }
+    })()
     return true
   }
 
@@ -661,20 +737,42 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ status: "error", error: "Missing client or matterId" })
       return false
     }
-    aggregator.apiClient
-      .fetchMatterAttachments(client, matterId)
-      .then((rawAttachments) => {
-        sendResponse({
-          status: "ok",
-          data: { attachments: normalizeMatterAttachments(rawAttachments) },
-        })
-      })
-      .catch((error) => {
+
+    const entryKey = `${client}-${matterId}`
+    ;(async () => {
+      try {
+        if (!message.forceRefresh) {
+          const cached = await getCacheMapEntry(
+            storageLayer,
+            MATTER_ATTACHMENTS_CACHE_KEY,
+            entryKey,
+          )
+          if (cached) {
+            sendResponse({ status: "ok", data: cached, fromCache: true })
+            return
+          }
+        }
+
+        const rawAttachments = await aggregator.apiClient.fetchMatterAttachments(
+          client,
+          matterId,
+        )
+        const data = { attachments: normalizeMatterAttachments(rawAttachments) }
+
+        await setCacheMapEntry(
+          storageLayer,
+          MATTER_ATTACHMENTS_CACHE_KEY,
+          entryKey,
+          data,
+        )
+        sendResponse({ status: "ok", data })
+      } catch (error) {
         sendResponse({
           status: "error",
           error: error?.message ?? "Unknown Legistar error",
         })
-      })
+      }
+    })()
     return true
   }
 
