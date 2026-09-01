@@ -872,7 +872,7 @@ class NewTabApp {
   }
 
   updateSettingsUI() {
-    document.getElementById("show-sidebar").checked = this.settings.showSidebar
+    document.getElementById("show-sidebar").checked = this.isSidebarOpen()
     document.getElementById("auto-location").checked =
       this.settings.autoLocation
 
@@ -2234,9 +2234,7 @@ class NewTabApp {
     if (showSidebar) {
       showSidebar.addEventListener("change", (e) => {
         console.log("Show sidebar changed:", e.target.checked)
-        this.settings.showSidebar = e.target.checked
-        this.updateSidebarVisibility()
-        this.saveSettings()
+        this.setSidebarOpen(e.target.checked)
       })
     }
 
@@ -2946,13 +2944,15 @@ class NewTabApp {
       if (subtitle) subtitle.textContent = data.body || ""
       this.agendaItemsRaw = Array.isArray(data.items) ? data.items : []
       this.agendaItemsClient = null
+      this.detailRequestId = (this.detailRequestId || 0) + 1
       content.innerHTML = this.renderEventDetail(data)
       this.populateLinkifiedFields(data, content)
       this.setupAgendaItemsSearch(content)
-      this.fetchEventDetailExtras(data, content)
+      this.fetchEventDetailExtras(data, content, this.detailRequestId)
     } else if (type === "official") {
       heading.textContent = data.name || "Official Details"
       if (subtitle) subtitle.textContent = data.office || data.title || ""
+      this.detailRequestId = (this.detailRequestId || 0) + 1
       content.innerHTML = this.renderOfficialDetail(data)
     }
 
@@ -2966,7 +2966,7 @@ class NewTabApp {
     }
   }
 
-  fetchEventDetailExtras(event, contentElement) {
+  fetchEventDetailExtras(event, contentElement, requestId) {
     if (!event.rawEventId || !event.source) return
 
     const client = event.source // "milwaukee" or "milwaukeecounty"
@@ -2978,13 +2978,26 @@ class NewTabApp {
     if (!needsLinks && !needsItems) return
 
     chrome.runtime.sendMessage(
-      { type: "legistar:getEventDetail", client, eventId: event.rawEventId },
+      {
+        type: "legistar:getEventDetail",
+        client,
+        eventId: event.rawEventId,
+        needsLinks,
+        needsItems,
+      },
       (response) => {
+        // The detail overlay may have moved on to a different meeting (or
+        // closed) while this request was in flight. Discard a stale
+        // response instead of overwriting the now-current overlay.
+        if (requestId !== this.detailRequestId) return
+
         if (chrome.runtime.lastError || !response || response.status !== "ok") {
-          this.renderEventItemsList([], contentElement, {
-            error: true,
-            client,
-          })
+          if (needsItems) {
+            this.renderEventItemsList([], contentElement, {
+              error: true,
+              client,
+            })
+          }
           return
         }
         const { videoUrl, minutesUrl, items } = response.data
@@ -3022,8 +3035,10 @@ class NewTabApp {
           }
         }
 
-        event.items = Array.isArray(items) ? items : []
-        this.renderEventItemsList(event.items, contentElement, { client })
+        if (needsItems) {
+          event.items = Array.isArray(items) ? items : []
+          this.renderEventItemsList(event.items, contentElement, { client })
+        }
       },
     )
   }
@@ -4460,7 +4475,7 @@ class NewTabApp {
 
     // Sync checkboxes
     const showSidebar = document.getElementById("pane-show-sidebar")
-    if (showSidebar) showSidebar.checked = this.settings.showSidebar
+    if (showSidebar) showSidebar.checked = this.isSidebarOpen()
 
     const autoLocation = document.getElementById("pane-auto-location")
     if (autoLocation) autoLocation.checked = this.settings.autoLocation
@@ -4646,12 +4661,10 @@ class NewTabApp {
     const paneShowSidebar = document.getElementById("pane-show-sidebar")
     if (paneShowSidebar) {
       paneShowSidebar.addEventListener("change", (e) => {
-        this.settings.showSidebar = e.target.checked
+        this.setSidebarOpen(e.target.checked)
         // Sync with main settings checkbox
         const mainCheckbox = document.getElementById("show-sidebar")
         if (mainCheckbox) mainCheckbox.checked = e.target.checked
-        this.updateSidebarVisibility()
-        this.saveSettings()
       })
     }
 

@@ -54,18 +54,36 @@ async function getCacheMapEntry(storage, cacheKey, entryKey) {
   return entry.data
 }
 
+// Serializes the read-modify-write below per cacheKey so two concurrent
+// setCacheMapEntry calls for the same map (e.g. two matter-attachment
+// fetches finishing close together) can't each read the same starting map
+// and have the second write clobber the first's entry.
+const cacheWriteQueues = new Map()
+
+function runExclusive(cacheKey, task) {
+  const previous = cacheWriteQueues.get(cacheKey) ?? Promise.resolve()
+  const next = previous.then(task, task)
+  cacheWriteQueues.set(
+    cacheKey,
+    next.catch(() => {}),
+  )
+  return next
+}
+
 async function setCacheMapEntry(storage, cacheKey, entryKey, data) {
-  const map = (await storage.get(cacheKey)) || {}
-  const now = Date.now()
+  return runExclusive(cacheKey, async () => {
+    const map = (await storage.get(cacheKey)) || {}
+    const now = Date.now()
 
-  for (const key of Object.keys(map)) {
-    if (now - (map[key].fetchedAt ?? 0) > CACHE_MAX_AGE_MS) {
-      delete map[key]
+    for (const key of Object.keys(map)) {
+      if (now - (map[key].fetchedAt ?? 0) > CACHE_MAX_AGE_MS) {
+        delete map[key]
+      }
     }
-  }
 
-  map[entryKey] = { data, fetchedAt: now }
-  await storage.set(cacheKey, map)
+    map[entryKey] = { data, fetchedAt: now }
+    await storage.set(cacheKey, map)
+  })
 }
 
 class LegistarApiClient {
@@ -239,9 +257,12 @@ class EventNormalizer {
       minutesUrl,
       videoUrl,
       meetingUrl: event.EventInSiteURL || null,
-      lastModified: normalizeLegistarUtcValue(
-        event.EventLastModifiedUtc || event.EventLastModified,
-      ),
+      // EventLastModifiedUtc is a genuine UTC instant with no "Z"; the plain
+      // EventLastModified fallback (no "Utc" suffix) is already local time,
+      // so only force UTC interpretation for the former.
+      lastModified: event.EventLastModifiedUtc
+        ? normalizeLegistarUtcValue(event.EventLastModifiedUtc)
+        : normalizeLegistarDateValue(event.EventLastModified),
       richText: event.EventAgendaNote || "",
     }
   }
@@ -676,7 +697,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === "legistar:getEventDetail") {
-    const { client, eventId } = message
+    const { client, eventId, needsLinks = true, needsItems = true } = message
     if (!client || !eventId) {
       sendResponse({ status: "error", error: "Missing client or eventId" })
       return false
@@ -697,29 +718,43 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           }
         }
 
+        let itemsFetchFailed = false
         const [raw, rawItems] = await Promise.all([
-          aggregator.apiClient.fetchSingleEvent(client, eventId),
-          aggregator.apiClient
-            .fetchEventItems(client, eventId)
-            .catch((error) => {
-              console.warn(
-                `[Legistar] Failed to fetch event items for ${eventId}:`,
-                error,
-              )
-              return []
-            }),
+          needsLinks
+            ? aggregator.apiClient.fetchSingleEvent(client, eventId)
+            : Promise.resolve(null),
+          needsItems
+            ? aggregator.apiClient
+                .fetchEventItems(client, eventId)
+                .catch((error) => {
+                  console.warn(
+                    `[Legistar] Failed to fetch event items for ${eventId}:`,
+                    error,
+                  )
+                  itemsFetchFailed = true
+                  return []
+                })
+            : Promise.resolve(null),
         ])
-        const videoUrl = raw.EventVideoPath || raw.EventVideoHtml5Path || null
-        const minutesUrl = raw.EventMinutesFile || null
-        const items = normalizeEventItems(rawItems)
+        const videoUrl = raw
+          ? raw.EventVideoPath || raw.EventVideoHtml5Path || null
+          : null
+        const minutesUrl = raw ? raw.EventMinutesFile || null : null
+        const items = needsItems ? normalizeEventItems(rawItems) : null
         const data = { videoUrl, minutesUrl, items }
 
-        await setCacheMapEntry(
-          storageLayer,
-          EVENT_DETAIL_CACHE_KEY,
-          entryKey,
-          data,
-        )
+        // Only cache a complete (links + items) result - caching a partial
+        // one (or a transient items-fetch failure) would make a later
+        // request that DOES need the missing piece see it as permanently
+        // absent for the full cache TTL.
+        if (needsLinks && needsItems && !itemsFetchFailed) {
+          await setCacheMapEntry(
+            storageLayer,
+            EVENT_DETAIL_CACHE_KEY,
+            entryKey,
+            data,
+          )
+        }
         sendResponse({ status: "ok", data })
       } catch (error) {
         sendResponse({
