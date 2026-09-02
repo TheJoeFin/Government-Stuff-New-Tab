@@ -2456,7 +2456,9 @@ class NewTabApp {
     const handleSearch = () => {
       const query = input.value.trim()
       if (query.length < 2) {
-        this.clearOfficialsSearchResults()
+        // Not enough to search yet - just clear stale results, don't
+        // navigate away from the search view while the user is still typing.
+        this.clearOfficialsSearchResultsContent()
         return
       }
       const results = this.governmentOfficials.searchOfficials(query)
@@ -2486,6 +2488,49 @@ class NewTabApp {
         input.blur()
       }
     })
+
+    this.setupSearchSuggestions(input, () => {
+      clearTimeout(debounceTimer)
+      handleSearch()
+    })
+  }
+
+  setupSearchSuggestions(input, runSearchNow) {
+    const chipsContainer = document.getElementById("search-suggestions-chips")
+    if (!chipsContainer) return
+
+    const suggestedTerms = [
+      "law enforcement",
+      "school",
+      "tax",
+      "housing",
+      "health",
+      "budget",
+      "public works",
+      "transportation",
+      "zoning",
+    ]
+
+    chipsContainer.innerHTML = ""
+    suggestedTerms.forEach((term) => {
+      const chip = document.createElement("button")
+      chip.type = "button"
+      chip.className = "search-suggestion-chip"
+      chip.textContent = term
+      chip.addEventListener("click", () => {
+        input.value = term
+        input.focus()
+        runSearchNow()
+      })
+      chipsContainer.appendChild(chip)
+    })
+  }
+
+  setSearchSuggestionsVisible(visible) {
+    const suggestions = document.getElementById("search-suggestions")
+    if (suggestions) {
+      suggestions.classList.toggle("hidden", !visible)
+    }
   }
 
   searchCalendarMeetings(query) {
@@ -3902,8 +3947,10 @@ class NewTabApp {
     this.populateWeekDays("two-weeks-out-days", 2)
   }
 
-  clearOfficialsSearchResults() {
-    // Clear search results containers
+  clearOfficialsSearchResultsContent() {
+    // Empty the search results containers without changing which view is shown.
+    // Used while the user is still typing (query too short to search yet) so
+    // pausing mid-search doesn't kick them out of the search view.
     const searchEventsContainer = document.getElementById("search-events-list")
     const searchOfficialsContainer = document.getElementById(
       "search-officials-list",
@@ -3916,6 +3963,12 @@ class NewTabApp {
       searchOfficialsContainer.innerHTML = ""
     }
 
+    this.setSearchSuggestionsVisible(true)
+  }
+
+  clearOfficialsSearchResults() {
+    this.clearOfficialsSearchResultsContent()
+
     // Switch back to events/calendar view and show calendar
     this.switchContentView("events")
     this.setCalendarVisibility(true)
@@ -3925,6 +3978,7 @@ class NewTabApp {
   renderOfficialsSearchResults(resultSets, query) {
     // Switch to search results view
     this.switchContentView("search-results")
+    this.setSearchSuggestionsVisible(false)
 
     // Get search results containers
     const searchEventsContainer = document.getElementById("search-events-list")
@@ -3960,32 +4014,55 @@ class NewTabApp {
           if (button) {
             button.classList.add("search-meeting-button")
           }
+
+          const matchReason = this.getMeetingMatchReason(event, query)
+          if (matchReason && button) {
+            button.appendChild(
+              this.buildMatchReasonElement(matchReason.label, matchReason.text, query),
+            )
+          }
+
           searchEventsContainer.appendChild(item)
         })
       }
 
       if (officials.length) {
         officials.forEach((official) => {
+          // Keep in sync with the level colors used in the officials tab
+          // (see divisionStructure in renderComprehensiveOfficials) so
+          // search results are visually consistent with that view.
           const colorMap = {
             city: "#0077be",
             county: "#ffc107",
             state: "#228b22",
             federal: "#dc143c",
           }
+          const levelColor = colorMap[official.level] || "var(--accent-color)"
           const element = this.createCompactOfficialElement(
             official,
             "comprehensive",
-            colorMap[official.level] || "var(--accent-color)",
+            levelColor,
           )
           element.classList.add("search-official-item")
+          element.style.setProperty("--detail-accent", levelColor)
+          element.style.borderLeft = `4px solid ${levelColor}`
 
-          const nameEl = element.querySelector(".official-name")
-          if (nameEl && official.level) {
+          const nameContainer = element.querySelector(
+            ".official-name-container",
+          )
+          if (nameContainer && official.level) {
             const badge = document.createElement("span")
-            badge.textContent = ` (${official.level})`
-            badge.style.fontSize = "0.7rem"
-            badge.style.color = "var(--text-muted)"
-            nameEl.appendChild(badge)
+            badge.className = "official-detail-tag search-level-badge"
+            badge.textContent = official.level
+            badge.style.setProperty("--detail-accent", levelColor)
+            nameContainer.appendChild(badge)
+          }
+
+          const matchReason = this.getOfficialMatchReason(official, query)
+          if (matchReason && nameContainer) {
+            nameContainer.appendChild(
+              this.buildMatchReasonElement(matchReason.label, matchReason.text, query),
+            )
           }
 
           // Override the click handler to use detail overlay instead of sidebar detail
@@ -4020,6 +4097,100 @@ class NewTabApp {
     this.announceToScreenReader(
       `${announceParts.join(", ")} found for ${query}`,
     )
+  }
+
+  // Finds the specific responsibility/committee text that made an official
+  // match the search query, so results show *why* they matched (e.g. "on
+  // the Public Works Committee") rather than just that they did. Matches
+  // already visible in the name/title/department summary line are skipped.
+  getOfficialMatchReason(official, query) {
+    const q = (query || "").toLowerCase()
+    if (!q || !official) return null
+
+    const responsibilities = official.responsibilities || []
+    const hit = responsibilities.find((text) =>
+      (text || "").toLowerCase().includes(q),
+    )
+    if (!hit) return null
+
+    return { label: "Committee/Responsibility", text: hit }
+  }
+
+  // Same idea as getOfficialMatchReason but for calendar meetings: surfaces
+  // which non-obvious field (body, description, topic, etc.) matched, since
+  // the title and location are already shown on the result card.
+  getMeetingMatchReason(event, query) {
+    const q = (query || "").toLowerCase()
+    if (!q || !event) return null
+
+    const fieldsInOrder = [
+      { key: "bodyName", label: "Committee/Body" },
+      { key: "description", label: "Description" },
+      { key: "summary", label: "Summary" },
+      { key: "topics", label: "Topic" },
+      { key: "keywords", label: "Keyword" },
+      { key: "sourceLabel", label: "Source" },
+    ]
+
+    for (const { key, label } of fieldsInOrder) {
+      const value = event[key]
+      const text = Array.isArray(value) ? value.join(", ") : value
+      if (typeof text === "string" && text.toLowerCase().includes(q)) {
+        return { label, text }
+      }
+    }
+
+    return null
+  }
+
+  // Builds a small "why this matched" line with the matched query substring
+  // highlighted, truncated to a window around the match for long text.
+  buildMatchReasonElement(label, text, query) {
+    const wrapper = document.createElement("div")
+    wrapper.className = "search-match-reason"
+
+    const labelEl = document.createElement("span")
+    labelEl.className = "search-match-reason-label"
+    labelEl.textContent = `${label}: `
+    wrapper.appendChild(labelEl)
+
+    const q = (query || "").toLowerCase()
+    const lowerText = text.toLowerCase()
+    const matchIndex = lowerText.indexOf(q)
+
+    const maxLength = 100
+    let snippet = text
+    let highlightStart = matchIndex
+    if (text.length > maxLength && matchIndex !== -1) {
+      const windowStart = Math.max(0, matchIndex - 40)
+      const windowEnd = Math.min(
+        text.length,
+        matchIndex + q.length + 40,
+      )
+      snippet = text.slice(windowStart, windowEnd)
+      highlightStart = matchIndex - windowStart
+      if (windowStart > 0) snippet = `…${snippet}`
+      if (windowEnd < text.length) snippet = `${snippet}…`
+      if (windowStart > 0) highlightStart += 1
+    }
+
+    if (highlightStart === -1 || !q) {
+      wrapper.appendChild(document.createTextNode(snippet))
+      return wrapper
+    }
+
+    const before = snippet.slice(0, highlightStart)
+    const match = snippet.slice(highlightStart, highlightStart + q.length)
+    const after = snippet.slice(highlightStart + q.length)
+
+    wrapper.appendChild(document.createTextNode(before))
+    const mark = document.createElement("mark")
+    mark.className = "search-match-highlight"
+    mark.textContent = match
+    wrapper.appendChild(mark)
+    wrapper.appendChild(document.createTextNode(after))
+
+    return wrapper
   }
 
   handleMeetingSearchResultSelection(event) {
