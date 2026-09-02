@@ -81,6 +81,8 @@ class NewTabApp {
     this.lastAddress = "" // Cache for last used address
     this.milwaukeeCache = new Map() // Smart cache for Milwaukee data
     this.cacheExpiry = 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
+    this.faviconCacheExpiry = 30 * 24 * 60 * 60 * 1000 // 30 days in milliseconds
+    this.faviconMemoryCache = new Map() // domain -> data URL, avoids re-hitting storage within a session
     this.settings = {
       // This is the sticky, persisted preference used on wide/desktop
       // layouts. Narrow/mobile layouts never read it directly - they use
@@ -4259,11 +4261,15 @@ class NewTabApp {
 
     const icon = document.createElement("img")
     icon.className = "icon"
-    icon.src = favorite.icon || this.getFaviconUrl(favorite.url)
     icon.alt = favorite.name
     icon.onerror = () => {
-      icon.src =
-        "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzZCNzI4MCIvPgo8cGF0aCBkPSJNMTYgMTJWMjAiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CjxwYXRoIGQ9Ik0xMiAxNkgyMCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+"
+      icon.src = this.getFaviconFallbackDataUri()
+    }
+
+    if (favorite.icon) {
+      icon.src = favorite.icon
+    } else {
+      this.applyFaviconIcon(icon, favorite.url)
     }
 
     const name = document.createElement("span")
@@ -4360,7 +4366,114 @@ class NewTabApp {
       const domain = new URL(url).hostname
       return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
     } catch {
-      return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzZCNzI4MCIvPgo8cGF0aCBkPSJNMTYgMTJWMjAiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CjxwYXRoIGQ9Ik0xMiAxNkgyMCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+"
+      return this.getFaviconFallbackDataUri()
+    }
+  }
+
+  getFaviconFallbackDataUri() {
+    return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzZCNzI4MCIvPgo8cGF0aCBkPSJNMTYgMTJWMjAiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CjxwYXRoIGQ9Ik0xMiAxNkgyMCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+"
+  }
+
+  // Favicon Caching
+  //
+  // The Google s2/favicons endpoint doesn't send cache headers that keep the
+  // browser's HTTP cache reliable across new-tab loads, so favicons were
+  // being re-fetched over the network on every new tab. Instead, fetch each
+  // favicon once, convert it to a data URL, and persist it (per-domain,
+  // similar to getCachedData/setCachedData above) so later loads are instant
+  // and offline-safe.
+  getFaviconCacheKey(domain) {
+    return `favicon_${domain}`
+  }
+
+  async getCachedFavicon(domain) {
+    if (this.faviconMemoryCache.has(domain)) {
+      return this.faviconMemoryCache.get(domain)
+    }
+
+    const cacheKey = this.getFaviconCacheKey(domain)
+
+    try {
+      let cachedData
+      if (typeof chrome !== "undefined" && chrome.storage) {
+        const result = await chrome.storage.local.get([cacheKey])
+        cachedData = result[cacheKey]
+      } else {
+        const stored = localStorage.getItem(cacheKey)
+        cachedData = stored ? JSON.parse(stored) : null
+      }
+
+      if (cachedData) {
+        const cacheAge = Date.now() - cachedData.timestamp
+        if (cacheAge < this.faviconCacheExpiry) {
+          this.faviconMemoryCache.set(domain, cachedData.dataUrl)
+          return cachedData.dataUrl
+        }
+      }
+
+      return null
+    } catch (error) {
+      console.error("Error reading favicon cache:", error)
+      return null
+    }
+  }
+
+  async setCachedFavicon(domain, dataUrl) {
+    this.faviconMemoryCache.set(domain, dataUrl)
+    const cacheKey = this.getFaviconCacheKey(domain)
+    const cachedItem = { dataUrl, timestamp: Date.now() }
+
+    try {
+      if (typeof chrome !== "undefined" && chrome.storage) {
+        await chrome.storage.local.set({ [cacheKey]: cachedItem })
+      } else {
+        localStorage.setItem(cacheKey, JSON.stringify(cachedItem))
+      }
+    } catch (error) {
+      console.error("Error saving favicon to cache:", error)
+    }
+  }
+
+  async fetchFaviconAsDataUrl(domain) {
+    const response = await fetch(
+      `https://www.google.com/s2/favicons?domain=${domain}&sz=32`,
+    )
+    if (!response.ok) {
+      throw new Error(`Favicon fetch failed: ${response.status}`)
+    }
+    const blob = await response.blob()
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result)
+      reader.onerror = () => reject(reader.error)
+      reader.readAsDataURL(blob)
+    })
+  }
+
+  async applyFaviconIcon(icon, url) {
+    let domain
+    try {
+      domain = new URL(url).hostname
+    } catch {
+      icon.src = this.getFaviconFallbackDataUri()
+      return
+    }
+
+    const cached = await this.getCachedFavicon(domain)
+    if (cached) {
+      icon.src = cached
+      return
+    }
+
+    try {
+      const dataUrl = await this.fetchFaviconAsDataUrl(domain)
+      icon.src = dataUrl
+      this.setCachedFavicon(domain, dataUrl)
+    } catch (error) {
+      console.warn(`Could not fetch/cache favicon for ${domain}:`, error)
+      // Fall back to letting the browser load it directly; icon.onerror
+      // covers the case where that also fails.
+      icon.src = this.getFaviconUrl(url)
     }
   }
 
