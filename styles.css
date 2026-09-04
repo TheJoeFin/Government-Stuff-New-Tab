@@ -2940,56 +2940,6 @@ body.sidebar-resizing .container {
   }
 }
 
-/* Officials search (appended) */
-.official-search {
-  padding: 0.75rem 1rem 0.5rem;
-  border-top: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-tertiary);
-  flex-shrink: 0;
-}
-.official-search.hidden {
-  display: none;
-}
-#toggle-official-search[aria-pressed="true"] {
-  color: var(--accent-color);
-}
-.dark-theme .official-search {
-  background: var(--bg-surface-alt, rgba(255, 255, 255, 0.02));
-}
-.official-search-group {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-#official-search-input {
-  flex: 1;
-  padding: 0.45rem 0.6rem;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  border-radius: 4px;
-  font-size: 0.8rem;
-}
-[data-theme="dark"] #official-search-input {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
-}
-#official-search-input:focus {
-  outline: 2px solid var(--accent-color);
-  outline-offset: 1px;
-}
-#official-search-clear {
-  font-size: 0.85rem;
-  line-height: 1;
-  padding: 0.35rem 0.45rem;
-}
-.official-search-hint {
-  display: block;
-  margin-top: 0.35rem;
-  font-size: 0.6rem;
-  color: var(--text-muted);
-}
 .officials-list.search-active .division-group {
   display: none;
 }
@@ -3123,58 +3073,37 @@ body.sidebar-resizing .container {
 
 /* Search Row */
 .search-row {
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-subtle);
-  padding: var(--space-3);
-  margin-bottom: var(--space-4);
+  padding: var(--space-2) 6px;
 }
 
 .search-row.hidden {
   display: none;
 }
 
-.search-row-content {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-  margin-bottom: var(--space-2);
-}
-
 .search-row input[type="search"] {
-  flex: 1;
-  background: var(--bg-tertiary);
+  /* Matches the main "Search the web..." bar's pill treatment
+     (.search-form/.search-input combined into one element) so the two
+     search fields in the app read as the same component, including its
+     larger text size and roomier padding - not just the same colors.
+     The wrapping <div> reuses .search-container's own width:100% rule,
+     so this doesn't need its own wrapper styles. */
+  width: 100%;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius);
-  font-size: var(--text-sm);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-full);
+  font-size: var(--text-base);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
 }
 
 .search-row input[type="search"]:focus {
   outline: none;
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px var(--accent-light);
-}
-
-.search-action-btn {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius);
-  font-size: var(--text-xs);
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.search-action-btn:hover {
-  background: var(--bg-card);
-  color: var(--text-primary);
-}
-
-.search-hint {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
+  box-shadow:
+    var(--shadow),
+    0 0 0 3px var(--accent-light);
 }
 
 /* Simplified Calendar */
