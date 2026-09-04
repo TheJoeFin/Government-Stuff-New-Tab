@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     locateBtn: document.getElementById("pane-locate-btn"),
     updateAddressBtn: document.getElementById("pane-update-address"),
     clearCacheBtn: document.getElementById("pane-clear-cache-btn"),
+    resetDefaultsBtn: document.getElementById("pane-reset-defaults-btn"),
     currentAddress: document.getElementById("pane-current-address"),
     addressStatus: document.getElementById("pane-address-status"),
     showSidebar: document.getElementById("pane-show-sidebar"),
@@ -204,6 +205,22 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         finish()
       }
+    })
+  })
+
+  els.resetDefaultsBtn.addEventListener("click", () => {
+    if (
+      !confirm(
+        "Reset all settings? This clears your saved address, favorites, theme, background, and cached data. This cannot be undone.",
+      )
+    ) {
+      return
+    }
+    chrome.storage.sync.clear(() => {
+      chrome.storage.local.clear(() => {
+        localStorage.clear()
+        location.reload()
+      })
     })
   })
 

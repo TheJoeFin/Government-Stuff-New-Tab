@@ -2866,14 +2866,6 @@ class NewTabApp {
         searchRow.classList.add("hidden")
       }
     }
-
-    // Hide address section when not in settings
-    if (viewType !== "settings-pane") {
-      const addressSection = document.getElementById("address-section")
-      if (addressSection) {
-        addressSection.classList.add("hidden")
-      }
-    }
   }
 
   filterEventsByDate(dateStr) {
@@ -5025,6 +5017,36 @@ class NewTabApp {
         this.applyBackground()
       })
     }
+
+    // Reset to defaults
+    const paneResetBtn = document.getElementById("pane-reset-defaults-btn")
+    if (paneResetBtn) {
+      paneResetBtn.addEventListener("click", () => this.resetAllSettings())
+    }
+  }
+
+  // Wipes all saved settings, favorites, address, and cached data, then
+  // reloads so the app re-initializes exactly as it would for a new install
+  async resetAllSettings() {
+    if (
+      !confirm(
+        "Reset all settings? This clears your saved address, favorites, theme, background, and cached data. This cannot be undone.",
+      )
+    ) {
+      return
+    }
+
+    try {
+      if (typeof chrome !== "undefined" && chrome.storage) {
+        await chrome.storage.sync.clear()
+        await chrome.storage.local.clear()
+      }
+      localStorage.clear()
+    } catch (error) {
+      console.error("Error resetting settings:", error)
+    }
+
+    location.reload()
   }
 
   // --- Settings Pane Status Helpers ---
@@ -6365,11 +6387,8 @@ class NewTabApp {
 
   showCompactAddressDisplay() {
     const addressSection = document.getElementById("address-section")
-    const addressDisplay = document.getElementById("address-display")
-    const currentAddressText = document.getElementById("current-address-text")
     const locateBtn = document.getElementById("locate-btn")
 
-    // Update the compact display with current address
     const addressValue =
       typeof this.currentAddress === "string" && this.currentAddress.trim()
         ? this.currentAddress
@@ -6377,29 +6396,14 @@ class NewTabApp {
           ? this.lastAddress
           : ""
 
-    if (currentAddressText && addressValue) {
-      currentAddressText.textContent = addressValue
-    } else {
-      console.warn("Could not set address text:", {
-        currentAddressText: !!currentAddressText,
-        currentAddress: this.currentAddress,
-      })
-    }
-
     // Hide the location pin button when address is already set
     if (locateBtn && addressValue) {
       locateBtn.style.display = "none"
     }
 
-    // Hide the full address input section (still exists below unified bar)
+    // Hide the full address input section now that an address is set
     if (addressSection) {
       addressSection.classList.add("hidden")
-    }
-
-    // Address display now always present in unified header; ensure no hidden classes linger
-    if (addressDisplay) {
-      addressDisplay.classList.remove("hidden")
-      addressDisplay.classList.add("inline")
     }
 
     // No longer editing
@@ -6408,7 +6412,6 @@ class NewTabApp {
 
   showAddressInput() {
     const addressSection = document.getElementById("address-section")
-    const addressDisplay = document.getElementById("address-display")
     const addressInput = document.getElementById("address-input")
     const locateBtn = document.getElementById("locate-btn")
 
@@ -6417,21 +6420,13 @@ class NewTabApp {
       addressSection.classList.remove("hidden")
     }
 
-    // Keep unified bar visible; do not hide addressDisplay
-    if (addressDisplay) {
-      addressDisplay.classList.add("inline")
-    }
-
     // Entering edit mode
     this.editingAddress = true
 
-    // Show location pin button when no address is set or when editing
+    // Always show the locate button while editing, so switching to
+    // "use my current location" doesn't require clearing the field first
     if (locateBtn) {
-      if (!this.currentAddress) {
-        locateBtn.style.display = ""
-      } else {
-        locateBtn.style.display = "none"
-      }
+      locateBtn.style.display = ""
     }
 
     // Focus on the address input for better UX
