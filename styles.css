@@ -2714,12 +2714,6 @@ body.sidebar-resizing .container {
   animation-delay: 0.15s;
 }
 
-/* Government Officials Specific Styles */
-/* Integrated sections styling */
-.integrated-section {
-  margin-bottom: var(--space-6);
-}
-
 .subsection-header {
   font-size: var(--text-sm);
   font-weight: 600;
@@ -3460,7 +3454,11 @@ body.sidebar-resizing .container {
 }
 
 .search-match-highlight {
-  background: color-mix(in srgb, var(--detail-accent, var(--accent-color)) 30%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--detail-accent, var(--accent-color)) 30%,
+    transparent
+  );
   color: var(--text-primary);
   border-radius: var(--radius-xs);
   padding: 0 0.15em;
@@ -3612,6 +3610,14 @@ body.sidebar-resizing .container {
   margin-bottom: var(--space-2);
 }
 
+.info-section p {
+  margin-top: var(--space-2);
+}
+
+.info-section p:first-of-type {
+  margin-top: 0;
+}
+
 .event-date {
   font-size: var(--text-lg);
   font-weight: 500;
@@ -3648,6 +3654,22 @@ body.sidebar-resizing .container {
   color: var(--text-primary);
   line-height: var(--leading-relaxed);
   white-space: pre-line;
+}
+
+.event-description ul {
+  padding-left: var(--space-4);
+}
+
+.event-description li {
+  margin-top: var(--space-2);
+}
+
+.event-description li:first-child {
+  margin-top: 0;
+}
+
+.event-description p + p {
+  margin-top: var(--space-2);
 }
 
 .event-inline-link {
