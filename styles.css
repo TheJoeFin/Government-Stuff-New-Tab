@@ -138,6 +138,11 @@ html {
   transition:
     background-color var(--transition-theme-duration) ease,
     color var(--transition-theme-duration) ease;
+  /* The app shell (.container) is capped to 100vh and scrolls internally
+     via .main-content/.sidebar, so the document itself should never
+     scroll. This is a defensive backstop against any stray overflow
+     (e.g. rounding) still bouncing the whole page on overscroll. */
+  overscroll-behavior: none;
 }
 
 body {
@@ -153,6 +158,7 @@ body {
     color var(--transition-theme-duration) ease,
     border-color var(--transition-theme-duration) ease;
   overflow-x: hidden;
+  overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -234,6 +240,17 @@ body {
   --sidebar-width: 380px;
   display: grid;
   grid-template-columns: 1fr var(--sidebar-width);
+  /* Without an explicit row size, this single implicit row sizes itself
+     to fit its tallest child's content (grid "auto" tracks are
+     content-sized, regardless of the children's own overflow rules), so
+     long content silently grew the whole page past 100vh instead of
+     scrolling inside .main-content/.sidebar. That made the *document*
+     the thing that scrolled/overscrolled, dragging the sticky header and
+     the sidebar away from the top together during rubber-band overscroll.
+     A definite height plus an explicit 1fr row caps it at the viewport,
+     so the panes' own overflow-y:auto actually engages instead. */
+  height: 100vh;
+  grid-template-rows: 1fr;
   min-height: 100vh;
   gap: 0;
   /* Positioned (with the default z-index:auto) purely so it paints above
@@ -258,6 +275,11 @@ body {
 .main-content {
   padding: 0;
   overflow-y: auto;
+  /* Without this, rubber-band/overscroll past the top translates the
+     scrolled content down while the sticky .header stays pinned to the
+     viewport, opening a gap between them. Containing the overscroll here
+     stops the bounce so the header stretches with the pane instead. */
+  overscroll-behavior-y: contain;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -1311,6 +1333,7 @@ body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   transition:
     background-color var(--transition-theme-duration) ease,
     border-color var(--transition-theme-duration) ease,
@@ -1549,6 +1572,7 @@ body {
   padding: var(--space-4);
   box-shadow: var(--shadow);
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   min-height: 0;
   transition:
     background-color var(--transition-theme-duration) ease,
