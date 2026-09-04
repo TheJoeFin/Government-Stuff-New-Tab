@@ -167,6 +167,7 @@ class NewTabApp {
     this.governmentOfficials = new GovernmentOfficials()
     this.milwaukeeCouncil = new MilwaukeeCouncil()
     this.milwaukeeCountyBoard = new MilwaukeeCountyBoard()
+    this.milwaukeeSchoolBoard = new MilwaukeeSchoolBoard()
 
     // Track whether user is currently editing the address
     this.editingAddress = false
@@ -2466,9 +2467,11 @@ class NewTabApp {
       const results = this.governmentOfficials.searchOfficials(query)
       const councilHits = this.milwaukeeCouncil.searchMembers(query)
       const countyHits = this.milwaukeeCountyBoard.searchMembers(query)
+      const schoolBoardHits = this.milwaukeeSchoolBoard.searchMembers(query)
       const mergedOfficials = this.dedupeOfficials([
         ...councilHits,
         ...countyHits,
+        ...schoolBoardHits,
         ...results,
       ])
       const meetingHits = this.searchCalendarMeetings(query)
@@ -3587,6 +3590,7 @@ class NewTabApp {
     const levelColorMap = {
       city: "#0077be",
       county: "#ffc107",
+      schools: "#8e44ad",
       state: "#228b22",
       federal: "#dc143c",
     }
@@ -4036,6 +4040,7 @@ class NewTabApp {
           const colorMap = {
             city: "#0077be",
             county: "#ffc107",
+            schools: "#8e44ad",
             state: "#228b22",
             federal: "#dc143c",
           }
@@ -5429,6 +5434,11 @@ class NewTabApp {
         localReps: [],
         allOfficials: this.governmentOfficials.getOfficialsByLevel("county"),
       },
+      "Milwaukee Public Schools": {
+        color: "#8e44ad",
+        localReps: [],
+        allOfficials: this.milwaukeeSchoolBoard.getMembers(),
+      },
       "Wisconsin State": {
         color: "#228b22",
         localReps: [],
@@ -5502,6 +5512,31 @@ class NewTabApp {
       console.log(`Adding Wisconsin senator: ${senator.name}`)
       divisionStructure["Federal Government"].localReps.push(senatorRep)
     })
+
+    // At-large School Board members represent every Milwaukee address, not
+    // just one district, so always surface them alongside the district rep.
+    if (this.milwaukeeData && this.milwaukeeData.representatives.length) {
+      const atLargeSchoolBoardMembers = this.milwaukeeSchoolBoard
+        .getMembers()
+        .filter(
+          (member) => String(member.district).toLowerCase() === "at-large",
+        )
+
+      atLargeSchoolBoardMembers.forEach((member) => {
+        divisionStructure["Milwaukee Public Schools"].localReps.push({
+          name: member.name,
+          title: member.title,
+          office: member.title,
+          department: member.department,
+          district: member.district,
+          division: "Milwaukee Public Schools",
+          responsibilities: member.responsibilities,
+          contact: member.contact,
+          type: "schoolBoardMember",
+        })
+        console.log(`Adding at-large school board member: ${member.name}`)
+      })
+    }
 
     // Debug: Show what's in each division
     Object.entries(divisionStructure).forEach(([division, data]) => {
@@ -5605,7 +5640,10 @@ class NewTabApp {
     const department = (official.department || "").trim()
 
     const isLocalRepresentative =
-      official.type === "alderperson" || official.type === "supervisor"
+      official.type === "alderperson" ||
+      official.type === "supervisor" ||
+      official.type === "schoolBoardMember" ||
+      official.type === "policeDistrict"
 
     if (isLocalRepresentative) {
       if (office && office.toLowerCase() !== name.toLowerCase()) {
@@ -5704,9 +5742,15 @@ class NewTabApp {
       matched = matchFromCollection(this.milwaukeeCouncil.getMembers())
     } else if (enriched.type === "supervisor") {
       matched = matchFromCollection(this.milwaukeeCountyBoard.getMembers())
+    } else if (enriched.type === "schoolBoardMember") {
+      matched = matchFromCollection(this.milwaukeeSchoolBoard.getMembers())
     }
 
     if (matched) {
+      if (matched.name && !enriched.name) {
+        enriched.name = matched.name
+      }
+
       if (matched.title && !enriched.office) {
         enriched.office = matched.title
       }
@@ -6160,7 +6204,9 @@ class NewTabApp {
         ? "District Website"
         : rep.type === "supervisor"
           ? "County Website"
-          : "Website"
+          : rep.type === "schoolBoardMember"
+            ? "School Board Website"
+            : "Website"
 
     const websiteLink = createContactLink(rep.website, websiteLabel)
     if (websiteLink) {
@@ -6192,14 +6238,18 @@ class NewTabApp {
         ? "Common Council Committees"
         : rep.type === "supervisor"
           ? "County Committee Service"
-          : "Key Responsibilities"
+          : rep.type === "schoolBoardMember"
+            ? "School Board Role"
+            : "Key Responsibilities"
 
     const expandedLabel =
       rep.type === "alderperson"
         ? "Hide Committees"
         : rep.type === "supervisor"
           ? "Hide Committee Service"
-          : "Hide Responsibilities"
+          : rep.type === "schoolBoardMember"
+            ? "Hide School Board Role"
+            : "Hide Responsibilities"
 
     this.appendResponsibilitiesSection(
       panel,
@@ -6893,7 +6943,7 @@ class NewTabApp {
       if (milwaukeeData && milwaukeeData.isInMilwaukeeCounty) {
         console.log("✅ Milwaukee API works! Data:", milwaukeeData)
         const repList = milwaukeeData.representatives
-          .map((rep) => `${rep.name} (${rep.type})`)
+          .map((rep) => `${rep.name || rep.office} (${rep.type})`)
           .join(", ")
         results.push({
           icon: "✅",
