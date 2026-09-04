@@ -1762,13 +1762,14 @@ body {
 
 /* Modern Representative Cards */
 .division-group {
+  /* No margin-bottom here: spacing between cards comes solely from the
+     parent .officials-list flex gap, so it isn't doubled up */
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
   transition: var(--transition-fast);
-  margin-bottom: 0.5rem;
 }
 
 .division-group:hover {
@@ -2368,7 +2369,6 @@ body.sidebar-resizing .container {
 
   /* Mobile representative cards */
   .division-group {
-    margin-bottom: var(--space-3);
     border-radius: var(--radius-lg);
   }
 
