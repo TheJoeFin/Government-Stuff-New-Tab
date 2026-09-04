@@ -2536,6 +2536,13 @@ class NewTabApp {
     if (suggestions) {
       suggestions.classList.toggle("hidden", !visible)
     }
+    // The "Meetings & Events"/"Officials" headings only make sense once
+    // there are actual results to label - keep them (and their empty
+    // lists) hidden while showing the starting suggestions instead.
+    const resultsContent = document.querySelector(".search-results-content")
+    if (resultsContent) {
+      resultsContent.classList.toggle("hidden", visible)
+    }
   }
 
   searchCalendarMeetings(query) {
@@ -4004,88 +4011,91 @@ class NewTabApp {
     const { officials = [], meetings = [] } = resultSets || {}
     const totalResults = officials.length + meetings.length
 
-    if (totalResults === 0) {
+    if (meetings.length) {
+      meetings.forEach((event) => {
+        const item = this.createCalendarEventListItem(event, {
+          onSelect: () => this.showDetailOverlay("event", event),
+        })
+        item.classList.add("search-meeting-item")
+        const button = item.querySelector(".calendar-event-main")
+        if (button) {
+          button.classList.add("search-meeting-button")
+        }
+
+        const matchReason = this.getMeetingMatchReason(event, query)
+        if (matchReason && button) {
+          button.appendChild(
+            this.buildMatchReasonElement(matchReason.label, matchReason.text, query),
+          )
+        }
+
+        searchEventsContainer.appendChild(item)
+      })
+    } else {
       const empty = document.createElement("div")
       empty.className = "search-results-empty"
-      empty.textContent = "No officials or meetings match your search."
+      empty.textContent = "No matching meetings or events."
       searchEventsContainer.appendChild(empty)
-    } else {
-      if (meetings.length) {
-        meetings.forEach((event) => {
-          const item = this.createCalendarEventListItem(event, {
-            onSelect: () => this.showDetailOverlay("event", event),
+    }
+
+    if (officials.length) {
+      officials.forEach((official) => {
+        // Keep in sync with the level colors used in the officials tab
+        // (see divisionStructure in renderComprehensiveOfficials) so
+        // search results are visually consistent with that view.
+        const colorMap = {
+          city: "#0077be",
+          county: "#ffc107",
+          schools: "#8e44ad",
+          state: "#228b22",
+          federal: "#dc143c",
+        }
+        const levelColor = colorMap[official.level] || "var(--accent-color)"
+        const element = this.createCompactOfficialElement(
+          official,
+          "comprehensive",
+          levelColor,
+        )
+        element.classList.add("search-official-item")
+        element.style.setProperty("--detail-accent", levelColor)
+        element.style.borderLeft = `4px solid ${levelColor}`
+
+        const nameContainer = element.querySelector(
+          ".official-name-container",
+        )
+        if (nameContainer && official.level) {
+          const badge = document.createElement("span")
+          badge.className = "official-detail-tag search-level-badge"
+          badge.textContent = official.level
+          badge.style.setProperty("--detail-accent", levelColor)
+          nameContainer.appendChild(badge)
+        }
+
+        const matchReason = this.getOfficialMatchReason(official, query)
+        if (matchReason && nameContainer) {
+          nameContainer.appendChild(
+            this.buildMatchReasonElement(matchReason.label, matchReason.text, query),
+          )
+        }
+
+        // Override the click handler to use detail overlay instead of sidebar detail
+        const button = element.querySelector("button")
+        if (button) {
+          // Remove existing click listeners
+          button.replaceWith(button.cloneNode(true))
+          const newButton = element.querySelector("button")
+          newButton.addEventListener("click", () => {
+            this.showDetailOverlay("official", official)
           })
-          item.classList.add("search-meeting-item")
-          const button = item.querySelector(".calendar-event-main")
-          if (button) {
-            button.classList.add("search-meeting-button")
-          }
+        }
 
-          const matchReason = this.getMeetingMatchReason(event, query)
-          if (matchReason && button) {
-            button.appendChild(
-              this.buildMatchReasonElement(matchReason.label, matchReason.text, query),
-            )
-          }
-
-          searchEventsContainer.appendChild(item)
-        })
-      }
-
-      if (officials.length) {
-        officials.forEach((official) => {
-          // Keep in sync with the level colors used in the officials tab
-          // (see divisionStructure in renderComprehensiveOfficials) so
-          // search results are visually consistent with that view.
-          const colorMap = {
-            city: "#0077be",
-            county: "#ffc107",
-            schools: "#8e44ad",
-            state: "#228b22",
-            federal: "#dc143c",
-          }
-          const levelColor = colorMap[official.level] || "var(--accent-color)"
-          const element = this.createCompactOfficialElement(
-            official,
-            "comprehensive",
-            levelColor,
-          )
-          element.classList.add("search-official-item")
-          element.style.setProperty("--detail-accent", levelColor)
-          element.style.borderLeft = `4px solid ${levelColor}`
-
-          const nameContainer = element.querySelector(
-            ".official-name-container",
-          )
-          if (nameContainer && official.level) {
-            const badge = document.createElement("span")
-            badge.className = "official-detail-tag search-level-badge"
-            badge.textContent = official.level
-            badge.style.setProperty("--detail-accent", levelColor)
-            nameContainer.appendChild(badge)
-          }
-
-          const matchReason = this.getOfficialMatchReason(official, query)
-          if (matchReason && nameContainer) {
-            nameContainer.appendChild(
-              this.buildMatchReasonElement(matchReason.label, matchReason.text, query),
-            )
-          }
-
-          // Override the click handler to use detail overlay instead of sidebar detail
-          const button = element.querySelector("button")
-          if (button) {
-            // Remove existing click listeners
-            button.replaceWith(button.cloneNode(true))
-            const newButton = element.querySelector("button")
-            newButton.addEventListener("click", () => {
-              this.showDetailOverlay("official", official)
-            })
-          }
-
-          searchOfficialsContainer.appendChild(element)
-        })
-      }
+        searchOfficialsContainer.appendChild(element)
+      })
+    } else {
+      const empty = document.createElement("div")
+      empty.className = "search-results-empty"
+      empty.textContent = "No matching officials."
+      searchOfficialsContainer.appendChild(empty)
     }
 
     const announceParts = [
