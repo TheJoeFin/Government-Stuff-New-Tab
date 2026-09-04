@@ -4116,3 +4116,41 @@ body.sidebar-resizing .container {
     gap: var(--space-2);
   }
 }
+
+/* Extension Options Page (options.html) - reuses the .settings-pane-*
+   classes from the in-app settings pane so the two stay visually
+   identical; this just supplies the standalone page's own frame */
+.options-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-8) var(--space-4);
+  gap: var(--space-6);
+}
+
+.options-header {
+  text-align: center;
+}
+
+.options-header h1 {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.options-subtitle {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.options-card {
+  width: 100%;
+  max-width: 560px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}

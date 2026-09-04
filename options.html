@@ -5,21 +5,112 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Government Stuff New Tab Options</title>
+    <link rel="icon" type="image/png" href="icons/icon-32.png" sizes="32x32">
     <link rel="stylesheet" href="styles.css">
+    <title>Settings - Milwaukee Government New Tab</title>
 </head>
 
 <body>
-    <h1>Settings</h1>
-    <form id="options-form">
-        <label for="api-key">Google API Key:</label>
-        <input type="text" id="api-key" name="apiKey" size="50">
-        <br>
-        <label for="propublica-api-key">ProPublica API Key:</label>
-        <input type="text" id="propublica-api-key" name="propublicaApiKey" size="50">
-        <button type="submit">Save</button>
-    </form>
-    <div id="status"></div>
+    <div class="options-page">
+        <header class="options-header">
+            <h1>⚙️ Settings</h1>
+            <p class="options-subtitle">Milwaukee Government New Tab</p>
+        </header>
+
+        <main class="options-card">
+            <div class="settings-pane-content">
+
+                <!-- Location -->
+                <section class="settings-pane-section">
+                    <h4 class="settings-pane-section-title">📍 Location</h4>
+                    <div class="settings-pane-field">
+                        <label for="pane-address-input">Your Milwaukee Area Address</label>
+                        <div class="settings-pane-address-row">
+                            <input type="text" id="pane-address-input"
+                                placeholder="e.g., 200 E Wells St, Milwaukee, WI 53202" autocomplete="street-address">
+                            <button id="pane-locate-btn" class="btn-icon" type="button" title="Use current location"
+                                aria-label="Use current location">📍</button>
+                        </div>
+                        <div class="settings-pane-actions">
+                            <button id="pane-update-address" class="btn-primary" type="button">💾 Save
+                                Address</button>
+                            <button id="pane-clear-cache-btn" class="btn-secondary" type="button">🧹 Clear Cached
+                                Data</button>
+                        </div>
+                    </div>
+                    <div class="settings-pane-current-address" id="pane-current-address"></div>
+                    <div class="settings-pane-status hidden" id="pane-address-status" role="status"
+                        aria-live="polite">
+                        <span class="status-icon"></span>
+                        <span class="status-text"></span>
+                    </div>
+                </section>
+
+                <!-- Display -->
+                <section class="settings-pane-section">
+                    <h4 class="settings-pane-section-title">🎨 Display</h4>
+                    <div class="settings-pane-field">
+                        <label class="settings-pane-toggle">
+                            <input type="checkbox" id="pane-show-sidebar">
+                            <span>Show sidebar on new tab</span>
+                        </label>
+                    </div>
+                    <div class="settings-pane-field">
+                        <label class="settings-pane-toggle">
+                            <input type="checkbox" id="pane-auto-location">
+                            <span>Automatically detect location</span>
+                        </label>
+                    </div>
+                    <div class="settings-pane-field">
+                        <label class="settings-pane-toggle">
+                            <span>Theme</span>
+                            <button id="pane-theme-toggle" class="btn-secondary settings-pane-theme-btn" type="button"
+                                aria-label="Toggle theme">🌙 Dark</button>
+                        </label>
+                    </div>
+                </section>
+
+                <!-- Background -->
+                <section class="settings-pane-section">
+                    <h4 class="settings-pane-section-title">🖼️ Background</h4>
+                    <div class="settings-pane-field">
+                        <label for="pane-background-mode">Background type</label>
+                        <select id="pane-background-mode" class="settings-pane-select">
+                            <option value="photo">Rotating photo</option>
+                            <option value="solid">Solid color</option>
+                            <option value="flag">Milwaukee flag</option>
+                        </select>
+                    </div>
+                    <div class="settings-pane-field" id="pane-background-color-field">
+                        <label for="pane-background-color">Background color</label>
+                        <input type="color" id="pane-background-color" class="settings-pane-color-input"
+                            value="#0077be">
+                    </div>
+                    <div class="settings-pane-field" id="pane-background-cycle-field">
+                        <label for="pane-background-cycle">Change photo</label>
+                        <select id="pane-background-cycle" class="settings-pane-select">
+                            <option value="every">Every new tab</option>
+                            <option value="hourly">Hourly</option>
+                            <option value="daily" selected>Daily</option>
+                            <option value="weekly">Weekly</option>
+                        </select>
+                    </div>
+                </section>
+
+                <!-- About -->
+                <section class="settings-pane-section">
+                    <h4 class="settings-pane-section-title">ℹ️ About</h4>
+                    <p class="settings-pane-about">
+                        <strong>Milwaukee Government New Tab</strong><br>
+                        View local government officials, meetings, and events for Milwaukee area addresses.
+                    </p>
+                    <p class="settings-pane-version" id="pane-version-info"></p>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
     <script src="options.js"></script>
 </body>
 
