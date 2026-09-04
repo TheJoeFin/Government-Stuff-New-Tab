@@ -60,6 +60,8 @@ class MilwaukeeApi {
       "assemblyRepresentative",
       "senator",
       "congressionalRepresentative",
+      "schoolBoardDistrict",
+      "policeDistrict",
     ].some((k) => data[k])
 
     const isSuccess =
@@ -171,6 +173,34 @@ class MilwaukeeApi {
         hasRep: !!data.congressionalRepresentative,
         hasDistrict: !!data.congressionalDistrict,
         rawData: data,
+      })
+    }
+
+    // Add School Board District. The API only provides the district number,
+    // not the director's name - the app matches that district against its
+    // own Milwaukee School Board roster and fills in the name/contact info.
+    if (data.schoolBoardDistrict) {
+      representatives.push({
+        name: null,
+        office:
+          data.schoolBoardDistrictLabel ||
+          `School Board District ${data.schoolBoardDistrict}`,
+        division: "Milwaukee Public Schools",
+        district: data.schoolBoardDistrict,
+        type: "schoolBoardMember",
+      })
+    }
+
+    // Add Police District. MPD doesn't publish a named contact per district
+    // here, so this is shown as informational coverage rather than a person.
+    if (data.policeDistrict) {
+      representatives.push({
+        name:
+          data.policeDistrictLabel || `Police District ${data.policeDistrict}`,
+        office: "Milwaukee Police Department",
+        division: "City of Milwaukee",
+        district: data.policeDistrict,
+        type: "policeDistrict",
       })
     }
 

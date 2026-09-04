@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="styles.css">
     <script src="milwaukee-council.js"></script>
     <script src="milwaukee-county-board.js"></script>
+    <script src="milwaukee-school-board.js"></script>
     <script src="script.js"></script>
     <script src="propublica-api.js"></script>
     <script src="milwaukee-api.js"></script>
@@ -73,9 +74,8 @@
         <!-- Show sidebar button (hidden when sidebar is visible) -->
         <button id="show-sidebar-btn" class="show-sidebar-btn hidden" aria-label="Show representatives sidebar"
             title="Show representatives">
-            <svg class="show-sidebar-icon" viewBox="0 0 24 24" width="18" height="18" fill="none"
-                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-                aria-hidden="true">
+            <svg class="show-sidebar-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <polyline points="15 6 9 12 15 18"></polyline>
             </svg>
         </button>
@@ -108,17 +108,12 @@
                         </div>
                     </div>
                 </div>
-                <div class="current-address visually-hidden" id="address-display" role="status" aria-live="polite">
-                    <span class="address-label">For:</span>
-                    <span class="address-value" id="current-address-text"></span>
-                </div>
             </div>
 
             <!-- Collapsible search row (hidden by default) -->
             <div class="search-row hidden" id="search-row" role="search" aria-label="Search officials and meetings">
-                <div class="search-row-content">
-                    <input type="search" id="official-search-input"
-                        placeholder="Search officials or meetings (e.g., sheriff, budget)"
+                <div class="search-container">
+                    <input type="search" id="official-search-input" placeholder="Search officials or meetings"
                         aria-label="Search officials or meetings by name, title, department, topic or responsibility"
                         autocomplete="off">
                 </div>
@@ -210,7 +205,13 @@
                 <div class="content-view search-results-view" id="search-results-view" role="tabpanel"
                     aria-labelledby="search-results-label">
                     <div id="search-results-label" class="visually-hidden">Search results</div>
-                    <div class="search-results-content">
+                    <div class="search-suggestions" id="search-suggestions">
+                        <p class="search-suggestions-label">Common searches</p>
+                        <div class="search-suggestions-chips" id="search-suggestions-chips">
+                            <!-- Suggested search term chips rendered here -->
+                        </div>
+                    </div>
+                    <div class="search-results-content hidden">
                         <div class="search-results-section" id="search-events-section">
                             <h4 class="search-section-title">Meetings & Events</h4>
                             <div id="search-events-list" class="search-results-list" role="list">
@@ -319,6 +320,15 @@
                                 View local government officials, meetings, and events for Milwaukee area addresses.
                             </p>
                             <p class="settings-pane-version" id="pane-version-info"></p>
+                        </section>
+
+                        <!-- Reset -->
+                        <section class="settings-pane-section">
+                            <h4 class="settings-pane-section-title">⚠️ Reset</h4>
+                            <p class="settings-pane-about">
+                                Clears your saved address, favorites, theme, background, and cached data.
+                            </p>
+                            <button id="pane-reset-defaults-btn" class="btn-secondary">Reset to Defaults</button>
                         </section>
 
                     </div>

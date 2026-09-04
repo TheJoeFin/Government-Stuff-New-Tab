@@ -1,0 +1,15 @@
+# Packaged extension bundles (built by bundle.ps1)
+*.zip
+
+# Local secrets (API keys, etc.) if ever pulled out of source into a dotenv file
+.env
+.env.local
+
+# OS cruft
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Editor swap/backup files
+*~
+*.swp

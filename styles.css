@@ -138,6 +138,11 @@ html {
   transition:
     background-color var(--transition-theme-duration) ease,
     color var(--transition-theme-duration) ease;
+  /* The app shell (.container) is capped to 100vh and scrolls internally
+     via .main-content/.sidebar, so the document itself should never
+     scroll. This is a defensive backstop against any stray overflow
+     (e.g. rounding) still bouncing the whole page on overscroll. */
+  overscroll-behavior: none;
 }
 
 body {
@@ -153,6 +158,7 @@ body {
     color var(--transition-theme-duration) ease,
     border-color var(--transition-theme-duration) ease;
   overflow-x: hidden;
+  overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -234,6 +240,17 @@ body {
   --sidebar-width: 380px;
   display: grid;
   grid-template-columns: 1fr var(--sidebar-width);
+  /* Without an explicit row size, this single implicit row sizes itself
+     to fit its tallest child's content (grid "auto" tracks are
+     content-sized, regardless of the children's own overflow rules), so
+     long content silently grew the whole page past 100vh instead of
+     scrolling inside .main-content/.sidebar. That made the *document*
+     the thing that scrolled/overscrolled, dragging the sticky header and
+     the sidebar away from the top together during rubber-band overscroll.
+     A definite height plus an explicit 1fr row caps it at the viewport,
+     so the panes' own overflow-y:auto actually engages instead. */
+  height: 100vh;
+  grid-template-rows: 1fr;
   min-height: 100vh;
   gap: 0;
   /* Positioned (with the default z-index:auto) purely so it paints above
@@ -258,6 +275,11 @@ body {
 .main-content {
   padding: 0;
   overflow-y: auto;
+  /* Without this, rubber-band/overscroll past the top translates the
+     scrolled content down while the sticky .header stays pinned to the
+     viewport, opening a gap between them. Containing the overscroll here
+     stops the bounce so the header stretches with the pane instead. */
+  overscroll-behavior-y: contain;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -902,33 +924,6 @@ body {
   box-shadow: 0 0 0 2px rgba(0, 119, 190, 0.25);
 }
 
-.sidebar-header .current-address.inline {
-  background: transparent;
-  border: none;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: var(--space-1);
-}
-
-.sidebar-header .address-label {
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-}
-
-.sidebar-header .address-value {
-  max-width: 150px;
-}
-
-@media (max-width: 600px) {
-  .sidebar-header .address-value {
-    max-width: 90px;
-  }
-}
-
 /* Chevron toggle rotation */
 #toggle-sidebar {
   transition: transform 0.25s ease;
@@ -992,53 +987,6 @@ body {
   flex: 1;
 }
 
-/* Compact Address Display */
-.address-display {
-  margin-bottom: var(--space-1);
-  transition: var(--transition);
-  flex-shrink: 0;
-}
-
-.address-display.hidden {
-  display: none;
-}
-
-.current-address {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--accent-light);
-  border: 1px solid var(--accent-color);
-  border-radius: var(--radius);
-  padding: var(--space-2);
-  gap: var(--space-2);
-}
-
-.address-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.address-label {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.address-value {
-  font-size: var(--text-base);
-  font-weight: 600;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .btn-small {
   min-width: 2rem;
   height: 2rem;
@@ -1062,18 +1010,6 @@ body {
   margin-bottom: 0;
   height: 0;
   overflow: hidden;
-}
-
-.address-display {
-  opacity: 0;
-  transform: translateY(-10px);
-  transition: var(--transition-slow);
-}
-
-.address-display.visible {
-  opacity: 1;
-  transform: translateY(0);
-  display: block;
 }
 
 /* Officials Calendar */
@@ -1397,6 +1333,7 @@ body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   transition:
     background-color var(--transition-theme-duration) ease,
     border-color var(--transition-theme-duration) ease,
@@ -1635,6 +1572,7 @@ body {
   padding: var(--space-4);
   box-shadow: var(--shadow);
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   min-height: 0;
   transition:
     background-color var(--transition-theme-duration) ease,
@@ -1762,13 +1700,14 @@ body {
 
 /* Modern Representative Cards */
 .division-group {
+  /* No margin-bottom here: spacing between cards comes solely from the
+     parent .officials-list flex gap, so it isn't doubled up */
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
   transition: var(--transition-fast);
-  margin-bottom: 0.5rem;
 }
 
 .division-group:hover {
@@ -2368,7 +2307,6 @@ body.sidebar-resizing .container {
 
   /* Mobile representative cards */
   .division-group {
-    margin-bottom: var(--space-3);
     border-radius: var(--radius-lg);
   }
 
@@ -2714,12 +2652,6 @@ body.sidebar-resizing .container {
   animation-delay: 0.15s;
 }
 
-/* Government Officials Specific Styles */
-/* Integrated sections styling */
-.integrated-section {
-  margin-bottom: var(--space-6);
-}
-
 .subsection-header {
   font-size: var(--text-sm);
   font-weight: 600;
@@ -2946,56 +2878,6 @@ body.sidebar-resizing .container {
   }
 }
 
-/* Officials search (appended) */
-.official-search {
-  padding: 0.75rem 1rem 0.5rem;
-  border-top: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-tertiary);
-  flex-shrink: 0;
-}
-.official-search.hidden {
-  display: none;
-}
-#toggle-official-search[aria-pressed="true"] {
-  color: var(--accent-color);
-}
-.dark-theme .official-search {
-  background: var(--bg-surface-alt, rgba(255, 255, 255, 0.02));
-}
-.official-search-group {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-#official-search-input {
-  flex: 1;
-  padding: 0.45rem 0.6rem;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  border-radius: 4px;
-  font-size: 0.8rem;
-}
-[data-theme="dark"] #official-search-input {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
-}
-#official-search-input:focus {
-  outline: 2px solid var(--accent-color);
-  outline-offset: 1px;
-}
-#official-search-clear {
-  font-size: 0.85rem;
-  line-height: 1;
-  padding: 0.35rem 0.45rem;
-}
-.official-search-hint {
-  display: block;
-  margin-top: 0.35rem;
-  font-size: 0.6rem;
-  color: var(--text-muted);
-}
 .officials-list.search-active .division-group {
   display: none;
 }
@@ -3129,58 +3011,37 @@ body.sidebar-resizing .container {
 
 /* Search Row */
 .search-row {
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-subtle);
-  padding: var(--space-3);
-  margin-bottom: var(--space-4);
+  padding: var(--space-2) 6px;
 }
 
 .search-row.hidden {
   display: none;
 }
 
-.search-row-content {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-  margin-bottom: var(--space-2);
-}
-
 .search-row input[type="search"] {
-  flex: 1;
-  background: var(--bg-tertiary);
+  /* Matches the main "Search the web..." bar's pill treatment
+     (.search-form/.search-input combined into one element) so the two
+     search fields in the app read as the same component, including its
+     larger text size and roomier padding - not just the same colors.
+     The wrapping <div> reuses .search-container's own width:100% rule,
+     so this doesn't need its own wrapper styles. */
+  width: 100%;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius);
-  font-size: var(--text-sm);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-full);
+  font-size: var(--text-base);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
 }
 
 .search-row input[type="search"]:focus {
   outline: none;
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px var(--accent-light);
-}
-
-.search-action-btn {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius);
-  font-size: var(--text-xs);
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.search-action-btn:hover {
-  background: var(--bg-card);
-  color: var(--text-primary);
-}
-
-.search-hint {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
+  box-shadow:
+    var(--shadow),
+    0 0 0 3px var(--accent-light);
 }
 
 /* Simplified Calendar */
@@ -3381,6 +3242,45 @@ body.sidebar-resizing .container {
 }
 
 /* Search Results View */
+.search-suggestions {
+  padding: var(--space-3) var(--space-3) 0;
+}
+
+.search-suggestions.hidden {
+  display: none;
+}
+
+.search-suggestions-label {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.search-suggestions-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.search-suggestion-chip {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.search-suggestion-chip:hover,
+.search-suggestion-chip:focus-visible {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
 .search-results-content {
   padding: var(--space-3);
 }
@@ -3402,6 +3302,33 @@ body.sidebar-resizing .container {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+.search-level-badge {
+  margin-top: var(--space-1);
+}
+
+.search-match-reason {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: var(--leading-tight);
+  margin-top: var(--space-1);
+}
+
+.search-match-reason-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.search-match-highlight {
+  background: color-mix(
+    in srgb,
+    var(--detail-accent, var(--accent-color)) 30%,
+    transparent
+  );
+  color: var(--text-primary);
+  border-radius: var(--radius-xs);
+  padding: 0 0.15em;
 }
 
 /* Detail Overlay */
@@ -3550,6 +3477,14 @@ body.sidebar-resizing .container {
   margin-bottom: var(--space-2);
 }
 
+.info-section p {
+  margin-top: var(--space-2);
+}
+
+.info-section p:first-of-type {
+  margin-top: 0;
+}
+
 .event-date {
   font-size: var(--text-lg);
   font-weight: 500;
@@ -3586,6 +3521,22 @@ body.sidebar-resizing .container {
   color: var(--text-primary);
   line-height: var(--leading-relaxed);
   white-space: pre-line;
+}
+
+.event-description ul {
+  padding-left: var(--space-4);
+}
+
+.event-description li {
+  margin-top: var(--space-2);
+}
+
+.event-description li:first-child {
+  margin-top: 0;
+}
+
+.event-description p + p {
+  margin-top: var(--space-2);
 }
 
 .event-inline-link {
@@ -4102,4 +4053,42 @@ body.sidebar-resizing .container {
     flex-direction: column;
     gap: var(--space-2);
   }
+}
+
+/* Extension Options Page (options.html) - reuses the .settings-pane-*
+   classes from the in-app settings pane so the two stay visually
+   identical; this just supplies the standalone page's own frame */
+.options-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-8) var(--space-4);
+  gap: var(--space-6);
+}
+
+.options-header {
+  text-align: center;
+}
+
+.options-header h1 {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.options-subtitle {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.options-card {
+  width: 100%;
+  max-width: 560px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
 }

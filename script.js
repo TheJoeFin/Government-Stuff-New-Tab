@@ -81,6 +81,8 @@ class NewTabApp {
     this.lastAddress = "" // Cache for last used address
     this.milwaukeeCache = new Map() // Smart cache for Milwaukee data
     this.cacheExpiry = 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
+    this.faviconCacheExpiry = 30 * 24 * 60 * 60 * 1000 // 30 days in milliseconds
+    this.faviconMemoryCache = new Map() // domain -> data URL, avoids re-hitting storage within a session
     this.settings = {
       // This is the sticky, persisted preference used on wide/desktop
       // layouts. Narrow/mobile layouts never read it directly - they use
@@ -165,6 +167,7 @@ class NewTabApp {
     this.governmentOfficials = new GovernmentOfficials()
     this.milwaukeeCouncil = new MilwaukeeCouncil()
     this.milwaukeeCountyBoard = new MilwaukeeCountyBoard()
+    this.milwaukeeSchoolBoard = new MilwaukeeSchoolBoard()
 
     // Track whether user is currently editing the address
     this.editingAddress = false
@@ -2456,15 +2459,19 @@ class NewTabApp {
     const handleSearch = () => {
       const query = input.value.trim()
       if (query.length < 2) {
-        this.clearOfficialsSearchResults()
+        // Not enough to search yet - just clear stale results, don't
+        // navigate away from the search view while the user is still typing.
+        this.clearOfficialsSearchResultsContent()
         return
       }
       const results = this.governmentOfficials.searchOfficials(query)
       const councilHits = this.milwaukeeCouncil.searchMembers(query)
       const countyHits = this.milwaukeeCountyBoard.searchMembers(query)
+      const schoolBoardHits = this.milwaukeeSchoolBoard.searchMembers(query)
       const mergedOfficials = this.dedupeOfficials([
         ...councilHits,
         ...countyHits,
+        ...schoolBoardHits,
         ...results,
       ])
       const meetingHits = this.searchCalendarMeetings(query)
@@ -2486,6 +2493,56 @@ class NewTabApp {
         input.blur()
       }
     })
+
+    this.setupSearchSuggestions(input, () => {
+      clearTimeout(debounceTimer)
+      handleSearch()
+    })
+  }
+
+  setupSearchSuggestions(input, runSearchNow) {
+    const chipsContainer = document.getElementById("search-suggestions-chips")
+    if (!chipsContainer) return
+
+    const suggestedTerms = [
+      "law enforcement",
+      "school",
+      "tax",
+      "housing",
+      "health",
+      "budget",
+      "public works",
+      "transportation",
+      "zoning",
+    ]
+
+    chipsContainer.innerHTML = ""
+    suggestedTerms.forEach((term) => {
+      const chip = document.createElement("button")
+      chip.type = "button"
+      chip.className = "search-suggestion-chip"
+      chip.textContent = term
+      chip.addEventListener("click", () => {
+        input.value = term
+        input.focus()
+        runSearchNow()
+      })
+      chipsContainer.appendChild(chip)
+    })
+  }
+
+  setSearchSuggestionsVisible(visible) {
+    const suggestions = document.getElementById("search-suggestions")
+    if (suggestions) {
+      suggestions.classList.toggle("hidden", !visible)
+    }
+    // The "Meetings & Events"/"Officials" headings only make sense once
+    // there are actual results to label - keep them (and their empty
+    // lists) hidden while showing the starting suggestions instead.
+    const resultsContent = document.querySelector(".search-results-content")
+    if (resultsContent) {
+      resultsContent.classList.toggle("hidden", visible)
+    }
   }
 
   searchCalendarMeetings(query) {
@@ -2807,14 +2864,6 @@ class NewTabApp {
         searchRow.classList.remove("hidden")
       } else {
         searchRow.classList.add("hidden")
-      }
-    }
-
-    // Hide address section when not in settings
-    if (viewType !== "settings-pane") {
-      const addressSection = document.getElementById("address-section")
-      if (addressSection) {
-        addressSection.classList.add("hidden")
       }
     }
   }
@@ -3540,6 +3589,7 @@ class NewTabApp {
     const levelColorMap = {
       city: "#0077be",
       county: "#ffc107",
+      schools: "#8e44ad",
       state: "#228b22",
       federal: "#dc143c",
     }
@@ -3902,8 +3952,10 @@ class NewTabApp {
     this.populateWeekDays("two-weeks-out-days", 2)
   }
 
-  clearOfficialsSearchResults() {
-    // Clear search results containers
+  clearOfficialsSearchResultsContent() {
+    // Empty the search results containers without changing which view is shown.
+    // Used while the user is still typing (query too short to search yet) so
+    // pausing mid-search doesn't kick them out of the search view.
     const searchEventsContainer = document.getElementById("search-events-list")
     const searchOfficialsContainer = document.getElementById(
       "search-officials-list",
@@ -3916,6 +3968,12 @@ class NewTabApp {
       searchOfficialsContainer.innerHTML = ""
     }
 
+    this.setSearchSuggestionsVisible(true)
+  }
+
+  clearOfficialsSearchResults() {
+    this.clearOfficialsSearchResultsContent()
+
     // Switch back to events/calendar view and show calendar
     this.switchContentView("events")
     this.setCalendarVisibility(true)
@@ -3925,6 +3983,7 @@ class NewTabApp {
   renderOfficialsSearchResults(resultSets, query) {
     // Switch to search results view
     this.switchContentView("search-results")
+    this.setSearchSuggestionsVisible(false)
 
     // Get search results containers
     const searchEventsContainer = document.getElementById("search-events-list")
@@ -3944,64 +4003,91 @@ class NewTabApp {
     const { officials = [], meetings = [] } = resultSets || {}
     const totalResults = officials.length + meetings.length
 
-    if (totalResults === 0) {
+    if (meetings.length) {
+      meetings.forEach((event) => {
+        const item = this.createCalendarEventListItem(event, {
+          onSelect: () => this.showDetailOverlay("event", event),
+        })
+        item.classList.add("search-meeting-item")
+        const button = item.querySelector(".calendar-event-main")
+        if (button) {
+          button.classList.add("search-meeting-button")
+        }
+
+        const matchReason = this.getMeetingMatchReason(event, query)
+        if (matchReason && button) {
+          button.appendChild(
+            this.buildMatchReasonElement(matchReason.label, matchReason.text, query),
+          )
+        }
+
+        searchEventsContainer.appendChild(item)
+      })
+    } else {
       const empty = document.createElement("div")
       empty.className = "search-results-empty"
-      empty.textContent = "No officials or meetings match your search."
+      empty.textContent = "No matching meetings or events."
       searchEventsContainer.appendChild(empty)
-    } else {
-      if (meetings.length) {
-        meetings.forEach((event) => {
-          const item = this.createCalendarEventListItem(event, {
-            onSelect: () => this.showDetailOverlay("event", event),
-          })
-          item.classList.add("search-meeting-item")
-          const button = item.querySelector(".calendar-event-main")
-          if (button) {
-            button.classList.add("search-meeting-button")
-          }
-          searchEventsContainer.appendChild(item)
-        })
-      }
+    }
 
-      if (officials.length) {
-        officials.forEach((official) => {
-          const colorMap = {
-            city: "#0077be",
-            county: "#ffc107",
-            state: "#228b22",
-            federal: "#dc143c",
-          }
-          const element = this.createCompactOfficialElement(
-            official,
-            "comprehensive",
-            colorMap[official.level] || "var(--accent-color)",
+    if (officials.length) {
+      officials.forEach((official) => {
+        // Keep in sync with the level colors used in the officials tab
+        // (see divisionStructure in renderComprehensiveOfficials) so
+        // search results are visually consistent with that view.
+        const colorMap = {
+          city: "#0077be",
+          county: "#ffc107",
+          schools: "#8e44ad",
+          state: "#228b22",
+          federal: "#dc143c",
+        }
+        const levelColor = colorMap[official.level] || "var(--accent-color)"
+        const element = this.createCompactOfficialElement(
+          official,
+          "comprehensive",
+          levelColor,
+        )
+        element.classList.add("search-official-item")
+        element.style.setProperty("--detail-accent", levelColor)
+        element.style.borderLeft = `4px solid ${levelColor}`
+
+        const nameContainer = element.querySelector(
+          ".official-name-container",
+        )
+        if (nameContainer && official.level) {
+          const badge = document.createElement("span")
+          badge.className = "official-detail-tag search-level-badge"
+          badge.textContent = official.level
+          badge.style.setProperty("--detail-accent", levelColor)
+          nameContainer.appendChild(badge)
+        }
+
+        const matchReason = this.getOfficialMatchReason(official, query)
+        if (matchReason && nameContainer) {
+          nameContainer.appendChild(
+            this.buildMatchReasonElement(matchReason.label, matchReason.text, query),
           )
-          element.classList.add("search-official-item")
+        }
 
-          const nameEl = element.querySelector(".official-name")
-          if (nameEl && official.level) {
-            const badge = document.createElement("span")
-            badge.textContent = ` (${official.level})`
-            badge.style.fontSize = "0.7rem"
-            badge.style.color = "var(--text-muted)"
-            nameEl.appendChild(badge)
-          }
+        // Override the click handler to use detail overlay instead of sidebar detail
+        const button = element.querySelector("button")
+        if (button) {
+          // Remove existing click listeners
+          button.replaceWith(button.cloneNode(true))
+          const newButton = element.querySelector("button")
+          newButton.addEventListener("click", () => {
+            this.showDetailOverlay("official", official)
+          })
+        }
 
-          // Override the click handler to use detail overlay instead of sidebar detail
-          const button = element.querySelector("button")
-          if (button) {
-            // Remove existing click listeners
-            button.replaceWith(button.cloneNode(true))
-            const newButton = element.querySelector("button")
-            newButton.addEventListener("click", () => {
-              this.showDetailOverlay("official", official)
-            })
-          }
-
-          searchOfficialsContainer.appendChild(element)
-        })
-      }
+        searchOfficialsContainer.appendChild(element)
+      })
+    } else {
+      const empty = document.createElement("div")
+      empty.className = "search-results-empty"
+      empty.textContent = "No matching officials."
+      searchOfficialsContainer.appendChild(empty)
     }
 
     const announceParts = [
@@ -4020,6 +4106,100 @@ class NewTabApp {
     this.announceToScreenReader(
       `${announceParts.join(", ")} found for ${query}`,
     )
+  }
+
+  // Finds the specific responsibility/committee text that made an official
+  // match the search query, so results show *why* they matched (e.g. "on
+  // the Public Works Committee") rather than just that they did. Matches
+  // already visible in the name/title/department summary line are skipped.
+  getOfficialMatchReason(official, query) {
+    const q = (query || "").toLowerCase()
+    if (!q || !official) return null
+
+    const responsibilities = official.responsibilities || []
+    const hit = responsibilities.find((text) =>
+      (text || "").toLowerCase().includes(q),
+    )
+    if (!hit) return null
+
+    return { label: "Committee/Responsibility", text: hit }
+  }
+
+  // Same idea as getOfficialMatchReason but for calendar meetings: surfaces
+  // which non-obvious field (body, description, topic, etc.) matched, since
+  // the title and location are already shown on the result card.
+  getMeetingMatchReason(event, query) {
+    const q = (query || "").toLowerCase()
+    if (!q || !event) return null
+
+    const fieldsInOrder = [
+      { key: "bodyName", label: "Committee/Body" },
+      { key: "description", label: "Description" },
+      { key: "summary", label: "Summary" },
+      { key: "topics", label: "Topic" },
+      { key: "keywords", label: "Keyword" },
+      { key: "sourceLabel", label: "Source" },
+    ]
+
+    for (const { key, label } of fieldsInOrder) {
+      const value = event[key]
+      const text = Array.isArray(value) ? value.join(", ") : value
+      if (typeof text === "string" && text.toLowerCase().includes(q)) {
+        return { label, text }
+      }
+    }
+
+    return null
+  }
+
+  // Builds a small "why this matched" line with the matched query substring
+  // highlighted, truncated to a window around the match for long text.
+  buildMatchReasonElement(label, text, query) {
+    const wrapper = document.createElement("div")
+    wrapper.className = "search-match-reason"
+
+    const labelEl = document.createElement("span")
+    labelEl.className = "search-match-reason-label"
+    labelEl.textContent = `${label}: `
+    wrapper.appendChild(labelEl)
+
+    const q = (query || "").toLowerCase()
+    const lowerText = text.toLowerCase()
+    const matchIndex = lowerText.indexOf(q)
+
+    const maxLength = 100
+    let snippet = text
+    let highlightStart = matchIndex
+    if (text.length > maxLength && matchIndex !== -1) {
+      const windowStart = Math.max(0, matchIndex - 40)
+      const windowEnd = Math.min(
+        text.length,
+        matchIndex + q.length + 40,
+      )
+      snippet = text.slice(windowStart, windowEnd)
+      highlightStart = matchIndex - windowStart
+      if (windowStart > 0) snippet = `…${snippet}`
+      if (windowEnd < text.length) snippet = `${snippet}…`
+      if (windowStart > 0) highlightStart += 1
+    }
+
+    if (highlightStart === -1 || !q) {
+      wrapper.appendChild(document.createTextNode(snippet))
+      return wrapper
+    }
+
+    const before = snippet.slice(0, highlightStart)
+    const match = snippet.slice(highlightStart, highlightStart + q.length)
+    const after = snippet.slice(highlightStart + q.length)
+
+    wrapper.appendChild(document.createTextNode(before))
+    const mark = document.createElement("mark")
+    mark.className = "search-match-highlight"
+    mark.textContent = match
+    wrapper.appendChild(mark)
+    wrapper.appendChild(document.createTextNode(after))
+
+    return wrapper
   }
 
   handleMeetingSearchResultSelection(event) {
@@ -4088,11 +4268,15 @@ class NewTabApp {
 
     const icon = document.createElement("img")
     icon.className = "icon"
-    icon.src = favorite.icon || this.getFaviconUrl(favorite.url)
     icon.alt = favorite.name
     icon.onerror = () => {
-      icon.src =
-        "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzZCNzI4MCIvPgo8cGF0aCBkPSJNMTYgMTJWMjAiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CjxwYXRoIGQ9Ik0xMiAxNkgyMCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+"
+      icon.src = this.getFaviconFallbackDataUri()
+    }
+
+    if (favorite.icon) {
+      icon.src = favorite.icon
+    } else {
+      this.applyFaviconIcon(icon, favorite.url)
     }
 
     const name = document.createElement("span")
@@ -4189,7 +4373,114 @@ class NewTabApp {
       const domain = new URL(url).hostname
       return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
     } catch {
-      return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzZCNzI4MCIvPgo8cGF0aCBkPSJNMTYgMTJWMjAiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CjxwYXRoIGQ9Ik0xMiAxNkgyMCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+"
+      return this.getFaviconFallbackDataUri()
+    }
+  }
+
+  getFaviconFallbackDataUri() {
+    return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzZCNzI4MCIvPgo8cGF0aCBkPSJNMTYgMTJWMjAiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CjxwYXRoIGQ9Ik0xMiAxNkgyMCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+"
+  }
+
+  // Favicon Caching
+  //
+  // The Google s2/favicons endpoint doesn't send cache headers that keep the
+  // browser's HTTP cache reliable across new-tab loads, so favicons were
+  // being re-fetched over the network on every new tab. Instead, fetch each
+  // favicon once, convert it to a data URL, and persist it (per-domain,
+  // similar to getCachedData/setCachedData above) so later loads are instant
+  // and offline-safe.
+  getFaviconCacheKey(domain) {
+    return `favicon_${domain}`
+  }
+
+  async getCachedFavicon(domain) {
+    if (this.faviconMemoryCache.has(domain)) {
+      return this.faviconMemoryCache.get(domain)
+    }
+
+    const cacheKey = this.getFaviconCacheKey(domain)
+
+    try {
+      let cachedData
+      if (typeof chrome !== "undefined" && chrome.storage) {
+        const result = await chrome.storage.local.get([cacheKey])
+        cachedData = result[cacheKey]
+      } else {
+        const stored = localStorage.getItem(cacheKey)
+        cachedData = stored ? JSON.parse(stored) : null
+      }
+
+      if (cachedData) {
+        const cacheAge = Date.now() - cachedData.timestamp
+        if (cacheAge < this.faviconCacheExpiry) {
+          this.faviconMemoryCache.set(domain, cachedData.dataUrl)
+          return cachedData.dataUrl
+        }
+      }
+
+      return null
+    } catch (error) {
+      console.error("Error reading favicon cache:", error)
+      return null
+    }
+  }
+
+  async setCachedFavicon(domain, dataUrl) {
+    this.faviconMemoryCache.set(domain, dataUrl)
+    const cacheKey = this.getFaviconCacheKey(domain)
+    const cachedItem = { dataUrl, timestamp: Date.now() }
+
+    try {
+      if (typeof chrome !== "undefined" && chrome.storage) {
+        await chrome.storage.local.set({ [cacheKey]: cachedItem })
+      } else {
+        localStorage.setItem(cacheKey, JSON.stringify(cachedItem))
+      }
+    } catch (error) {
+      console.error("Error saving favicon to cache:", error)
+    }
+  }
+
+  async fetchFaviconAsDataUrl(domain) {
+    const response = await fetch(
+      `https://www.google.com/s2/favicons?domain=${domain}&sz=32`,
+    )
+    if (!response.ok) {
+      throw new Error(`Favicon fetch failed: ${response.status}`)
+    }
+    const blob = await response.blob()
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result)
+      reader.onerror = () => reject(reader.error)
+      reader.readAsDataURL(blob)
+    })
+  }
+
+  async applyFaviconIcon(icon, url) {
+    let domain
+    try {
+      domain = new URL(url).hostname
+    } catch {
+      icon.src = this.getFaviconFallbackDataUri()
+      return
+    }
+
+    const cached = await this.getCachedFavicon(domain)
+    if (cached) {
+      icon.src = cached
+      return
+    }
+
+    try {
+      const dataUrl = await this.fetchFaviconAsDataUrl(domain)
+      icon.src = dataUrl
+      this.setCachedFavicon(domain, dataUrl)
+    } catch (error) {
+      console.warn(`Could not fetch/cache favicon for ${domain}:`, error)
+      // Fall back to letting the browser load it directly; icon.onerror
+      // covers the case where that also fails.
+      icon.src = this.getFaviconUrl(url)
     }
   }
 
@@ -4726,6 +5017,36 @@ class NewTabApp {
         this.applyBackground()
       })
     }
+
+    // Reset to defaults
+    const paneResetBtn = document.getElementById("pane-reset-defaults-btn")
+    if (paneResetBtn) {
+      paneResetBtn.addEventListener("click", () => this.resetAllSettings())
+    }
+  }
+
+  // Wipes all saved settings, favorites, address, and cached data, then
+  // reloads so the app re-initializes exactly as it would for a new install
+  async resetAllSettings() {
+    if (
+      !confirm(
+        "Reset all settings? This clears your saved address, favorites, theme, background, and cached data. This cannot be undone.",
+      )
+    ) {
+      return
+    }
+
+    try {
+      if (typeof chrome !== "undefined" && chrome.storage) {
+        await chrome.storage.sync.clear()
+        await chrome.storage.local.clear()
+      }
+      localStorage.clear()
+    } catch (error) {
+      console.error("Error resetting settings:", error)
+    }
+
+    location.reload()
   }
 
   // --- Settings Pane Status Helpers ---
@@ -5145,6 +5466,11 @@ class NewTabApp {
         localReps: [],
         allOfficials: this.governmentOfficials.getOfficialsByLevel("county"),
       },
+      "Milwaukee Public Schools": {
+        color: "#8e44ad",
+        localReps: [],
+        allOfficials: this.milwaukeeSchoolBoard.getMembers(),
+      },
       "Wisconsin State": {
         color: "#228b22",
         localReps: [],
@@ -5218,6 +5544,31 @@ class NewTabApp {
       console.log(`Adding Wisconsin senator: ${senator.name}`)
       divisionStructure["Federal Government"].localReps.push(senatorRep)
     })
+
+    // At-large School Board members represent every Milwaukee address, not
+    // just one district, so always surface them alongside the district rep.
+    if (this.milwaukeeData && this.milwaukeeData.representatives.length) {
+      const atLargeSchoolBoardMembers = this.milwaukeeSchoolBoard
+        .getMembers()
+        .filter(
+          (member) => String(member.district).toLowerCase() === "at-large",
+        )
+
+      atLargeSchoolBoardMembers.forEach((member) => {
+        divisionStructure["Milwaukee Public Schools"].localReps.push({
+          name: member.name,
+          title: member.title,
+          office: member.title,
+          department: member.department,
+          district: member.district,
+          division: "Milwaukee Public Schools",
+          responsibilities: member.responsibilities,
+          contact: member.contact,
+          type: "schoolBoardMember",
+        })
+        console.log(`Adding at-large school board member: ${member.name}`)
+      })
+    }
 
     // Debug: Show what's in each division
     Object.entries(divisionStructure).forEach(([division, data]) => {
@@ -5321,7 +5672,10 @@ class NewTabApp {
     const department = (official.department || "").trim()
 
     const isLocalRepresentative =
-      official.type === "alderperson" || official.type === "supervisor"
+      official.type === "alderperson" ||
+      official.type === "supervisor" ||
+      official.type === "schoolBoardMember" ||
+      official.type === "policeDistrict"
 
     if (isLocalRepresentative) {
       if (office && office.toLowerCase() !== name.toLowerCase()) {
@@ -5420,9 +5774,15 @@ class NewTabApp {
       matched = matchFromCollection(this.milwaukeeCouncil.getMembers())
     } else if (enriched.type === "supervisor") {
       matched = matchFromCollection(this.milwaukeeCountyBoard.getMembers())
+    } else if (enriched.type === "schoolBoardMember") {
+      matched = matchFromCollection(this.milwaukeeSchoolBoard.getMembers())
     }
 
     if (matched) {
+      if (matched.name && !enriched.name) {
+        enriched.name = matched.name
+      }
+
       if (matched.title && !enriched.office) {
         enriched.office = matched.title
       }
@@ -5876,7 +6236,9 @@ class NewTabApp {
         ? "District Website"
         : rep.type === "supervisor"
           ? "County Website"
-          : "Website"
+          : rep.type === "schoolBoardMember"
+            ? "School Board Website"
+            : "Website"
 
     const websiteLink = createContactLink(rep.website, websiteLabel)
     if (websiteLink) {
@@ -5908,14 +6270,18 @@ class NewTabApp {
         ? "Common Council Committees"
         : rep.type === "supervisor"
           ? "County Committee Service"
-          : "Key Responsibilities"
+          : rep.type === "schoolBoardMember"
+            ? "School Board Role"
+            : "Key Responsibilities"
 
     const expandedLabel =
       rep.type === "alderperson"
         ? "Hide Committees"
         : rep.type === "supervisor"
           ? "Hide Committee Service"
-          : "Hide Responsibilities"
+          : rep.type === "schoolBoardMember"
+            ? "Hide School Board Role"
+            : "Hide Responsibilities"
 
     this.appendResponsibilitiesSection(
       panel,
@@ -6021,11 +6387,8 @@ class NewTabApp {
 
   showCompactAddressDisplay() {
     const addressSection = document.getElementById("address-section")
-    const addressDisplay = document.getElementById("address-display")
-    const currentAddressText = document.getElementById("current-address-text")
     const locateBtn = document.getElementById("locate-btn")
 
-    // Update the compact display with current address
     const addressValue =
       typeof this.currentAddress === "string" && this.currentAddress.trim()
         ? this.currentAddress
@@ -6033,29 +6396,14 @@ class NewTabApp {
           ? this.lastAddress
           : ""
 
-    if (currentAddressText && addressValue) {
-      currentAddressText.textContent = addressValue
-    } else {
-      console.warn("Could not set address text:", {
-        currentAddressText: !!currentAddressText,
-        currentAddress: this.currentAddress,
-      })
-    }
-
     // Hide the location pin button when address is already set
     if (locateBtn && addressValue) {
       locateBtn.style.display = "none"
     }
 
-    // Hide the full address input section (still exists below unified bar)
+    // Hide the full address input section now that an address is set
     if (addressSection) {
       addressSection.classList.add("hidden")
-    }
-
-    // Address display now always present in unified header; ensure no hidden classes linger
-    if (addressDisplay) {
-      addressDisplay.classList.remove("hidden")
-      addressDisplay.classList.add("inline")
     }
 
     // No longer editing
@@ -6064,7 +6412,6 @@ class NewTabApp {
 
   showAddressInput() {
     const addressSection = document.getElementById("address-section")
-    const addressDisplay = document.getElementById("address-display")
     const addressInput = document.getElementById("address-input")
     const locateBtn = document.getElementById("locate-btn")
 
@@ -6073,21 +6420,13 @@ class NewTabApp {
       addressSection.classList.remove("hidden")
     }
 
-    // Keep unified bar visible; do not hide addressDisplay
-    if (addressDisplay) {
-      addressDisplay.classList.add("inline")
-    }
-
     // Entering edit mode
     this.editingAddress = true
 
-    // Show location pin button when no address is set or when editing
+    // Always show the locate button while editing, so switching to
+    // "use my current location" doesn't require clearing the field first
     if (locateBtn) {
-      if (!this.currentAddress) {
-        locateBtn.style.display = ""
-      } else {
-        locateBtn.style.display = "none"
-      }
+      locateBtn.style.display = ""
     }
 
     // Focus on the address input for better UX
@@ -6609,7 +6948,7 @@ class NewTabApp {
       if (milwaukeeData && milwaukeeData.isInMilwaukeeCounty) {
         console.log("✅ Milwaukee API works! Data:", milwaukeeData)
         const repList = milwaukeeData.representatives
-          .map((rep) => `${rep.name} (${rep.type})`)
+          .map((rep) => `${rep.name || rep.office} (${rep.type})`)
           .join(", ")
         results.push({
           icon: "✅",
